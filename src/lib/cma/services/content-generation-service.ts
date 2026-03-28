@@ -98,43 +98,45 @@ export async function generateFullContent(
     .map((s) => `## ${s.heading}\n${s.keyPoints.map((p) => `- ${p}`).join("\n")}`)
     .join("\n\n");
 
-  const systemPrompt = `You are a senior content writer and web designer for TonyTechLab, an EdTech company.
-Style: ${tone}
-SEO: Include target keywords naturally. Use H2/H3 headings.
-Length: ${targetWordCount} words.
-Language: ${language}
+  const systemPrompt = `You are a senior content writer for TonyTechLab, an EdTech company.
+Style: ${tone}. SEO: Use keywords naturally. Length: ~${targetWordCount} words. Language: ${language}.
 
-Write engaging, informative content following the outline below as **beautifully styled HTML with inline styles**.
-Include practical examples where relevant.
-Write a compelling introduction and conclusion.
+Generate a beautifully structured blog post using TonyTechLab's HTML template.
+CSS is provided externally — you ONLY output HTML using these exact class names.
 
-CRITICAL HTML + INLINE STYLE RULES:
-- Every element MUST have inline style= attributes (WordPress strips <style> tags)
-- Wrap everything in: <div style="max-width:760px;margin:0 auto;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:#2d3748;line-height:1.8;padding:20px;">
-- H2: style="font-size:1.7em;font-weight:700;color:#1a365d;margin:1.8em 0 0.6em;padding-bottom:0.3em;border-bottom:3px solid #f6ad55;"
-- H3: style="font-size:1.3em;font-weight:600;color:#2d3748;margin:1.5em 0 0.4em;"
-- P: style="margin:0 0 1.3em;line-height:1.8;font-size:1.05em;"
-- UL/OL: style="margin:0 0 1.3em;padding-left:1.5em;"
-- LI: style="margin:0.4em 0;line-height:1.8;"
-- BLOCKQUOTE: style="border-left:4px solid #3182ce;padding:16px 20px;margin:1.5em 0;background:#ebf8ff;border-radius:0 10px 10px 0;color:#2a4365;line-height:1.7;"
-- CODE (inline): style="background:#edf2f7;padding:3px 7px;border-radius:6px;font-size:0.88em;font-family:monospace;color:#2d3748;"
-- PRE: style="background:#1a202c;color:#e2e8f0;padding:20px 24px;border-radius:10px;overflow-x:auto;margin:1.5em 0;font-size:0.9em;line-height:1.6;"
-- TABLE: style="width:100%;border-collapse:collapse;margin:1.5em 0;"
-- TH: style="padding:12px 16px;font-weight:600;text-align:left;color:#1a365d;border-bottom:2px solid #2d3748;background:#f7fafc;"
-- TD: style="padding:10px 16px;border-bottom:1px solid #e2e8f0;"
-- IMG: style="max-width:100%;height:auto;border-radius:12px;margin:1em 0;"
-- A: style="color:#3182ce;text-decoration:none;"
-- Use <strong> for emphasis, <em> for italics
+TEMPLATE STRUCTURE (follow this order):
+1. Wrap everything in: <div class="tn-cf-post">
+2. Start with intro box: <div class="tn-cf-intro">Italic intro paragraph with <strong>key topic</strong> highlighted...</div>
+3. Table of contents: <div class="tn-cf-toc"><h3>📑 Mục Lục</h3><ul><li>👉 <a href="#section-id">Section Title</a></li>...</ul></div>
+4. Sections with: <h2 id="section-id">📌 Section Title</h2> (use relevant emojis)
+5. Sub-sections: <h3>Sub-heading</h3>
+6. End with conclusion: <div class="tn-conclusion"><h2>Kết Luận</h2><p>Summary...</p><ul><li>✅ Key point</li>...</ul></div>
+7. End with tags: <div style="margin-top:2em;text-align:center;"><span class="tn-tag">Tag1</span> <span class="tn-tag">Tag2</span>...</div>
+
+AVAILABLE COMPONENTS (use these class names exactly):
+- Info box: <div class="tn-highlight-box"><strong>💡 Title:</strong> Content...</div>
+- Warning box: <div class="tn-warning-box"><strong>⚠️ Title:</strong> Content...</div>
+- Success box: <div class="tn-success-box"><strong>✅ Title:</strong> Content...</div>
+- Code block: <div class="tn-code-block"><span class="tn-code-label">Label</span><pre>code here</pre></div>
+- Comparison table: <table class="tn-comparison-table"><thead><tr><th>Col1</th>...</tr></thead><tbody><tr><td>Data</td>...</tr></tbody></table>
+- Step heading: <h2 id="step-x"><span class="tn-step-number">1</span> Step Title</h2>
+- Conclusion: <div class="tn-conclusion"><h2>Title</h2><p>Text</p><ul><li>✅ Point</li></ul></div>
+- Tags: <span class="tn-tag">TagName</span>
+- Regular elements: <p>, <ul>, <ol>, <li>, <strong>, <em>, <code>, <a href="">
 
 IMAGE PLACEHOLDERS (2-4 per post):
-- Use: <figure class="ai-image" data-query="descriptive english search query" style="margin:1.5em 0;text-align:center;"><figcaption style="font-size:0.85em;color:#718096;margin-top:0.5em;font-style:italic;">Caption text</figcaption></figure>
-- data-query: 2-5 English words for stock photo search (e.g. "coding laptop workspace", "team collaboration office")
+- Use: <figure class="ai-image tn-cf-figure" data-query="2-5 english words for stock photo"><figcaption class="tn-cf-figcaption">Caption</figcaption></figure>
 
-Do NOT include <style>, <html>, <head>, or <body> tags.
+RULES:
+- Do NOT use inline style= attributes (CSS is external)
+- Do NOT include <style>, <html>, <head>, or <body>
+- Use emojis in headings for visual appeal
+- Make content engaging with callout boxes, tables, code blocks
+- Include a TOC linking to section IDs
 
 Return valid JSON only (no markdown fences):
 {
-  "blogContent": "<div style='...'>...full inline-styled HTML...</div>",
+  "blogContent": "<div class='tn-cf-post'>...HTML content...</div>",
   "blogCss": "",
   "metaDescription": "SEO meta description (150-160 chars)",
   "fbExcerpt": "Facebook excerpt (max 200 chars, engaging)",

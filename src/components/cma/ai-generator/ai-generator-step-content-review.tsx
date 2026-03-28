@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft, Save, Eye, Code2 } from "lucide-react";
+import { TONYTECHLAB_CUSTOM_CSS } from "@/lib/cma/themes/tonytechlab-custom-css";
 
 interface ContentReviewStepProps {
   blogContent: string;
@@ -20,11 +21,13 @@ interface ContentReviewStepProps {
   loading: boolean;
 }
 
-// Build a full preview document combining HTML + CSS
+// Build a full preview document with TonyTechLab template CSS + any custom CSS
 function buildPreviewDoc(html: string, css: string): string {
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<style>body{margin:16px;font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;line-height:1.6}img{max-width:100%;height:auto}${css}</style>
+<style>body{margin:16px;font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;line-height:1.6}img{max-width:100%;height:auto}
+${TONYTECHLAB_CUSTOM_CSS}
+${css}</style>
 </head><body>${html}</body></html>`;
 }
 

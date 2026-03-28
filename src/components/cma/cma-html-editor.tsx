@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Code2, Eye, EyeOff, Maximize2, Minimize2 } from "lucide-react";
+import { TONYTECHLAB_CUSTOM_CSS } from "@/lib/cma/themes/tonytechlab-custom-css";
 
 // Content stored as JSON with separate html/css/js sections
 export interface HtmlEditorContent {
@@ -53,6 +54,7 @@ function buildPreviewDoc(content: HtmlEditorContent): string {
   <style>
     body { margin: 16px; font-family: system-ui, -apple-system, sans-serif; color: #1a1a1a; line-height: 1.6; }
     img { max-width: 100%; height: auto; }
+    ${TONYTECHLAB_CUSTOM_CSS}
     ${content.css}
   </style>
 </head>

@@ -8,6 +8,7 @@ import { blocksToSanitizedHtml } from "../blocks-to-html";
 import { blocksToStyledHtml } from "../themes/apply-theme-styles";
 import { markdownToThemedHtml } from "../themes/apply-theme-to-markdown-html";
 import { resolveImagePlaceholders, fetchAndUploadFeaturedImage } from "./image-resolution-service";
+import { TONYTECHLAB_CUSTOM_CSS } from "../themes/tonytechlab-custom-css";
 
 export interface PublishRequest {
   postId: string;
@@ -75,11 +76,12 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
       htmlContent = blocksToStyledHtml(blocks, post.styleTheme || "default");
     } else if (post.contentFormat === "html") {
       // HTML format: content is JSON { html, css, js }
-      // WordPress strips <style>/<script> tags, so only use the HTML body.
-      // AI-generated posts use inline styles; CSS field kept for preview only.
+      // Prepend TonyTechLab template CSS + any custom CSS, then the HTML body
       try {
         const parsed = JSON.parse(post.content);
-        htmlContent = parsed.html || "";
+        const customCss = parsed.css ? parsed.css : "";
+        const allCss = TONYTECHLAB_CUSTOM_CSS + (customCss ? `\n${customCss}` : "");
+        htmlContent = `<style>${allCss}</style>\n${parsed.html || ""}`;
       } catch {
         // Fallback: treat as raw HTML string
         htmlContent = post.content;

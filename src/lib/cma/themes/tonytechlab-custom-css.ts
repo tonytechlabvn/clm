@@ -6,6 +6,30 @@ export const TONYTECHLAB_CUSTOM_CSS = `
 /* TonyTechLab Theme — Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
+/* AI-Generated Post Container */
+.tn-cf-post { font-family: 'Poppins', sans-serif; max-width: 860px; margin: 0 auto; line-height: 1.8; color: #2d3748; }
+.tn-cf-post h2 { font-family: 'Libre Baskerville', Georgia, serif; font-size: 1.8em; font-weight: 700; color: #1a365d; margin-top: 2.5em; margin-bottom: 0.8em; padding-bottom: 0.3em; border-bottom: 3px solid #f6ad55; }
+.tn-cf-post h3 { font-family: 'Libre Baskerville', Georgia, serif; font-size: 1.3em; font-weight: 600; color: #2c5282; margin-top: 1.8em; }
+.tn-cf-post p { margin: 0 0 1.3em; line-height: 1.8; font-size: 1.05em; }
+.tn-cf-post ul, .tn-cf-post ol { margin: 0 0 1.3em; padding-left: 1.5em; }
+.tn-cf-post li { margin: 0.4em 0; line-height: 1.8; }
+.tn-cf-post a { color: #3182ce; text-decoration: none; }
+.tn-cf-post a:hover { color: #2b6cb0; text-decoration: underline; }
+.tn-cf-post code { background: #edf2f7; padding: 3px 7px; border-radius: 6px; font-size: 0.88em; font-family: 'JetBrains Mono', monospace; }
+.tn-cf-post blockquote { border-left: 4px solid #3182ce; padding: 16px 20px; margin: 1.5em 0; background: #ebf8ff; border-radius: 0 10px 10px 0; color: #2a4365; }
+
+/* Intro Box */
+.tn-cf-intro { font-style: italic; font-size: 1.15em; padding: 1.2em 1.5em; border-left: 4px solid #3182ce; background: linear-gradient(135deg, #ebf8ff, #e2e8f0); border-radius: 0 8px 8px 0; margin: 1.5em 0; }
+
+/* Figure with shadow */
+.tn-cf-figure { margin: 2em 0; text-align: center; }
+.tn-cf-figure img { max-width: 100%; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); transition: transform 0.3s ease; }
+.tn-cf-figure img:hover { transform: scale(1.02); }
+.tn-cf-figcaption { font-style: italic; color: #718096; margin-top: 0.8em; font-size: 0.9em; }
+
+/* Responsive */
+@media (max-width: 768px) { .tn-cf-post h2 { font-size: 1.4em; } .tn-cf-intro { font-size: 1em; padding: 1em; } }
+
 /* Callout Boxes — shared base */
 .tn-highlight-box, .tn-warning-box, .tn-success-box {
   padding: 1.2em 1.5em;
