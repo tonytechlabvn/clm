@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { BlockNoteEditor, type Block, type PartialBlock } from "@blocknote/core";
+import { useEffect } from "react";
+import type { Block, PartialBlock } from "@blocknote/core";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
+import { SuggestionMenuController, getDefaultReactSlashMenuItems } from "@blocknote/react";
+import { cmaSchema } from "@/lib/cma/blocks/custom-block-schema";
+import { getCustomSlashMenuItems } from "./cma-custom-block-toolbar";
 
 // Scoped CSS import — only loaded when this component renders
 import "@blocknote/core/fonts/inter.css";
@@ -30,6 +33,7 @@ async function uploadFile(file: File, orgId?: string): Promise<string> {
 
 export function CmaBlockEditor({ initialContent, onChange, orgId }: CmaBlockEditorProps) {
   const editor = useCreateBlockNote({
+    schema: cmaSchema,
     uploadFile: (file: File) => uploadFile(file, orgId),
   });
 
@@ -42,14 +46,25 @@ export function CmaBlockEditor({ initialContent, onChange, orgId }: CmaBlockEdit
   // Notify parent when content changes
   useEffect(() => {
     const handler = () => {
-      onChange(editor.document);
+      onChange(editor.document as any);
     };
     editor.onEditorContentChange(handler);
   }, [editor, onChange]);
 
   return (
     <div className="bn-container" data-color-mode="light">
-      <BlockNoteView editor={editor} theme="light" />
+      <BlockNoteView editor={editor} theme="light" slashMenu={false}>
+        <SuggestionMenuController
+          triggerCharacter="/"
+          getItems={async (query) =>
+            [...getDefaultReactSlashMenuItems(editor), ...getCustomSlashMenuItems(editor)]
+              .filter((item) =>
+                item.title.toLowerCase().includes(query.toLowerCase()) ||
+                item.aliases?.some((a: string) => a.includes(query.toLowerCase()))
+              )
+          }
+        />
+      </BlockNoteView>
     </div>
   );
 }

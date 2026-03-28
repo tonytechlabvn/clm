@@ -5,6 +5,7 @@ import { unified } from "unified";
 import rehypeParse from "rehype-parse";
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
+import { isCustomBlockType, renderCustomBlockHtml } from "./blocks/custom-blocks-to-html";
 
 // Reuse same sanitization schema as markdown pipeline for consistency
 const sanitizeSchema = {
@@ -15,6 +16,7 @@ const sanitizeSchema = {
     "ul", "ol", "li", "em", "strong", "br", "hr",
     "table", "thead", "tbody", "tr", "th", "td",
     "figure", "figcaption", "span",
+    "nav", "section", "s", "u",
   ],
   attributes: {
     ...defaultSchema.attributes,
@@ -23,8 +25,8 @@ const sanitizeSchema = {
     code: ["className"],
     th: ["align"],
     td: ["align"],
-    // Allow style attr for themed publishing (Phase 4)
-    "*": [...(defaultSchema.attributes?.["*"] || []), "style"],
+    // Allow style + class attrs for themed publishing and custom blocks
+    "*": [...(defaultSchema.attributes?.["*"] || []), "style", "className", "id"],
   },
   protocols: {
     href: ["http", "https", "mailto"],
@@ -87,23 +89,25 @@ interface BlockNode {
   children?: BlockNode[];
 }
 
-function renderBlock(block: BlockNode): string {
+function renderBlock(block: BlockNode, allBlocks: BlockNode[]): string {
   const content = renderInlineContent(block.content);
   const props = block.props || {};
 
   switch (block.type) {
     case "heading": {
       const level = Math.min(Math.max(Number(props.level) || 1, 1), 6);
-      return `<h${level}>${content}</h${level}>`;
+      const id = slugify(stripInlineToText(block.content));
+      const idAttr = id ? ` id="${id}"` : "";
+      return `<h${level}${idAttr}>${content}</h${level}>`;
     }
     case "paragraph":
       return `<p>${content || "<br>"}</p>`;
 
     case "bulletListItem":
-      return `<li>${content}${renderChildren(block.children)}</li>`;
+      return `<li>${content}${renderChildren(block.children, allBlocks)}</li>`;
 
     case "numberedListItem":
-      return `<li>${content}${renderChildren(block.children)}</li>`;
+      return `<li>${content}${renderChildren(block.children, allBlocks)}</li>`;
 
     case "checkListItem": {
       const checked = props.checked ? " checked" : "";
@@ -141,14 +145,31 @@ function renderBlock(block: BlockNode): string {
     }
 
     default:
-      // Unknown block types render as paragraph
+      // Custom blocks (callout, step, conclusion, toc)
+      if (isCustomBlockType(block.type)) {
+        return renderCustomBlockHtml(
+          block,
+          { escapeHtml, renderInline: (c) => renderInlineContent(c as InlineContent[] | undefined) },
+          allBlocks
+        );
+      }
       return content ? `<p>${content}</p>` : "";
   }
 }
 
-function renderChildren(children: BlockNode[] | undefined): string {
+function renderChildren(children: BlockNode[] | undefined, allBlocks: BlockNode[]): string {
   if (!children?.length) return "";
-  return children.map(renderBlock).join("");
+  return children.map((b) => renderBlock(b, allBlocks)).join("");
+}
+
+// Extract plain text from inline content for slug generation
+function stripInlineToText(items: InlineContent[] | undefined): string {
+  if (!items?.length) return "";
+  return items.map((item) => item.text || "").join("");
+}
+
+function slugify(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
 // Groups consecutive list items into <ul>/<ol> wrappers
@@ -174,10 +195,10 @@ function wrapListItems(blocks: BlockNode[]): string {
         flushList();
       }
       currentListType = listType;
-      listItems.push(renderBlock(block));
+      listItems.push(renderBlock(block, blocks));
     } else {
       flushList();
-      result.push(renderBlock(block));
+      result.push(renderBlock(block, blocks));
     }
   }
   flushList();

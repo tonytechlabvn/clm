@@ -56,6 +56,12 @@ function Section({ title, icon: Icon, children, defaultOpen = true }: {
   );
 }
 
+const THEME_DESCRIPTIONS: Record<string, string> = {
+  default: "Clean, minimal sans-serif layout",
+  editorial: "Classic serif editorial style",
+  tonytechlab: "Blue gradients, callouts, step badges — TonyTechLab brand",
+};
+
 export function CmaComposerSidebar({
   featuredImage,
   onFeaturedImageClick,
@@ -98,21 +104,21 @@ export function CmaComposerSidebar({
         )}
       </Section>
 
-      {/* Style Theme — only for block posts */}
-      {contentFormat === "blocks" && (
-        <Section title="Style Theme" icon={Palette}>
-          <select
-            value={styleTheme}
-            onChange={(e) => onStyleThemeChange(e.target.value)}
-            className="w-full rounded-md border px-3 py-2 text-sm bg-background"
-          >
-            {themes.map((t) => (
-              <option key={t.name} value={t.name}>{t.label}</option>
-            ))}
-          </select>
-          <p className="text-xs text-muted-foreground">Applied when publishing to WordPress</p>
-        </Section>
-      )}
+      {/* Style Theme — available for all content formats */}
+      <Section title="Style Theme" icon={Palette}>
+        <select
+          value={styleTheme}
+          onChange={(e) => onStyleThemeChange(e.target.value)}
+          className="w-full rounded-md border px-3 py-2 text-sm bg-background"
+        >
+          {themes.map((t) => (
+            <option key={t.name} value={t.name}>{t.label}</option>
+          ))}
+        </select>
+        <p className="text-xs text-muted-foreground">
+          {THEME_DESCRIPTIONS[styleTheme] || "Applied when publishing"}
+        </p>
+      </Section>
 
       {/* Post Details */}
       <Section title="Details" icon={FileText}>

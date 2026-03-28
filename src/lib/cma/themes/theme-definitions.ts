@@ -1,6 +1,8 @@
 // Style theme definitions for CMA styled publishing
 // Each theme maps HTML elements to inline CSS style strings for WordPress compatibility
 
+import { TONYTECHLAB_CUSTOM_CSS } from "./tonytechlab-custom-css";
+
 export interface ThemeStyles {
   name: string;
   label: string;
@@ -23,6 +25,9 @@ export interface ThemeStyles {
   hr: string;
   figure: string;
   figcaption: string;
+  // Optional CSS stylesheet for themes using class-based custom blocks
+  // Generated programmatically from trusted definitions, not user-supplied
+  customStyleSheet?: string;
 }
 
 export const THEMES: Record<string, ThemeStyles> = {
@@ -48,6 +53,31 @@ export const THEMES: Record<string, ThemeStyles> = {
     hr: "border: none; border-top: 2px solid #e2e8f0; margin: 2.5em 0;",
     figure: "margin: 1.5em 0; text-align: center;",
     figcaption: "font-size: 0.85em; color: #64748b; margin-top: 0.5em; font-style: italic;",
+  },
+
+  tonytechlab: {
+    name: "tonytechlab",
+    label: "TonyTechLab",
+    wrapper: "font-family: 'Poppins', -apple-system, sans-serif; color: #2d3748; line-height: 1.8; max-width: 760px; margin: 0 auto; padding: 32px 24px;",
+    h1: "font-family: 'Libre Baskerville', Georgia, serif; font-size: 2.4em; font-weight: 700; color: #1a365d; letter-spacing: -0.02em; line-height: 1.2; margin: 0 0 0.6em;",
+    h2: "font-family: 'Libre Baskerville', Georgia, serif; font-size: 1.7em; font-weight: 600; color: #1a365d; margin: 1.8em 0 0.6em; padding-bottom: 0.3em; border-bottom: 3px solid #f6ad55;",
+    h3: "font-family: 'Libre Baskerville', Georgia, serif; font-size: 1.3em; font-weight: 600; color: #2d3748; margin: 1.5em 0 0.4em;",
+    p: "margin: 0 0 1.3em; line-height: 1.8; font-size: 1.05em;",
+    a: "color: #3182ce; text-decoration: none; border-bottom: 1px solid #90cdf4;",
+    img: "max-width: 100%; height: auto; border-radius: 10px; margin: 1.5em 0;",
+    code: "background: #edf2f7; padding: 3px 7px; border-radius: 6px; font-size: 0.88em; font-family: 'JetBrains Mono', 'Fira Code', monospace; color: #2d3748;",
+    pre: "background: #1a202c; color: #e2e8f0; padding: 20px 24px; border-radius: 10px; overflow-x: auto; margin: 1.5em 0; font-size: 0.9em; line-height: 1.6;",
+    blockquote: "border-left: 4px solid #3182ce; padding: 16px 20px; margin: 1.5em 0; background: #ebf8ff; border-radius: 0 10px 10px 0; color: #2a4365; line-height: 1.7;",
+    ul: "margin: 0 0 1.3em; padding-left: 1.5em;",
+    ol: "margin: 0 0 1.3em; padding-left: 1.5em;",
+    li: "margin: 0.4em 0; line-height: 1.8;",
+    table: "width: 100%; border-collapse: collapse; margin: 1.5em 0; border-radius: 10px;",
+    th: "padding: 12px 16px; font-weight: 600; text-align: left; color: #1a365d; border-bottom: 2px solid #2d3748;",
+    td: "padding: 10px 16px; border-bottom: 1px solid #e2e8f0;",
+    hr: "border: none; border-top: 2px solid #e2e8f0; margin: 2.5em 0;",
+    figure: "margin: 1.5em 0; text-align: center;",
+    figcaption: "font-size: 0.85em; color: #718096; margin-top: 0.5em; font-style: italic;",
+    customStyleSheet: TONYTECHLAB_CUSTOM_CSS,
   },
 
   editorial: {
@@ -113,4 +143,12 @@ export function getTheme(name: string): ThemeStyles {
 
 export function getAvailableThemes(): { name: string; label: string }[] {
   return Object.values(THEMES).map((t) => ({ name: t.name, label: t.label }));
+}
+
+// Returns <style> block for themes with customStyleSheet, or null
+export function getThemeStyleBlock(themeName: string): string | null {
+  const theme = getTheme(themeName);
+  return theme.customStyleSheet
+    ? `<style>${theme.customStyleSheet}</style>`
+    : null;
 }

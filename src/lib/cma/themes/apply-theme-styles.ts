@@ -2,7 +2,8 @@
 // Generates styled HTML directly by re-rendering blocks with inline CSS
 
 import type { ThemeStyles } from "./theme-definitions";
-import { getTheme, sanitizeStyleString } from "./theme-definitions";
+import { getTheme, getThemeStyleBlock, sanitizeStyleString } from "./theme-definitions";
+import { isCustomBlockType, renderCustomBlockHtml } from "../blocks/custom-blocks-to-html";
 
 interface InlineContent {
   type: string;
@@ -53,7 +54,7 @@ function renderInline(items: InlineContent[] | undefined, theme: ThemeStyles): s
   }).join("");
 }
 
-function renderStyledBlock(block: BlockNode, theme: ThemeStyles): string {
+function renderStyledBlock(block: BlockNode, theme: ThemeStyles, allBlocks: BlockNode[]): string {
   const content = renderInline(block.content, theme);
   const props = block.props || {};
 
@@ -62,14 +63,16 @@ function renderStyledBlock(block: BlockNode, theme: ThemeStyles): string {
       const level = Math.min(Math.max(Number(props.level) || 1, 1), 6);
       const hKey = `h${level}` as keyof ThemeStyles;
       const hStyle = (theme[hKey] as string) || theme.h3;
-      return `<h${level}${s(hStyle)}>${content}</h${level}>`;
+      const id = slugify(stripInlineToText(block.content));
+      const idAttr = id ? ` id="${id}"` : "";
+      return `<h${level}${idAttr}${s(hStyle)}>${content}</h${level}>`;
     }
     case "paragraph":
       return `<p${s(theme.p)}>${content || "<br>"}</p>`;
     case "bulletListItem":
-      return `<li${s(theme.li)}>${content}${renderStyledChildren(block.children, theme)}</li>`;
+      return `<li${s(theme.li)}>${content}${renderStyledChildren(block.children, theme, allBlocks)}</li>`;
     case "numberedListItem":
-      return `<li${s(theme.li)}>${content}${renderStyledChildren(block.children, theme)}</li>`;
+      return `<li${s(theme.li)}>${content}${renderStyledChildren(block.children, theme, allBlocks)}</li>`;
     case "checkListItem": {
       const checked = props.checked ? " checked" : "";
       return `<li${s(theme.li)}><input type="checkbox"${checked} disabled> ${content}</li>`;
@@ -99,16 +102,35 @@ function renderStyledBlock(block: BlockNode, theme: ThemeStyles): string {
       });
       const thead = rows.length > 0 ? `<thead>${rows[0]}</thead>` : "";
       const tbody = rows.length > 1 ? `<tbody>${rows.slice(1).join("")}</tbody>` : "";
-      return `<table${s(theme.table)}>${thead}${tbody}</table>`;
+      // TonyTechLab theme adds comparison table class for gradient headers
+      const tableClass = theme.name === "tonytechlab" ? ' class="tn-comparison-table"' : "";
+      return `<table${tableClass}${s(theme.table)}>${thead}${tbody}</table>`;
     }
     default:
+      // Custom blocks (callout, step, conclusion, toc)
+      if (isCustomBlockType(block.type)) {
+        return renderCustomBlockHtml(
+          block,
+          { escapeHtml: esc, renderInline: (items) => renderInline(items as InlineContent[], theme) },
+          allBlocks
+        );
+      }
       return content ? `<p${s(theme.p)}>${content}</p>` : "";
   }
 }
 
-function renderStyledChildren(children: BlockNode[] | undefined, theme: ThemeStyles): string {
+function renderStyledChildren(children: BlockNode[] | undefined, theme: ThemeStyles, allBlocks: BlockNode[]): string {
   if (!children?.length) return "";
-  return children.map((b) => renderStyledBlock(b, theme)).join("");
+  return children.map((b) => renderStyledBlock(b, theme, allBlocks)).join("");
+}
+
+function stripInlineToText(items: InlineContent[] | undefined): string {
+  if (!items?.length) return "";
+  return items.map((item) => item.text || "").join("");
+}
+
+function slugify(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
 // Wraps consecutive list items with styled <ul>/<ol>
@@ -133,10 +155,10 @@ function wrapStyledListItems(blocks: BlockNode[], theme: ThemeStyles): string {
       const lt = block.type === "numberedListItem" ? "numberedListItem" : "bulletListItem";
       if (listType && listType !== lt) flush();
       listType = lt;
-      items.push(renderStyledBlock(block, theme));
+      items.push(renderStyledBlock(block, theme, blocks));
     } else {
       flush();
-      result.push(renderStyledBlock(block, theme));
+      result.push(renderStyledBlock(block, theme, blocks));
     }
   }
   flush();
@@ -144,8 +166,11 @@ function wrapStyledListItems(blocks: BlockNode[], theme: ThemeStyles): string {
 }
 
 // Converts BlockNote blocks to themed inline-styled HTML for WordPress
+// Prepends <style> block for themes with customStyleSheet (e.g. tonytechlab)
 export function blocksToStyledHtml(blocks: BlockNode[], themeName: string): string {
   const theme = getTheme(themeName);
   const body = wrapStyledListItems(blocks, theme);
-  return `<div${s(theme.wrapper)}>\n${body}\n</div>`;
+  const styleBlock = getThemeStyleBlock(themeName);
+  const prefix = styleBlock ? `${styleBlock}\n` : "";
+  return `${prefix}<div${s(theme.wrapper)}>\n${body}\n</div>`;
 }
