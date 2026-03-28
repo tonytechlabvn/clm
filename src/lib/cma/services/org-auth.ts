@@ -3,6 +3,7 @@
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma-client";
 import { NextResponse } from "next/server";
+import { authOptions } from "@/lib/auth-options";
 
 export interface OrgAuthContext {
   userId: string;
@@ -20,7 +21,7 @@ export interface OrgAuthContext {
 export async function withOrgAuth(
   orgId: string
 ): Promise<OrgAuthContext | NextResponse> {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.dbUserId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -66,7 +67,7 @@ export async function withOrgAuth(
 export async function withAdminAuth(): Promise<
   { userId: string; userRole: string } | NextResponse
 > {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.dbUserId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

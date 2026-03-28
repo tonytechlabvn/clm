@@ -35,6 +35,10 @@ export default function CmaComposerPage() {
   const accounts = accountsData?.accounts || [];
 
   async function handleSaveDraft() {
+    if (!org?.id) {
+      setError("No organization found. Go to Connections to set up your account first.");
+      return;
+    }
     if (!title.trim() || !content.trim()) {
       setError("Title and content are required");
       return;
@@ -62,6 +66,7 @@ export default function CmaComposerPage() {
   }
 
   async function handlePublish() {
+    if (!org?.id) { setError("No organization found. Go to Connections to set up your account first."); return; }
     if (!accountId) { setError("Select a platform account first"); return; }
     if (!title.trim() || !content.trim()) { setError("Title and content are required"); return; }
     setPublishing(true);
