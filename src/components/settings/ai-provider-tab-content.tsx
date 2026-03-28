@@ -49,10 +49,13 @@ export function AiProviderTabContent({
           <Check className="h-4 w-4" /> Currently active provider
         </div>
       ) : (
-        <Button variant="outline" size="sm" onClick={onSetActive}>
-          <Zap className="h-4 w-4 mr-1" />
-          Set {providerLabel} as active provider
-        </Button>
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 flex items-center justify-between">
+          <p className="text-sm text-amber-700">This provider is not active. Click to make it the default.</p>
+          <Button variant="default" size="sm" onClick={onSetActive} className="ml-3 bg-amber-600 hover:bg-amber-700">
+            <Zap className="h-4 w-4 mr-1" />
+            Set as Active
+          </Button>
+        </div>
       )}
 
       {/* Model input with presets dropdown */}
