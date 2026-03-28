@@ -169,17 +169,29 @@ Return valid JSON only (no markdown fences):
   };
 }
 
-/** Safely parse JSON from AI response */
+/** Safely parse JSON from AI response — handles control characters in string values */
 function parseJsonSafe(text: string): Record<string, unknown> {
   let cleaned = text.trim();
   if (cleaned.startsWith("```")) {
     cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
   }
+  // Extract JSON object if surrounded by other text
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (jsonMatch) cleaned = jsonMatch[0];
+
+  // Fix control characters inside JSON string values:
+  // Real newlines/tabs inside strings must be escaped for JSON.parse
+  cleaned = cleaned.replace(
+    /"(?:[^"\\]|\\.)*"/g,
+    (match) => match
+      .replace(/\n/g, "\\n")
+      .replace(/\r/g, "\\r")
+      .replace(/\t/g, "\\t")
+  );
+
   try {
     return JSON.parse(cleaned);
   } catch {
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
     throw new Error("Failed to parse AI response as JSON");
   }
 }
