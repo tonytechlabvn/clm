@@ -30,9 +30,14 @@ async function uploadFile(file: File, orgId?: string): Promise<string> {
 
 export function CmaBlockEditor({ initialContent, onChange, orgId }: CmaBlockEditorProps) {
   const editor = useCreateBlockNote({
-    initialContent: initialContent && initialContent.length > 0 ? initialContent : undefined,
     uploadFile: (file: File) => uploadFile(file, orgId),
   });
+
+  // Apply initialContent when it changes (e.g. template selection)
+  useEffect(() => {
+    if (!initialContent || initialContent.length === 0) return;
+    editor.replaceBlocks(editor.document, initialContent);
+  }, [editor, initialContent]);
 
   // Notify parent when content changes
   useEffect(() => {
