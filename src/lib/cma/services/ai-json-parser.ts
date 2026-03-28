@@ -3,6 +3,11 @@
 
 /** Safely parse JSON from AI response text */
 export function parseAiJson(text: string): Record<string, unknown> {
+  if (!text || !text.trim()) {
+    console.error("[parseAiJson] Received empty AI response");
+    throw new Error("AI returned empty response. Try again or use a different model.");
+  }
+
   let cleaned = text.trim();
 
   // Strip markdown code fences
@@ -12,7 +17,11 @@ export function parseAiJson(text: string): Record<string, unknown> {
 
   // Extract JSON object if surrounded by other text
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-  if (jsonMatch) cleaned = jsonMatch[0];
+  if (!jsonMatch) {
+    console.error("[parseAiJson] No JSON object found. Response:", cleaned.slice(0, 500));
+    throw new Error("AI response did not contain valid JSON. Try again.");
+  }
+  cleaned = jsonMatch[0];
 
   // Attempt 1: direct parse
   try {

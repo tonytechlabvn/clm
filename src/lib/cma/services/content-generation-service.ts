@@ -155,7 +155,9 @@ Return valid JSON only (no markdown fences):
   const fullPrompt = `${systemPrompt}\n\n${userMessage}`;
 
   const ai = await getActiveAiConfig();
-  const result = await callAI(ai.provider, ai.apiKey, fullPrompt, 8192, ai.model);
+  console.log(`[generateFullContent] Using ${ai.provider}/${ai.model}`);
+  const result = await callAI(ai.provider, ai.apiKey, fullPrompt, 16384, ai.model);
+  console.log(`[generateFullContent] Response length: ${result.text.length}, tokens: ${result.usage.totalTokens}`);
   await trackTokenUsage(orgId, result.usage.totalTokens);
 
   const parsed = parseAiJson(result.text);

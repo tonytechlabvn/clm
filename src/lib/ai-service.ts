@@ -97,7 +97,25 @@ async function callGeminiWithApiKey(
           ),
         ]);
         const response = result.response;
-        const text = response.text();
+
+        // Check if response was blocked by safety filters
+        if (response.promptFeedback?.blockReason) {
+          throw new Error(`AI response blocked: ${response.promptFeedback.blockReason}. Try rephrasing your content.`);
+        }
+
+        let text: string;
+        try {
+          text = response.text();
+        } catch {
+          // response.text() throws when no candidates exist (safety block or empty response)
+          const finishReason = response.candidates?.[0]?.finishReason;
+          throw new Error(`AI returned empty response${finishReason ? ` (reason: ${finishReason})` : ""}. Try again or use a different model.`);
+        }
+
+        if (!text.trim()) {
+          throw new Error("AI returned empty response. Try again or use a different model.");
+        }
+
         const meta = response.usageMetadata;
         return {
           text,
