@@ -1,8 +1,8 @@
-// BlockNote custom block: Numbered step with circular gradient badge
-// Badge number is editable via input; body supports rich text
+// BlockNote custom block: Step with numbered circle badge
+// Badge is an editable number input styled as a gradient circle
 
-import { defaultProps } from "@blocknote/core";
 import { createReactBlockSpec } from "@blocknote/react";
+import { defaultProps } from "@blocknote/core";
 
 export const StepBlock = createReactBlockSpec(
   {
@@ -20,13 +20,15 @@ export const StepBlock = createReactBlockSpec(
           type="number"
           value={block.props.stepNumber}
           onChange={(e) => editor.updateBlock(block, { props: { stepNumber: Number(e.target.value) || 1 } })}
-          min={1} max={99}
+          min={1}
+          max={99}
           contentEditable={false}
           style={{
             width: 36, height: 36, borderRadius: "50%",
             background: "linear-gradient(135deg, #3182ce, #2b6cb0)",
             color: "white", textAlign: "center", fontWeight: 700,
             border: "none", fontSize: "0.95em", flexShrink: 0,
+            cursor: "pointer",
           }}
         />
         <div ref={contentRef} style={{ flex: 1 }} />

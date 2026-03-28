@@ -1,5 +1,5 @@
 // BlockNote custom block: Table of Contents placeholder
-// Shows a non-editable placeholder in editor; actual TOC is auto-generated at publish time
+// Content is auto-generated from headings at publish time (see custom-blocks-to-html.ts)
 
 import { createReactBlockSpec } from "@blocknote/react";
 
@@ -13,8 +13,10 @@ export const TocBlock = createReactBlockSpec(
     render: () => (
       <div style={{
         background: "linear-gradient(135deg, #f7fafc, #edf2f7)",
-        padding: "1.2em 1.5em", borderRadius: "12px",
-        border: "1px dashed #cbd5e0", margin: "1em 0",
+        padding: "1.2em 1.5em",
+        borderRadius: "12px",
+        border: "1px dashed #cbd5e0",
+        margin: "1em 0",
       }}>
         <div style={{ fontWeight: 600, color: "#4a5568", fontSize: "0.95em" }}>
           Table of Contents

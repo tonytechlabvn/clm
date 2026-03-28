@@ -1,13 +1,13 @@
-// BlockNote custom block: Callout box (info/warning/success variants)
-// Renders colored callout with variant selector, title input, and rich-text body
+// BlockNote custom block: Callout (info/warning/success)
+// Renders colored highlight box with icon, variant selector, and editable title
 
-import { defaultProps } from "@blocknote/core";
 import { createReactBlockSpec } from "@blocknote/react";
+import { defaultProps } from "@blocknote/core";
 
-const VARIANT_STYLES: Record<string, { bg: string; border: string }> = {
-  info: { bg: "#ebf8ff", border: "#3182ce" },
-  warning: { bg: "#fffbeb", border: "#d97706" },
-  success: { bg: "#f0fff4", border: "#38a169" },
+const VARIANT_STYLES: Record<string, { bg: string; border: string; icon: string }> = {
+  info: { bg: "#ebf8ff", border: "#3182ce", icon: "\u{1F4A1}" },
+  warning: { bg: "#fffbeb", border: "#d97706", icon: "\u26A0\uFE0F" },
+  success: { bg: "#f0fff4", border: "#38a169", icon: "\u2705" },
 };
 
 export const CalloutBlock = createReactBlockSpec(
@@ -25,19 +25,22 @@ export const CalloutBlock = createReactBlockSpec(
       const v = VARIANT_STYLES[block.props.variant] || VARIANT_STYLES.info;
       return (
         <div style={{
-          background: v.bg, borderLeft: `4px solid ${v.border}`,
-          borderRadius: "10px", padding: "1em 1.2em", margin: "1em 0",
+          background: v.bg,
+          borderLeft: `4px solid ${v.border}`,
+          borderRadius: "10px",
+          padding: "1em 1.2em",
+          margin: "1em 0",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5em", marginBottom: "0.4em" }}>
             <select
               value={block.props.variant}
-              onChange={(e) => editor.updateBlock(block, { props: { variant: e.target.value as "info" | "warning" | "success" } })}
+              onChange={(e) => editor.updateBlock(block, { props: { variant: e.target.value as any } })}
               style={{ fontSize: "0.8em", padding: "2px 4px", borderRadius: 4, border: "1px solid #ccc" }}
               contentEditable={false}
             >
-              <option value="info">Info</option>
-              <option value="warning">Warning</option>
-              <option value="success">Success</option>
+              <option value="info">{"\u{1F4A1}"} Info</option>
+              <option value="warning">{"\u26A0\uFE0F"} Warning</option>
+              <option value="success">{"\u2705"} Success</option>
             </select>
             <input
               type="text"
