@@ -79,7 +79,8 @@ export default function AiSettingsPage() {
     setTokensRewrite(data.maxTokensRewrite);
   }, [data]);
 
-  const activeModelLabel = PROVIDER_MODELS[active]?.find((m) => m.id === models[active])?.label || models[active];
+  const activeModelEntry = PROVIDER_MODELS[active]?.find((m) => m.id === models[active]);
+  const activeModelLabel = activeModelEntry?.label || models[active] || "Not configured";
   const activeProviderLabel = TABS.find((t) => t.id === active)?.label || active;
 
   async function handleSave() {
