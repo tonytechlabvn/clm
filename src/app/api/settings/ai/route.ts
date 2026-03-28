@@ -32,8 +32,8 @@ export async function PUT(request: Request) {
   const auth = await withAdminAuth();
   if (auth instanceof NextResponse) return auth;
 
-  if (auth.userRole !== "root") {
-    return NextResponse.json({ error: "Only root users can modify AI settings" }, { status: 403 });
+  if (auth.userRole !== "root" && auth.userRole !== "admin") {
+    return NextResponse.json({ error: "Only root or admin users can modify AI settings" }, { status: 403 });
   }
 
   try {
