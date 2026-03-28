@@ -6,6 +6,7 @@ import { callAI } from "@/lib/ai-service";
 import { getActiveAiConfig } from "@/lib/ai-settings-service";
 import { extractContent, sanitizeExtractedText } from "./crawler-service";
 import { checkAiBudget, trackTokenUsage } from "./content-ai-service";
+import { parseAiJson } from "./ai-json-parser";
 
 export type SourceType = "url" | "text" | "image" | "video";
 
@@ -221,7 +222,7 @@ export async function extractAndSummarizeSource(
   const result = await callAI(ai.provider, ai.apiKey, fullPrompt, 2048, ai.model);
   await trackTokenUsage(orgId, result.usage.totalTokens);
 
-  const parsed = parseJsonSafe(result.text);
+  const parsed = parseAiJson(result.text);
 
   return {
     sourceType: detectedType,
@@ -236,17 +237,3 @@ export async function extractAndSummarizeSource(
   };
 }
 
-/** Safely parse JSON from AI response */
-function parseJsonSafe(text: string): Record<string, unknown> {
-  let cleaned = text.trim();
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-  }
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
-    throw new Error("Failed to parse AI response as JSON");
-  }
-}

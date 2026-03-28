@@ -4,6 +4,7 @@
 import { callAI } from "@/lib/ai-service";
 import { getActiveAiConfig } from "@/lib/ai-settings-service";
 import { checkAiBudget, trackTokenUsage } from "./content-ai-service";
+import { parseAiJson } from "./ai-json-parser";
 
 export type ContentTone = "professional" | "casual" | "technical" | "educational";
 
@@ -73,7 +74,7 @@ Target length: ~${targetWordCount} words`;
   const result = await callAI(ai.provider, ai.apiKey, fullPrompt, 2048, ai.model);
   await trackTokenUsage(orgId, result.usage.totalTokens);
 
-  const parsed = parseJsonSafe(result.text);
+  const parsed = parseAiJson(result.text);
   return {
     title: String(parsed.title || topic),
     metaDescription: String(parsed.metaDescription || "").slice(0, 160),
@@ -157,7 +158,7 @@ Return valid JSON only (no markdown fences):
   const result = await callAI(ai.provider, ai.apiKey, fullPrompt, 8192, ai.model);
   await trackTokenUsage(orgId, result.usage.totalTokens);
 
-  const parsed = parseJsonSafe(result.text);
+  const parsed = parseAiJson(result.text);
   return {
     blogContent: String(parsed.blogContent || ""),
     blogCss: String(parsed.blogCss || ""),
@@ -169,29 +170,3 @@ Return valid JSON only (no markdown fences):
   };
 }
 
-/** Safely parse JSON from AI response — handles control characters in string values */
-function parseJsonSafe(text: string): Record<string, unknown> {
-  let cleaned = text.trim();
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-  }
-  // Extract JSON object if surrounded by other text
-  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-  if (jsonMatch) cleaned = jsonMatch[0];
-
-  // Fix control characters inside JSON string values:
-  // Real newlines/tabs inside strings must be escaped for JSON.parse
-  cleaned = cleaned.replace(
-    /"(?:[^"\\]|\\.)*"/g,
-    (match) => match
-      .replace(/\n/g, "\\n")
-      .replace(/\r/g, "\\r")
-      .replace(/\t/g, "\\t")
-  );
-
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    throw new Error("Failed to parse AI response as JSON");
-  }
-}

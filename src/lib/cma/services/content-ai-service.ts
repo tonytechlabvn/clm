@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma-client";
 import type { AIProvider } from "@/types";
 import { getActiveAiConfig } from "@/lib/ai-settings-service";
 import { sanitizeExtractedText } from "./crawler-service";
+import { parseAiJson } from "./ai-json-parser";
 
 export interface CurationResult {
   blogDraft: string;
@@ -49,7 +50,7 @@ export async function curateContent(
   await trackTokenUsage(orgId, result.usage.totalTokens);
 
   // Parse JSON response
-  const parsed = parseJsonResponse(result.text);
+  const parsed = parseAiJson(result.text);
   return {
     blogDraft: String(parsed.blogDraft || ""),
     fbExcerpt: String(parsed.fbExcerpt || "").slice(0, 200),
@@ -86,19 +87,3 @@ export async function trackTokenUsage(
   });
 }
 
-/** Parse JSON from AI response, handling common formatting issues */
-function parseJsonResponse(text: string): Record<string, unknown> {
-  // Strip markdown code fences if present
-  let cleaned = text.trim();
-  if (cleaned.startsWith("```")) {
-    cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-  }
-  try {
-    return JSON.parse(cleaned);
-  } catch {
-    // Try to extract JSON object from response
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
-    throw new Error("Failed to parse AI response as JSON");
-  }
-}
