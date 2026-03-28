@@ -6,6 +6,8 @@ import { decryptToken } from "../crypto-utils";
 import { markdownToSanitizedHtml } from "../markdown-to-html";
 import { blocksToSanitizedHtml } from "../blocks-to-html";
 import { blocksToStyledHtml } from "../themes/apply-theme-styles";
+import { markdownToThemedHtml } from "../themes/apply-theme-to-markdown-html";
+import { resolveImagePlaceholders, fetchAndUploadFeaturedImage } from "./image-resolution-service";
 
 export interface PublishRequest {
   postId: string;
@@ -72,7 +74,43 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
       // Apply theme inline styles for WordPress compatibility
       htmlContent = blocksToStyledHtml(blocks, post.styleTheme || "default");
     } else {
-      htmlContent = await markdownToSanitizedHtml(post.content);
+      htmlContent = await markdownToThemedHtml(post.content, post.styleTheme || "default");
+    }
+
+    // 7b. Resolve [IMAGE] placeholders with real Unsplash images
+    const suggestedPrompts: string[] = (() => {
+      try {
+        const data = post.outlineData as { suggestedImagePrompts?: string[] } | null;
+        return data?.suggestedImagePrompts || [];
+      } catch { return []; }
+    })();
+
+    const imageResult = await resolveImagePlaceholders(htmlContent, {
+      siteUrl, username, token,
+      orgId: req.orgId, postId: req.postId,
+      suggestedImagePrompts: suggestedPrompts,
+      postTitle: post.title,
+    }, adapter);
+    htmlContent = imageResult.html;
+
+    // 7c. Determine featured image — use first inline image, or fetch dedicated one
+    let featuredMediaId: number | undefined;
+    if (imageResult.uploadedMediaIds.length > 0) {
+      featuredMediaId = imageResult.uploadedMediaIds[0];
+    } else if (adapter.uploadMedia) {
+      const featured = await fetchAndUploadFeaturedImage(
+        post.title,
+        { siteUrl, username, token, orgId: req.orgId, postId: req.postId },
+        adapter
+      );
+      if (featured) {
+        featuredMediaId = featured.mediaId;
+        // Store URL for dashboard display
+        await prisma.cmaPost.update({
+          where: { id: req.postId },
+          data: { featuredImage: featured.url },
+        });
+      }
     }
 
     // 8. Publish or update on platform
@@ -85,6 +123,7 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
         excerpt: post.excerpt || undefined,
         categories: post.categories,
         tags: post.tags,
+        featuredMediaId,
         status: "publish",
       });
     } else {
@@ -95,6 +134,7 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
         excerpt: post.excerpt || undefined,
         categories: post.categories,
         tags: post.tags,
+        featuredMediaId,
         status: "publish",
       });
     }
