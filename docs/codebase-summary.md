@@ -1,8 +1,8 @@
-# Codebase Summary — CMA Phase 3
+# Codebase Summary — CLM Phase 4
 
 **Project:** Tony Tech Lab Core Learning Management (CLM)
-**Module:** Content Management Application (CMA)
-**Phase:** 3 (Scheduled Publishing)
+**Modules:** Content Management (CMA) + Classroom System + Learning Management System (LMS)
+**Phase:** 4 (Classroom + LMS + AI Integration)
 **Last Updated:** 2026-03-28
 **Status:** Complete
 
@@ -25,48 +25,111 @@
 ```
 src/
 ├── app/
-│   ├── api/cma/
-│   │   ├── accounts/           # Platform account linking
-│   │   ├── calendar/           # GET /api/cma/calendar
-│   │   ├── media/              # Asset upload
-│   │   ├── org/                # Org settings
-│   │   ├── posts/
+│   ├── api/
+│   │   ├── cma/                    # Content Management API (12 routes)
+│   │   │   ├── accounts/
+│   │   │   ├── calendar/
+│   │   │   ├── media/
+│   │   │   ├── org/
+│   │   │   ├── posts/[id]/{publish,schedule}/
+│   │   │   └── preview/
+│   │   ├── classroom/              # Classroom API (12 routes)
+│   │   │   ├── route.ts
 │   │   │   ├── [id]/
-│   │   │   │   ├── publish/    # POST /api/cma/posts/[id]/publish
-│   │   │   │   ├── schedule/   # POST/PATCH/DELETE /api/cma/posts/[id]/schedule
-│   │   │   │   └── route.ts    # GET/PATCH/DELETE /api/cma/posts/[id]
-│   │   │   └── route.ts        # GET/POST /api/cma/posts
-│   │   └── preview/            # Content preview endpoint
+│   │   │   │   ├── route.ts
+│   │   │   │   ├── assignments/[aid]/
+│   │   │   │   │   ├── route.ts
+│   │   │   │   │   ├── submit/
+│   │   │   │   │   ├── ai-feedback/
+│   │   │   │   │   └── submissions/[sid]/feedback/
+│   │   │   │   ├── members/[uid]/
+│   │   │   │   ├── dashboard/
+│   │   │   │   └── export/
+│   │   │   └── join/
+│   │   ├── lms/                    # Learning Management API (15 routes)
+│   │   │   ├── courses/
+│   │   │   │   └── [slug]/
+│   │   │   │       ├── route.ts
+│   │   │   │       ├── sections/[id]/
+│   │   │   │       ├── lessons/[id]/
+│   │   │   │       ├── enroll/
+│   │   │   │       └── progress/
+│   │   │   ├── lessons/[id]/progress/
+│   │   │   └── ai/
+│   │   │       ├── generate-quiz/
+│   │   │       ├── summarize/
+│   │   │       └── review-code/
+│   │   └── integration/
+│   │       └── classroom-courses/
+│   ├── classroom/                  # Classroom UI (4 pages)
+│   │   ├── page.tsx
+│   │   ├── [id]/
+│   │   │   ├── page.tsx
+│   │   │   ├── dashboard/
+│   │   │   └── assignments/[aid]/
+│   ├── lms/                        # LMS UI (5 pages)
+│   │   ├── page.tsx
+│   │   ├── courses/
+│   │   │   ├── page.tsx
+│   │   │   ├── [slug]/
+│   │   │   │   ├── page.tsx
+│   │   │   │   ├── learn/[lessonId]/
+│   │   │   │   └── builder/
 │   ├── admin/cma/
-│   │   ├── dashboard/          # Post management UI
-│   │   ├── calendar/           # Calendar view page
-│   │   └── posts/[id]/         # Post editor page
-│   └── layout.tsx              # Root layout
-├── components/cma/
-│   ├── post-editor.tsx         # Markdown editor + platform selector
-│   ├── cma-calendar-event.tsx  # Calendar event widget
-│   ├── calendar-widget.tsx     # Full calendar container
-│   └── [other CMA components]
-├── lib/cma/
-│   ├── services/
-│   │   ├── pgboss-service.ts   # Job queue lifecycle (212 lines)
-│   │   ├── scheduling-service.ts # Post scheduling logic (160 lines)
-│   │   ├── publishing-service.ts # Immediate publish logic
-│   │   ├── post-service.ts     # Post CRUD operations
-│   │   └── org-auth.ts         # Multi-tenant org validation
-│   ├── adapters/
-│   │   ├── adapter-registry.ts # Adapter registration
-│   │   ├── platform-adapter.ts # Base adapter interface
-│   │   └── wordpress-adapter.ts # WordPress implementation
-│   ├── hooks/
-│   │   └── use-cma-org.ts      # Org context hook
-│   ├── use-cma-api.ts          # API client hook
-│   ├── crypto-utils.ts         # Encryption/hashing utilities
-│   ├── markdown-to-html.ts     # Content rendering
-│   └── [other utilities]
-├── instrumentation.ts          # Next.js startup hook (pg-boss init)
-├── middleware.ts               # Auth + org context validation
-└── types/                      # TypeScript definitions
+│   │   ├── dashboard/
+│   │   ├── calendar/
+│   │   └── posts/[id]/
+│   └── layout.tsx
+├── components/
+│   ├── cma/                        # CMA components (Phase 3)
+│   ├── classroom/                  # Classroom UI (Phase 4)
+│   ├── lms/                        # LMS UI (Phase 4)
+│   └── ui/                         # Generic UI
+├── lib/
+│   ├── prisma-client.ts
+│   ├── cma/
+│   │   ├── services/
+│   │   │   ├── pgboss-service.ts
+│   │   │   ├── scheduling-service.ts
+│   │   │   ├── publishing-service.ts
+│   │   │   ├── post-service.ts
+│   │   │   └── org-auth.ts
+│   │   ├── adapters/
+│   │   ├── hooks/
+│   │   │   └── use-cma-api.ts
+│   │   └── utils/
+│   ├── classroom/                  # Classroom services (Phase 4)
+│   │   ├── services/
+│   │   │   ├── classroom-service.ts
+│   │   │   ├── assignment-service.ts
+│   │   │   ├── feedback-service.ts
+│   │   │   └── classroom-auth.ts
+│   │   ├── hooks/
+│   │   │   └── use-classroom-api.ts
+│   │   └── utils/
+│   ├── lms/                        # LMS services (Phase 4)
+│   │   ├── services/
+│   │   │   ├── course-service.ts
+│   │   │   ├── section-lesson-service.ts
+│   │   │   ├── enrollment-service.ts
+│   │   │   ├── lms-auth.ts
+│   │   │   ├── ai-helper-service.ts
+│   │   │   ├── lms-pgboss-service.ts
+│   │   │   └── lms-worker-handlers.ts
+│   │   ├── hooks/
+│   │   │   └── use-lms-api.ts
+│   │   └── utils/
+│   ├── prompts/                    # AI prompts (Phase 4)
+│   │   ├── clm-quiz-generator-prompt.ts
+│   │   ├── clm-content-summarizer-prompt.ts
+│   │   ├── clm-code-reviewer-prompt.ts
+│   │   └── clm-submission-feedback-prompt.ts
+│   └── utils/
+├── instrumentation.ts              # pg-boss init (CMA + LMS workers)
+├── middleware.ts
+├── types/
+└── prisma/
+    └── schema.prisma               # 22 models (10 Phase 4 new)
 ```
 
 ---
@@ -148,80 +211,73 @@ src/
 
 ---
 
-## Data Model (Prisma)
+## Data Model (Prisma) — 22 Models
 
-### CmaPost (Primary Post Entity)
+### Phase 3: Content Management (3 models)
 
-```prisma
-model CmaPost {
-  id              String   @id @default(cuid())
-  orgId           String   // Multi-tenant scoping
-  title           String
-  content         String   // Markdown
-  contentHtml     String?  // Rendered HTML
-  description     String?
-  status          String   @default("draft")
-  // Status values: "draft" | "approved" | "scheduled" | "publishing" | "published" | "failed"
+**CmaPost** — Social media post
+- id, orgId, title, content (Markdown), status, scheduledAt, pgBossJobId, createdAt, updatedAt
+- Indexes: `[orgId]`, `[scheduledAt]`
 
-  // Scheduling fields (Phase 3)
-  scheduledAt     DateTime?        // When to publish
-  pgBossJobId     String?          // pg-boss job ID for cancellation
+**CmaPlatformAccount** — Linked platform (WordPress, Medium, etc.)
+- id, orgId, platform, siteUrl, credentials (encrypted), isActive, lastVerified, createdAt, updatedAt
+- Indexes: `[orgId]`
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+**CmaPostPlatform** — Post ↔ Platform link
+- id, postId, accountId, publishedUrl, publishedId, createdAt, updatedAt
+- Unique: `[postId, accountId]`
 
-  // Relations
-  platforms       CmaPostPlatform[]
+### Phase 4: Classroom System (4 models)
 
-  // Indexes
-  @@index([orgId])
-  @@index([scheduledAt])
-  @@map("cma_posts")
-}
-```
+**Classroom** — Learning space
+- id, orgId, instructorId (userId), name, description, joinCode (unique 6-char), isActive, createdAt, updatedAt
+- Indexes: `[orgId]`, `[instructorId]`
 
-### CmaPlatformAccount (Linked Platform Account)
+**ClassroomMember** — Student/instructor roster
+- id, userId, classroomId, role ("student" | "instructor"), joinedAt
+- Unique: `[userId, classroomId]`
+- Indexes: `[classroomId]`
 
-```prisma
-model CmaPlatformAccount {
-  id              String   @id @default(cuid())
-  orgId           String   // Multi-tenant scoping
-  platform        String   // "wordpress", "medium", "substack"
-  siteUrl         String   // Platform URL
-  credentials     String   // Encrypted auth token
-  isActive        Boolean  @default(true)
-  lastVerified    DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+**Assignment** — Classroom task
+- id, classroomId, title, description, jobDescription, dueDate, type, status, linkedCourseId, createdById, createdAt, updatedAt
+- Indexes: `[classroomId]`, `[dueDate]`
 
-  // Relations
-  posts           CmaPostPlatform[]
+**Submission** — Student work
+- id, assignmentId, studentId (userId), content, score, status, submittedAt, createdAt, updatedAt
+- Unique: `[assignmentId, studentId]`
+- Indexes: `[assignmentId]`
 
-  @@index([orgId])
-  @@map("cma_platform_accounts")
-}
-```
+**Feedback** — Instructor/AI feedback
+- id, submissionId, instructorId (userId), comment, aiFeedback (JSON), score, createdAt, updatedAt
+- Indexes: `[submissionId]`
 
-### CmaPostPlatform (Post ↔ Platform Link)
+### Phase 4: Learning Management System (10 models)
 
-```prisma
-model CmaPostPlatform {
-  id              String   @id @default(cuid())
-  postId          String
-  accountId       String
-  publishedUrl    String?  // URL on platform after publish
-  publishedId     String?  // Platform-specific post ID
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+**Course** — Published learning course
+- id, orgId, instructorId (userId), title, slug (unique), description, thumbnailUrl, level, status, estimatedHours, tags (JSON array), createdAt, updatedAt
+- Indexes: `[orgId]`, `[slug]`
 
-  // Relations
-  post            CmaPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  account         CmaPlatformAccount @relation(fields: [accountId], references: [id])
+**Section** — Course chapter
+- id, courseId, title, description, order, isPublished, createdAt, updatedAt
+- Indexes: `[courseId]`
 
-  @@unique([postId, accountId])
-  @@map("cma_post_platforms")
-}
-```
+**Lesson** — Learning unit
+- id, sectionId, title, type ("video" | "article" | "quiz"), content (Markdown), videoUrl, order, estimatedMinutes, isPublished, createdAt, updatedAt
+- Indexes: `[sectionId]`
+
+**LessonProgress** — Student lesson completion
+- id, lessonId, userId, status ("not_started" | "in_progress" | "completed"), completedAt, timeSpent (seconds), createdAt, updatedAt
+- Unique: `[lessonId, userId]`
+- Indexes: `[lessonId]`, `[userId]`
+
+**CourseEnrollment** — Student enrollment
+- id, courseId, userId, progress (0-100), enrolledAt, completedAt, createdAt, updatedAt
+- Unique: `[courseId, userId]`
+- Indexes: `[courseId]`, `[userId]`
+
+### Auth Models (5 models)
+
+**User, Organization, Account, Session, VerificationToken** — NextAuth.js standard schema
 
 ---
 
@@ -554,6 +610,50 @@ npx prisma migrate deploy
 - [project-overview-pdr.md](./project-overview-pdr.md) — Requirements and roadmap
 - [project-changelog.md](./project-changelog.md) — Version history
 - [api-reference.md](./api-reference.md) — API endpoint docs
+
+---
+
+## Phase 4 Module Summaries
+
+### Classroom Module
+
+| Component | Location | Purpose | Status |
+|-----------|----------|---------|--------|
+| `classroom-service.ts` | `lib/classroom/services/` | CRUD, join by code, member management | Complete |
+| `assignment-service.ts` | `lib/classroom/services/` | Assignment lifecycle, submission tracking | Complete |
+| `feedback-service.ts` | `lib/classroom/services/` | Instructor feedback, dashboard analytics, CSV export | Complete |
+| `classroom-auth.ts` | `lib/classroom/services/` | Member role validation (student vs instructor) | Complete |
+| `use-classroom-api.ts` | `lib/classroom/hooks/` | Client-side API hook with loading/error states | Complete |
+| `api/classroom/*` | `app/api/classroom/` | 12 API routes (see system-architecture.md) | Complete |
+
+### LMS Module
+
+| Component | Location | Purpose | Status |
+|-----------|----------|---------|--------|
+| `course-service.ts` | `lib/lms/services/` | Course CRUD, catalog, publish/archive | Complete |
+| `section-lesson-service.ts` | `lib/lms/services/` | Section/lesson CRUD, reordering, visibility | Complete |
+| `enrollment-service.ts` | `lib/lms/services/` | Student enrollment, progress tracking, completion | Complete |
+| `lms-auth.ts` | `lib/lms/services/` | Student access control, completion verification | Complete |
+| `ai-helper-service.ts` | `lib/lms/services/` | AI calls with rate limiting + quota management | Complete |
+| `lms-pgboss-service.ts` | `lib/lms/services/` | Job queue for async quiz gen + batch feedback | Complete |
+| `lms-worker-handlers.ts` | `lib/lms/services/` | Job handlers (quiz generation, batch feedback) | Complete |
+| `use-lms-api.ts` | `lib/lms/hooks/` | Client-side API hook | Complete |
+| `api/lms/*` | `app/api/lms/` | 15 API routes (12 LMS + 3 AI) | Complete |
+
+### AI Integration
+
+| Prompt | Location | Purpose | Status |
+|--------|----------|---------|--------|
+| `clm-quiz-generator-prompt.ts` | `lib/prompts/` | Generate MCQs from lesson content | Complete |
+| `clm-content-summarizer-prompt.ts` | `lib/prompts/` | Multi-paragraph summary of lesson | Complete |
+| `clm-code-reviewer-prompt.ts` | `lib/prompts/` | Code submission scoring + feedback | Complete |
+| `clm-submission-feedback-prompt.ts` | `lib/prompts/` | Personalized assignment feedback | Complete |
+
+### Integration Module
+
+| Route | Purpose | Status |
+|-------|---------|--------|
+| `POST /api/integration/classroom-courses` | Link course to classroom assignment | Complete |
 
 ---
 

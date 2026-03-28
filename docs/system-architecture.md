@@ -1,52 +1,51 @@
-# System Architecture — CMA (Content Management Application)
+# System Architecture — CLM (Content Management + Learning Management)
 
 ## Overview
 
-The **Content Management Application (CMA)** is a Next.js-based content publishing platform that manages posts across multiple social media platforms. It provides organizational multi-tenancy, content scheduling via pg-boss, calendar visualization, and intelligent content preview.
+The **Core Learning Management (CLM)** platform is a Next.js-based integrated system combining Content Management (CMA) with classroom learning management and LMS capabilities. Phase 4 expands Phase 3 CMA (social media scheduling) with:
+- **Classroom System:** Create classrooms, manage members, assign work, provide feedback
+- **Learning Management System (LMS):** Build courses, enroll students, track progress
+- **AI Integration:** Auto-generate quizzes, summarize content, review code submissions
+- **Cross-system Integration:** Link courses to classroom assignments
 
-### Current Architecture (Phase 3 Complete)
+### Current Architecture (Phase 4 Complete)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Next.js Frontend (React)                    │
-│  Pages: /cma/dashboard, /cma/calendar, /cma/posts               │
-│  Components: PostEditor, CMACalendarEvent, CalendarWidget       │
-└──────────────────────┬──────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                     Next.js Frontend (React)                           │
+│  CMA:       /admin/cma/dashboard, /admin/cma/calendar, /admin/cma/posts
+│  Classroom: /classroom (list) → /classroom/[id] → /classroom/[id]/assignments
+│  LMS:       /lms (catalog) → /lms/courses/[slug] → /lms/courses/[slug]/learn
+└──────────────────────┬─────────────────────────────────────────────────┘
                        │
-                       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   API Routes (/api/cma/*)                       │
-│  GET    /api/cma/posts          (list posts)                    │
-│  POST   /api/cma/posts          (create post)                   │
-│  GET    /api/cma/posts/[id]     (fetch post)                    │
-│  PATCH  /api/cma/posts/[id]     (update post)                   │
-│  DELETE /api/cma/posts/[id]     (delete post)                   │
-│  POST   /api/cma/posts/[id]/publish       (immediate publish)   │
-│  POST   /api/cma/posts/[id]/schedule      (enqueue for later)   │
-│  PATCH  /api/cma/posts/[id]/schedule      (reschedule)         │
-│  DELETE /api/cma/posts/[id]/schedule      (cancel schedule)     │
-│  GET    /api/cma/calendar       (list scheduled posts)          │
-│  POST   /api/cma/accounts       (link platform account)         │
-│  GET    /api/cma/org            (org details)                   │
-│  GET/PATCH /api/cma/media       (asset upload)                  │
-└──────────────────────┬──────────────────────────────────────────┘
-                       │
-        ┌──────────────┼──────────────┐
-        │              │              │
-        ▼              ▼              ▼
-   ┌────────┐  ┌─────────────────┐  ┌──────────────┐
-   │ Prisma │  │   pg-boss Job   │  │ Platform API │
-   │ORM+DB  │  │    Queue        │  │  Adapters    │
-   └────────┘  └─────────────────┘  └──────────────┘
-        │              │              │
-        └──────────────┴──────────────┴────────────┘
-                       │
-                       ▼
-            ┌──────────────────────┐
-            │    PostgreSQL DB     │
-            │  (CMA + pg-boss      │
-            │   schema)            │
-            └──────────────────────┘
+        ┌──────────────┼──────────────┬──────────────┐
+        │              │              │              │
+        ▼              ▼              ▼              ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│ /api/cma/*   │ │ /api/classroom/*  │ /api/lms/*  │ /api/integration/*
+│ (12 routes)  │ │ (12 routes)  │ (12 routes)  │ (1 route)    │
+│              │ │              │ /api/lms/ai/* │              │
+│              │ │              │ (3 routes)   │              │
+└────────┬─────┘ └────────┬─────┘ └────────┬─────┘ └────────┬─────┘
+         │                 │                │                │
+         └─────────────────┼────────────────┼────────────────┘
+                           │
+                           ▼
+                ┌──────────────────────────┐
+                │  Prisma ORM (22 models)  │
+                │  - CMA (3 models)        │
+                │  - Classroom (4 models)  │
+                │  - LMS (10 models)       │
+                │  - Auth (5 models)       │
+                └────────┬─────────────────┘
+                         │
+         ┌───────────────┼───────────────┐
+         │               │               │
+         ▼               ▼               ▼
+    ┌────────┐   ┌──────────────┐  ┌──────────────┐
+    │PostgreSQL  │  pg-boss Job  │ │   AI APIs    │
+    │   (DB)    │    Queue      │ │(OpenAI,etc)  │
+    └────────┘   └──────────────┘ └──────────────┘
 ```
 
 ---
@@ -240,6 +239,96 @@ NEXT_RUNTIME=nodejs            # Enables instrumentation
 
 ---
 
+## Phase 4 Architecture: Classroom + LMS + AI
+
+### 1. Classroom System (4 new models, 12 API routes)
+
+**Models:**
+- `Classroom` — Org's learning space (orgId, instructorId, name, joinCode unique 6-char, isActive)
+- `ClassroomMember` — Student/instructor role (userId, classroomId, role: "student"|"instructor")
+- `Assignment` — Classroom task (title, description, jobDescription, dueDate, type, status, linkedCourseId)
+- `Submission` — Student work (assignmentId, studentId, content, score, status, submittedAt)
+- `Feedback` — Instructor/AI feedback (submissionId, instructorId, comment, aiFeedback)
+
+**API Routes (12):**
+- POST/GET `/api/classroom` — Create classroom + list instructor's classrooms
+- GET/PATCH/DELETE `/api/classroom/[id]` — Classroom detail, update, archive
+- POST `/api/classroom/join` — Join classroom by code
+- DELETE `/api/classroom/[id]/members/[uid]` — Remove member
+- POST/GET `/api/classroom/[id]/assignments` — Create assignment + list
+- GET `/api/classroom/[id]/assignments/[aid]` — Assignment detail (role-filtered view)
+- POST `/api/classroom/[id]/assignments/[aid]/submit` — Student submission
+- POST `/api/classroom/[id]/assignments/[aid]/submissions/[sid]/feedback` — Give feedback
+- POST `/api/classroom/[id]/assignments/[aid]/ai-feedback` — Trigger AI feedback
+- GET `/api/classroom/[id]/dashboard` — Instructor analytics
+- GET `/api/classroom/[id]/export` — CSV export (submissions + scores)
+
+### 2. LMS (Course + Lesson Management) (10 new models, 12 API routes)
+
+**Models:**
+- `Course` — Published course (orgId, instructorId, title, slug unique, description, thumbnailUrl, level, status, estimatedHours, tags[])
+- `Section` — Course grouping (courseId, title, order, isPublished)
+- `Lesson` — Learning unit (sectionId, title, type: "video"|"article"|"quiz", content, videoUrl, order, estimatedMinutes, isPublished)
+- `LessonProgress` — Student completion (lessonId, userId, status: "not_started"|"in_progress"|"completed", completedAt, timeSpent)
+- `CourseEnrollment` — Student enrollment (courseId, userId, progress 0-100, enrolledAt, completedAt)
+- Plus 5 core auth models (User, Organization, Account, Session, VerificationToken)
+
+**API Routes (12):**
+- GET/POST `/api/lms/courses` — Course catalog + create
+- GET/PATCH/DELETE `/api/lms/courses/[slug]` — Course detail, update, archive
+- POST `/api/lms/courses/[slug]/sections` — Create section
+- PATCH/DELETE `/api/lms/courses/[slug]/sections/[id]` — Section update/delete
+- POST `/api/lms/courses/[slug]/lessons` — Create lesson
+- GET/PATCH/DELETE `/api/lms/courses/[slug]/lessons/[id]` — Lesson content, update, delete
+- POST `/api/lms/courses/[slug]/enroll` — Student enrollment
+- GET `/api/lms/courses/[slug]/progress` — Progress tracking
+- POST `/api/lms/lessons/[id]/progress` — Mark lesson complete
+
+### 3. AI Integration (3 API routes, 2 pg-boss queues)
+
+**AI Routes:**
+- POST `/api/lms/ai/generate-quiz` — Generate quiz from lesson content
+- POST `/api/lms/ai/summarize` — Summarize lesson content
+- POST `/api/lms/ai/review-code` — Score code submission with feedback
+
+**pg-boss Queues:**
+- `lms-quiz-generate` — Async quiz generation (prevents UI blocking)
+- `classroom-batch-feedback` — Batch AI feedback on ungraded submissions
+
+**Prompts** (src/lib/prompts/):
+- `clm-quiz-generator-prompt.ts` — MCQ generation from lesson text
+- `clm-content-summarizer-prompt.ts` — Multi-paragraph summary
+- `clm-code-reviewer-prompt.ts` — Scoring + improvement suggestions
+- `clm-submission-feedback-prompt.ts` — Personalized feedback for assignments
+
+### 4. Cross-System Integration (1 API route)
+
+- POST `/api/integration/classroom-courses` — Link LMS course to classroom assignment
+  - Allows students to complete course as assignment submission
+  - Tracks completion and automatically scores based on course progress
+
+### Database Enhancements
+
+**New pg-boss Queues:**
+```
+- Job: 'lms-quiz-generate'
+  Data: { lessonId, aiProvider, contentText, lessonTitle }
+  Timeout: 30s, Retries: 2
+
+- Job: 'classroom-batch-feedback'
+  Data: { classroomId, assignmentId, llmModel }
+  Timeout: 60s, Retries: 2
+```
+
+**Indexes Added:**
+- `Classroom` — `@@index([orgId])`, `@@index([instructorId])`
+- `Assignment` — `@@index([classroomId])`, `@@index([dueDate])`
+- `Course` — `@@index([orgId])`, `@@index([slug])`
+- `Lesson` — `@@index([courseId])`, `@@index([sectionId])`
+- `CourseEnrollment` — `@@index([courseId])`, `@@index([userId])`
+
+---
+
 ## Future Considerations
 
 - **Batch Publishing:** Extend pg-boss to support bulk schedule operations
@@ -254,7 +343,7 @@ NEXT_RUNTIME=nodejs            # Enables instrumentation
 
 | Layer | Tech | Version |
 |-------|------|---------|
-| Runtime | Node.js | 18+ (Next.js 14.2 requirement) |
+| Runtime | Node.js | 18+ |
 | Framework | Next.js | 14.2.35 |
 | UI | React | 18 |
 | Styling | Tailwind CSS | 3.4.1 |
@@ -264,4 +353,5 @@ NEXT_RUNTIME=nodejs            # Enables instrumentation
 | Calendar | @fullcalendar | 6.1.20 |
 | Markdown | @uiw/react-md-editor | 4.0.11 |
 | Auth | NextAuth.js | 4.24.13 |
+| AI Models | OpenAI API, Anthropic Claude | Latest |
 

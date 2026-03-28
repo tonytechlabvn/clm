@@ -5,51 +5,98 @@
 ```
 src/
 ├── app/                           # Next.js App Router
-│   ├── api/cma/                   # CMA API routes
-│   │   ├── accounts/              # Platform account management
-│   │   ├── calendar/              # Calendar endpoint
-│   │   ├── posts/                 # Post CRUD + publish/schedule
+│   ├── api/
+│   │   ├── cma/                   # CMA API routes (Phase 3)
+│   │   │   ├── accounts/
+│   │   │   ├── calendar/
+│   │   │   ├── posts/[id]/{publish,schedule}/
+│   │   │   ├── media/
+│   │   │   ├── org/
+│   │   │   └── preview/
+│   │   ├── classroom/             # Classroom API routes (Phase 4)
+│   │   │   ├── route.ts           # POST/GET /api/classroom
+│   │   │   ├── join/              # POST /api/classroom/join
 │   │   │   └── [id]/
-│   │   │       ├── publish/       # POST /api/cma/posts/[id]/publish
-│   │   │       └── schedule/      # POST/PATCH/DELETE /api/cma/posts/[id]/schedule
-│   │   ├── media/                 # Asset upload
-│   │   ├── org/                   # Organization settings
-│   │   └── preview/               # Content preview
-│   ├── admin/
-│   │   └── cma/
-│   │       ├── layout.tsx
-│   │       ├── dashboard/
-│   │       ├── calendar/          # FullCalendar integration
-│   │       └── posts/
-│   └── layout.tsx                 # Root layout
+│   │   │       ├── route.ts
+│   │   │       ├── assignments/[aid]/
+│   │   │       ├── members/[uid]/
+│   │   │       ├── dashboard/
+│   │   │       └── export/
+│   │   ├── lms/                   # LMS API routes (Phase 4)
+│   │   │   ├── courses/
+│   │   │   │   └── [slug]/
+│   │   │   │       ├── sections/[id]/
+│   │   │   │       ├── lessons/[id]/
+│   │   │   │       ├── enroll/
+│   │   │   │       └── progress/
+│   │   │   ├── lessons/[id]/progress/
+│   │   │   └── ai/
+│   │   │       ├── generate-quiz/
+│   │   │       ├── summarize/
+│   │   │       └── review-code/
+│   │   └── integration/
+│   │       └── classroom-courses/
+│   ├── admin/cma/
+│   │   ├── dashboard/
+│   │   ├── calendar/
+│   │   └── posts/[id]/
+│   ├── classroom/                 # Classroom UI (Phase 4)
+│   │   ├── page.tsx
+│   │   └── [id]/
+│   ├── lms/                       # LMS UI (Phase 4)
+│   │   ├── page.tsx
+│   │   └── courses/
+│   └── layout.tsx
 ├── components/                    # Reusable React components
-│   ├── cma/
-│   │   ├── post-editor.tsx        # Markdown editor + platform selector
-│   │   ├── cma-calendar-event.tsx # Calendar event widget
-│   │   ├── calendar-widget.tsx    # Calendar container
-│   │   └── ...
+│   ├── cma/                       # CMA components
+│   ├── classroom/                 # Classroom UI components (Phase 4)
+│   ├── lms/                       # LMS UI components (Phase 4)
 │   └── ui/                        # Generic UI (inputs, buttons, etc.)
 ├── lib/                           # Business logic & utilities
-│   ├── prisma-client.ts           # Prisma instance
-│   ├── cma/
+│   ├── prisma-client.ts
+│   ├── cma/                       # Content Management (Phase 3)
 │   │   ├── services/
-│   │   │   ├── pgboss-service.ts         # Job queue lifecycle
-│   │   │   ├── scheduling-service.ts     # Post scheduling logic
-│   │   │   ├── publishing-service.ts     # Immediate publish logic
-│   │   │   ├── post-service.ts           # Post CRUD
-│   │   │   └── org-auth.ts               # Multi-tenant auth
+│   │   │   ├── pgboss-service.ts
+│   │   │   ├── scheduling-service.ts
+│   │   │   ├── publishing-service.ts
+│   │   │   ├── post-service.ts
+│   │   │   └── org-auth.ts
 │   │   ├── adapters/
-│   │   │   ├── adapter-registry.ts       # Adapter registry
-│   │   │   ├── platform-adapter.ts       # Base interface
-│   │   │   └── wordpress-adapter.ts      # WordPress implementation
 │   │   ├── hooks/
-│   │   │   └── use-cma-org.ts            # Org context hook
-│   │   ├── use-cma-api.ts                # CMA API client hook
-│   │   └── ...
-│   └── utils/                     # Generic utilities
-├── instrumentation.ts             # Next.js startup hook (pg-boss init)
-├── middleware.ts                  # Auth & org context middleware
-└── types/                         # TypeScript type definitions
+│   │   │   └── use-cma-api.ts
+│   │   └── utils/
+│   ├── classroom/                 # Classroom System (Phase 4)
+│   │   ├── services/
+│   │   │   ├── classroom-service.ts
+│   │   │   ├── assignment-service.ts
+│   │   │   ├── feedback-service.ts
+│   │   │   └── classroom-auth.ts
+│   │   ├── hooks/
+│   │   │   └── use-classroom-api.ts
+│   │   └── utils/
+│   ├── lms/                       # Learning Management (Phase 4)
+│   │   ├── services/
+│   │   │   ├── course-service.ts
+│   │   │   ├── section-lesson-service.ts
+│   │   │   ├── enrollment-service.ts
+│   │   │   ├── lms-auth.ts
+│   │   │   ├── ai-helper-service.ts
+│   │   │   ├── lms-pgboss-service.ts
+│   │   │   └── lms-worker-handlers.ts
+│   │   ├── hooks/
+│   │   │   └── use-lms-api.ts
+│   │   └── utils/
+│   ├── prompts/                   # AI Prompts (Phase 4)
+│   │   ├── clm-quiz-generator-prompt.ts
+│   │   ├── clm-content-summarizer-prompt.ts
+│   │   ├── clm-code-reviewer-prompt.ts
+│   │   └── clm-submission-feedback-prompt.ts
+│   └── utils/
+├── instrumentation.ts             # pg-boss init (CMA + LMS workers)
+├── middleware.ts
+├── types/
+└── prisma/
+    └── schema.prisma              # 22 models
 ```
 
 ---
