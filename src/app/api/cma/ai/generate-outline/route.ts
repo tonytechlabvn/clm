@@ -24,7 +24,7 @@ function checkRateLimit(userId: string): boolean {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { orgId, topic, keywords, tone, language, targetWordCount } = body;
+    const { orgId, topic, keywords, tone, language, targetWordCount, sourceContext } = body;
 
     if (!orgId || !topic) {
       return NextResponse.json({ error: "orgId and topic required" }, { status: 400 });
@@ -46,7 +46,8 @@ export async function POST(request: Request) {
       Array.isArray(keywords) ? keywords : [],
       safeTone,
       language || "en",
-      Math.min(Math.max(targetWordCount || 1500, 500), 5000)
+      Math.min(Math.max(targetWordCount || 1500, 500), 5000),
+      typeof sourceContext === "string" ? sourceContext : undefined
     );
 
     return NextResponse.json(outline);

@@ -233,6 +233,16 @@ export function validateContentFormat(content: string, format: string): boolean 
       return false;
     }
   }
+  if (format === "html") {
+    // HTML format stores JSON with { html, css, js } fields
+    try {
+      const parsed = JSON.parse(content);
+      return typeof parsed === "object" && !Array.isArray(parsed) && typeof parsed.html === "string";
+    } catch {
+      // Also accept raw HTML strings
+      return typeof content === "string" && content.trim().length > 0;
+    }
+  }
   if (format === "markdown") {
     // Markdown is plain string — ensure it's not a JSON array
     try {

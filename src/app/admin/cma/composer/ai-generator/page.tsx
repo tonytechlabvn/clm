@@ -11,7 +11,18 @@ import { ContentReviewStep } from "@/components/cma/ai-generator/ai-generator-st
 import { ArrowLeft, Sparkles } from "lucide-react";
 
 type Tone = "professional" | "casual" | "technical" | "educational";
+type SourceType = "url" | "text" | "image" | "video";
 interface OutlineSection { heading: string; keyPoints: string[] }
+
+interface SourceExtractionResult {
+  sourceType: SourceType;
+  title: string;
+  summary: string;
+  keyInsights: string[];
+  suggestedTopics: string[];
+  suggestedKeywords: string[];
+  originalContent?: string;
+}
 
 export default function CmaAiGeneratorPage() {
   const router = useRouter();
@@ -24,6 +35,9 @@ export default function CmaAiGeneratorPage() {
   const [tone, setTone] = useState<Tone>("professional");
   const [language, setLanguage] = useState("en");
   const [wordCount, setWordCount] = useState(1500);
+  // Source extraction state
+  const [sourceContext, setSourceContext] = useState("");
+  const [extracting, setExtracting] = useState(false);
 
   // Step 2 state
   const [title, setTitle] = useState("");
@@ -33,11 +47,44 @@ export default function CmaAiGeneratorPage() {
 
   // Step 3 state
   const [blogContent, setBlogContent] = useState("");
+  const [blogCss, setBlogCss] = useState("");
   const [fbExcerpt, setFbExcerpt] = useState("");
   const [linkedinExcerpt, setLinkedinExcerpt] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /** Extract and summarize source material via AI */
+  async function handleExtractSource(
+    input: string,
+    sourceType?: SourceType
+  ): Promise<SourceExtractionResult | null> {
+    if (!org?.id) { setError("No organization found"); return null; }
+    setExtracting(true);
+    setError(null);
+    try {
+      const result = await cmaFetch<SourceExtractionResult>(
+        "/api/cma/ai/extract-source",
+        {
+          method: "POST",
+          body: JSON.stringify({ orgId: org.id, input, sourceType }),
+        }
+      );
+      // Store the summary as source context for outline generation
+      const context = [
+        `Source: ${result.title}`,
+        `Summary: ${result.summary}`,
+        `Key Insights: ${result.keyInsights.join("; ")}`,
+      ].join("\n");
+      setSourceContext(context);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Source extraction failed");
+      return null;
+    } finally {
+      setExtracting(false);
+    }
+  }
 
   async function handleGenerateOutline() {
     if (!org?.id || !topic.trim()) { setError("Topic is required"); return; }
@@ -51,6 +98,7 @@ export default function CmaAiGeneratorPage() {
         body: JSON.stringify({
           orgId: org.id, topic, tone, language, targetWordCount: wordCount,
           keywords: keywords ? keywords.split(",").map((k) => k.trim()) : [],
+          sourceContext: sourceContext || undefined,
         }),
       });
       setTitle(result.title); setMetaDesc(result.metaDescription);
@@ -66,13 +114,16 @@ export default function CmaAiGeneratorPage() {
     setLoading(true); setError(null);
     try {
       const result = await cmaFetch<{
-        blogContent: string; fbExcerpt: string; linkedinExcerpt: string; suggestedImagePrompts: string[];
+        blogContent: string; blogCss: string; fbExcerpt: string; linkedinExcerpt: string; suggestedImagePrompts: string[];
       }>("/api/cma/ai/generate-content", {
         method: "POST",
-        body: JSON.stringify({ orgId: org.id, outline: { title, sections }, tone, language, targetWordCount: wordCount }),
+        body: JSON.stringify({
+          orgId: org.id, outline: { title, sections }, tone, language, targetWordCount: wordCount,
+          sourceContext: sourceContext || undefined,
+        }),
       });
-      setBlogContent(result.blogContent); setFbExcerpt(result.fbExcerpt);
-      setLinkedinExcerpt(result.linkedinExcerpt);
+      setBlogContent(result.blogContent); setBlogCss(result.blogCss || "");
+      setFbExcerpt(result.fbExcerpt); setLinkedinExcerpt(result.linkedinExcerpt);
       if (result.suggestedImagePrompts.length) setImagePrompts(result.suggestedImagePrompts);
       setStep(3);
     } catch (err) {
@@ -84,11 +135,12 @@ export default function CmaAiGeneratorPage() {
     if (!org?.id || !blogContent) return;
     setLoading(true); setError(null);
     try {
-      // Save already-generated content as draft — no re-generation needed
+      const htmlContent = JSON.stringify({ html: blogContent, css: blogCss, js: "" });
       const post = await cmaFetch<{ id: string }>("/api/cma/posts", {
         method: "POST",
         body: JSON.stringify({
-          orgId: org.id, title, content: blogContent,
+          orgId: org.id, title, content: htmlContent,
+          contentFormat: "html",
           excerpt: linkedinExcerpt || undefined,
           tags: [], categories: [],
         }),
@@ -124,9 +176,13 @@ export default function CmaAiGeneratorPage() {
       )}
 
       {step === 1 && (
-        <TopicInputStep topic={topic} onTopicChange={setTopic} keywords={keywords} onKeywordsChange={setKeywords}
+        <TopicInputStep
+          topic={topic} onTopicChange={setTopic} keywords={keywords} onKeywordsChange={setKeywords}
           tone={tone} onToneChange={setTone} language={language} onLanguageChange={setLanguage}
-          wordCount={wordCount} onWordCountChange={setWordCount} onGenerate={handleGenerateOutline} loading={loading} />
+          wordCount={wordCount} onWordCountChange={setWordCount} onGenerate={handleGenerateOutline} loading={loading}
+          sourceContext={sourceContext} onSourceContextChange={setSourceContext}
+          onExtractSource={handleExtractSource} extracting={extracting}
+        />
       )}
       {step === 2 && (
         <OutlineReviewStep title={title} onTitleChange={setTitle} metaDesc={metaDesc} onMetaDescChange={setMetaDesc}
@@ -134,7 +190,8 @@ export default function CmaAiGeneratorPage() {
           onGenerate={handleGenerateContent} loading={loading} />
       )}
       {step === 3 && (
-        <ContentReviewStep blogContent={blogContent} onBlogContentChange={setBlogContent}
+        <ContentReviewStep blogContent={blogContent} blogCss={blogCss}
+          onBlogContentChange={setBlogContent} onBlogCssChange={setBlogCss}
           fbExcerpt={fbExcerpt} onFbExcerptChange={setFbExcerpt}
           linkedinExcerpt={linkedinExcerpt} onLinkedinExcerptChange={setLinkedinExcerpt}
           imagePrompts={imagePrompts} onBack={() => setStep(2)} onSave={handleSaveAsDraft} loading={loading} />

@@ -9,7 +9,7 @@ export interface CreatePostInput {
   authorId: string;
   title: string;
   content: string;
-  contentFormat?: "markdown" | "blocks";
+  contentFormat?: "markdown" | "blocks" | "html";
   templateId?: string;
   styleTheme?: string;
   excerpt?: string;
@@ -21,7 +21,7 @@ export interface CreatePostInput {
 export interface UpdatePostInput {
   title?: string;
   content?: string;
-  contentFormat?: "markdown" | "blocks";
+  contentFormat?: "markdown" | "blocks" | "html";
   styleTheme?: string;
   excerpt?: string;
   categories?: string[];

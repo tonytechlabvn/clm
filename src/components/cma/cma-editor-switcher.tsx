@@ -3,13 +3,17 @@
 import dynamic from "next/dynamic";
 import type { Block, PartialBlock } from "@blocknote/core";
 
-// Lazy-load both editors — BlockNote is client-only, markdown editor uses browser APIs
+// Lazy-load editors — BlockNote is client-only, markdown/html editors use browser APIs
 const CmaBlockEditor = dynamic(
   () => import("./cma-block-editor").then((m) => ({ default: m.CmaBlockEditor })),
   { ssr: false, loading: () => <EditorSkeleton /> }
 );
 const CmaMarkdownEditor = dynamic(
   () => import("./cma-markdown-editor").then((m) => ({ default: m.CmaMarkdownEditor })),
+  { ssr: false, loading: () => <EditorSkeleton /> }
+);
+const CmaHtmlEditor = dynamic(
+  () => import("./cma-html-editor").then((m) => ({ default: m.CmaHtmlEditor })),
   { ssr: false, loading: () => <EditorSkeleton /> }
 );
 
@@ -22,7 +26,7 @@ function EditorSkeleton() {
 }
 
 interface CmaEditorSwitcherProps {
-  contentFormat: "markdown" | "blocks";
+  contentFormat: "markdown" | "blocks" | "html";
   content: string;
   onContentChange: (content: string) => void;
   onBlocksChange?: (blocks: Block[]) => void;
@@ -50,6 +54,10 @@ export function CmaEditorSwitcher({
         orgId={orgId}
       />
     );
+  }
+
+  if (contentFormat === "html") {
+    return <CmaHtmlEditor value={content} onChange={onContentChange} />;
   }
 
   return <CmaMarkdownEditor value={content} onChange={onContentChange} />;

@@ -37,7 +37,7 @@ interface PostDetail {
   id: string;
   title: string;
   content: string;
-  contentFormat: "markdown" | "blocks";
+  contentFormat: "markdown" | "blocks" | "html";
   styleTheme: string;
   excerpt: string | null;
   categories: string[];
@@ -59,7 +59,7 @@ export default function CmaPostEditPage() {
   const [selectedAccountId, setSelectedAccountId] = useState("");
 
   // Form state
-  const [contentFormat, setContentFormat] = useState<"markdown" | "blocks">("markdown");
+  const [contentFormat, setContentFormat] = useState<"markdown" | "blocks" | "html">("markdown");
   const [initialBlocks, setInitialBlocks] = useState<PartialBlock[] | undefined>();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -254,7 +254,7 @@ export default function CmaPostEditPage() {
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className="text-sm font-medium">
-            Content ({contentFormat === "blocks" ? "Block Editor" : "Markdown"})
+            Content ({contentFormat === "blocks" ? "Block Editor" : contentFormat === "html" ? "HTML/CSS/JS" : "Markdown"})
           </label>
           <button
             onClick={handlePreview}

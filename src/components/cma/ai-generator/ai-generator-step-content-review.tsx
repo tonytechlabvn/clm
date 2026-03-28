@@ -1,13 +1,15 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CmaMarkdownEditor } from "@/components/cma/cma-markdown-editor";
-import { Loader2, ArrowLeft, Save } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Eye, Code2 } from "lucide-react";
 
 interface ContentReviewStepProps {
   blogContent: string;
+  blogCss: string;
   onBlogContentChange: (v: string) => void;
+  onBlogCssChange: (v: string) => void;
   fbExcerpt: string;
   onFbExcerptChange: (v: string) => void;
   linkedinExcerpt: string;
@@ -18,16 +20,89 @@ interface ContentReviewStepProps {
   loading: boolean;
 }
 
+// Build a full preview document combining HTML + CSS
+function buildPreviewDoc(html: string, css: string): string {
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{margin:16px;font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;line-height:1.6}img{max-width:100%;height:auto}${css}</style>
+</head><body>${html}</body></html>`;
+}
+
 export function ContentReviewStep({
-  blogContent, onBlogContentChange, fbExcerpt, onFbExcerptChange,
-  linkedinExcerpt, onLinkedinExcerptChange, imagePrompts, onBack, onSave, loading,
+  blogContent, blogCss, onBlogContentChange, onBlogCssChange,
+  fbExcerpt, onFbExcerptChange, linkedinExcerpt, onLinkedinExcerptChange,
+  imagePrompts, onBack, onSave, loading,
 }: ContentReviewStepProps) {
+  const [viewMode, setViewMode] = useState<"preview" | "html" | "css">("preview");
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Update iframe preview when content or CSS changes
+  useEffect(() => {
+    if (!iframeRef.current || viewMode !== "preview") return;
+    const doc = iframeRef.current.contentDocument;
+    if (!doc) return;
+    doc.open();
+    doc.write(buildPreviewDoc(blogContent, blogCss));
+    doc.close();
+  }, [blogContent, blogCss, viewMode]);
+
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader><CardTitle>Generated Blog Post</CardTitle></CardHeader>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Generated Blog Post</CardTitle>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setViewMode("preview")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                  viewMode === "preview" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <Eye className="h-3.5 w-3.5 inline mr-1" />Preview
+              </button>
+              <button
+                onClick={() => setViewMode("html")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                  viewMode === "html" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <Code2 className="h-3.5 w-3.5 inline mr-1" />HTML
+              </button>
+              <button
+                onClick={() => setViewMode("css")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                  viewMode === "css" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                CSS
+              </button>
+            </div>
+          </div>
+        </CardHeader>
         <CardContent>
-          <CmaMarkdownEditor value={blogContent} onChange={onBlogContentChange} />
+          {viewMode === "preview" ? (
+            <iframe
+              ref={iframeRef}
+              title="Content Preview"
+              sandbox="allow-scripts"
+              className="w-full min-h-[500px] rounded-md border bg-white"
+            />
+          ) : viewMode === "html" ? (
+            <textarea
+              value={blogContent}
+              onChange={(e) => onBlogContentChange(e.target.value)}
+              spellCheck={false}
+              className="w-full min-h-[500px] resize-none p-4 font-mono text-sm leading-relaxed bg-[#1e1e1e] text-[#d4d4d4] rounded-md focus:outline-none"
+            />
+          ) : (
+            <textarea
+              value={blogCss}
+              onChange={(e) => onBlogCssChange(e.target.value)}
+              spellCheck={false}
+              className="w-full min-h-[300px] resize-none p-4 font-mono text-sm leading-relaxed bg-[#1e1e1e] text-[#d4d4d4] rounded-md focus:outline-none"
+            />
+          )}
         </CardContent>
       </Card>
 

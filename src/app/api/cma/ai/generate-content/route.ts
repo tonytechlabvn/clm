@@ -1,8 +1,10 @@
 // AI Content Generation — POST generates full blog post from approved outline
+// Returns HTML+CSS content with Unsplash images already embedded
 
 import { NextResponse } from "next/server";
 import { withOrgAuth } from "@/lib/cma/services/org-auth";
 import { generateFullContent } from "@/lib/cma/services/content-generation-service";
+import { resolveAiImagePlaceholders } from "@/lib/cma/services/ai-image-embed-service";
 import { prisma } from "@/lib/prisma-client";
 import { normalizeUrl } from "@/lib/cma/services/crawler-service";
 import type { ContentTone } from "@/lib/cma/services/content-generation-service";
@@ -26,7 +28,7 @@ function checkRateLimit(userId: string): boolean {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { orgId, outline, tone, language, targetWordCount, saveAsDraft } = body;
+    const { orgId, outline, tone, language, targetWordCount, saveAsDraft, sourceContext } = body;
 
     if (!orgId || !outline?.title || !outline?.sections?.length) {
       return NextResponse.json(
@@ -50,18 +52,30 @@ export async function POST(request: Request) {
       outline,
       safeTone,
       language || "en",
-      Math.min(Math.max(targetWordCount || 1500, 500), 5000)
+      Math.min(Math.max(targetWordCount || 1500, 500), 5000),
+      typeof sourceContext === "string" ? sourceContext : undefined
     );
+
+    // Resolve AI image placeholders with real Unsplash photos
+    const resolvedHtml = await resolveAiImagePlaceholders(result.blogContent);
 
     // Optionally save as draft post with pending_review status
     let postId: string | null = null;
     if (saveAsDraft) {
+      // Store as html format: JSON { html, css, js }
+      const htmlContent = JSON.stringify({
+        html: resolvedHtml,
+        css: result.blogCss,
+        js: "",
+      });
+
       const post = await prisma.cmaPost.create({
         data: {
           orgId,
           authorId: auth.userId,
           title: outline.title,
-          content: result.blogContent,
+          content: htmlContent,
+          contentFormat: "html",
           excerpt: result.metaDescription,
           status: "pending_review",
           aiGenerated: true,
@@ -93,7 +107,11 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ ...result, postId });
+    return NextResponse.json({
+      ...result,
+      blogContent: resolvedHtml,
+      postId,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     const status = message.includes("budget exceeded") ? 429 : 500;

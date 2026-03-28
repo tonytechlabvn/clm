@@ -30,7 +30,7 @@ interface CmaComposerSidebarProps {
   onAccountChange: (v: string) => void;
   accounts: PlatformAccount[];
   // Content format indicator
-  contentFormat?: "markdown" | "blocks";
+  contentFormat?: "markdown" | "blocks" | "html";
 }
 
 // Collapsible section wrapper

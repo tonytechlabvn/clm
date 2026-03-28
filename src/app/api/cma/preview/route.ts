@@ -22,6 +22,16 @@ export async function POST(request: Request) {
       const blocks = typeof content === "string" ? JSON.parse(content) : content;
       // Use styled output if theme specified, otherwise plain sanitized HTML
       html = theme ? blocksToStyledHtml(blocks, theme) : await blocksToSanitizedHtml(blocks);
+    } else if (contentFormat === "html") {
+      // HTML format: JSON { html, css, js } — combine for preview
+      try {
+        const parsed = typeof content === "string" ? JSON.parse(content) : content;
+        const css = parsed.css ? `<style>${parsed.css}</style>` : "";
+        const js = parsed.js ? `<script>${parsed.js}<\/script>` : "";
+        html = `${css}${parsed.html || ""}${js}`;
+      } catch {
+        html = typeof content === "string" ? content : "";
+      }
     } else {
       html = await markdownToSanitizedHtml(content);
     }

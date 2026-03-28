@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 
 interface CmaStyledPreviewProps {
   content: string;
-  contentFormat: "markdown" | "blocks";
+  contentFormat: "markdown" | "blocks" | "html";
   theme?: string;
 }
 

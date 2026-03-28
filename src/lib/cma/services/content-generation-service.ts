@@ -21,6 +21,7 @@ export interface GeneratedOutline {
 
 export interface GeneratedContent {
   blogContent: string;
+  blogCss: string;
   metaDescription: string;
   fbExcerpt: string;
   linkedinExcerpt: string;
@@ -43,22 +44,28 @@ Respond with valid JSON only (no markdown fences):
 
 Create 5-8 sections. Include intro and conclusion sections.`;
 
-/** Generate a structured outline from topic + keywords */
+/** Generate a structured outline from topic + keywords, optionally enriched by source context */
 export async function generateOutline(
   orgId: string,
   topic: string,
   keywords: string[],
   tone: ContentTone,
   language: string,
-  targetWordCount: number
+  targetWordCount: number,
+  sourceContext?: string
 ): Promise<GeneratedOutline & { tokensUsed: number }> {
   await checkAiBudget(orgId);
 
-  const userMessage = `Topic: ${topic}
+  let userMessage = `Topic: ${topic}
 Keywords: ${keywords.join(", ")}
 Tone: ${tone}
 Language: ${language}
 Target length: ~${targetWordCount} words`;
+
+  // When source context is provided, include it as reference material
+  if (sourceContext) {
+    userMessage += `\n\n--- SOURCE REFERENCE MATERIAL ---\n${sourceContext.slice(0, 6000)}\n--- END SOURCE ---\n\nIMPORTANT: Use the source material above as the primary reference. Build the outline around the key insights and facts from this source. Enhance and expand on the source content rather than ignoring it.`;
+  }
 
   const fullPrompt = `${OUTLINE_SYSTEM_PROMPT}\n\n${userMessage}`;
 
@@ -76,13 +83,14 @@ Target length: ~${targetWordCount} words`;
   };
 }
 
-/** Generate full blog content from an approved outline */
+/** Generate full blog content from an approved outline, optionally enriched by source context */
 export async function generateFullContent(
   orgId: string,
   outline: { title: string; sections: OutlineSection[] },
   tone: ContentTone,
   language: string,
-  targetWordCount: number
+  targetWordCount: number,
+  sourceContext?: string
 ): Promise<GeneratedContent> {
   await checkAiBudget(orgId);
 
@@ -90,27 +98,49 @@ export async function generateFullContent(
     .map((s) => `## ${s.heading}\n${s.keyPoints.map((p) => `- ${p}`).join("\n")}`)
     .join("\n\n");
 
-  const systemPrompt = `You are a senior content writer for TonyTechLab, an EdTech company.
+  const systemPrompt = `You are a senior content writer and web designer for TonyTechLab, an EdTech company.
 Style: ${tone}
 SEO: Include target keywords naturally. Use H2/H3 headings.
 Length: ${targetWordCount} words.
 Language: ${language}
 
-Write engaging, informative content following the outline below.
+Write engaging, informative content following the outline below as **semantic HTML** (not markdown).
 Include practical examples where relevant.
-Add [IMAGE] placeholders where visuals would help.
 Write a compelling introduction and conclusion.
+
+HTML RULES:
+- Use semantic HTML: <article>, <section>, <h2>, <h3>, <p>, <ul>, <ol>, <blockquote>, <figure>, <code>, <pre>, <table>
+- Add 2-4 image placeholders using: <figure class="ai-image" data-query="descriptive english search query"><figcaption>Caption text</figcaption></figure>
+  The data-query attribute should be 2-5 English words describing the image for stock photo search (e.g. "coding laptop workspace", "team collaboration office")
+- Do NOT include <style> tags, <html>, <head>, or <body> — just the article content
+- Do NOT use inline styles — only semantic HTML with class names
+
+CSS RULES:
+- Provide a separate CSS string that styles the content beautifully
+- Use a root class ".ai-post" to scope all styles
+- Make it responsive, modern, and professional
+- Style headings, paragraphs, lists, code blocks, blockquotes, figures, tables
+- Add nice spacing, typography, and visual hierarchy
+- Use a cohesive color palette that matches ${tone} tone
+- Style .ai-image figures with a placeholder background (#f0f4f8) and min-height: 200px
 
 Return valid JSON only (no markdown fences):
 {
-  "blogContent": "Full markdown blog post content",
+  "blogContent": "<article class='ai-post'>...full HTML content...</article>",
+  "blogCss": ".ai-post { ... } .ai-post h2 { ... } ...",
   "metaDescription": "SEO meta description (150-160 chars)",
   "fbExcerpt": "Facebook excerpt (max 200 chars, engaging)",
   "linkedinExcerpt": "LinkedIn excerpt (max 300 chars, professional)",
   "suggestedImagePrompts": ["image description 1", "..."]
 }`;
 
-  const userMessage = `Title: ${outline.title}\n\nOutline:\n${outlineText}`;
+  let userMessage = `Title: ${outline.title}\n\nOutline:\n${outlineText}`;
+
+  // When source context is provided, include it as reference material for richer content
+  if (sourceContext) {
+    userMessage += `\n\n--- SOURCE REFERENCE MATERIAL ---\n${sourceContext.slice(0, 6000)}\n--- END SOURCE ---\n\nIMPORTANT: Use the source material above as primary reference. Include specific facts, data, and insights from the source. Enhance and expand on the content rather than generic writing.`;
+  }
+
   const fullPrompt = `${systemPrompt}\n\n${userMessage}`;
 
   const ai = await getActiveAiConfig();
@@ -120,6 +150,7 @@ Return valid JSON only (no markdown fences):
   const parsed = parseJsonSafe(result.text);
   return {
     blogContent: String(parsed.blogContent || ""),
+    blogCss: String(parsed.blogCss || ""),
     metaDescription: String(parsed.metaDescription || "").slice(0, 160),
     fbExcerpt: String(parsed.fbExcerpt || "").slice(0, 200),
     linkedinExcerpt: String(parsed.linkedinExcerpt || "").slice(0, 300),

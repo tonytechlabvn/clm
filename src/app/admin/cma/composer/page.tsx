@@ -10,7 +10,7 @@ import { CmaEditorSwitcher } from "@/components/cma/cma-editor-switcher";
 import { CmaComposerSidebar } from "@/components/cma/cma-composer-sidebar";
 import { CmaTemplatePicker } from "@/components/cma/cma-template-picker";
 import { CmaFeaturedImagePicker } from "@/components/cma/cma-featured-image-picker";
-import { Loader2, Save, Send, Link2, Sparkles } from "lucide-react";
+import { Loader2, Save, Send, Link2, Sparkles, FileCode2, Blocks, FileText } from "lucide-react";
 import type { PartialBlock } from "@blocknote/core";
 
 interface PlatformAccount {
@@ -33,7 +33,7 @@ export default function CmaComposerPage() {
   // Key to force editor re-mount when template is applied
   const [editorKey, setEditorKey] = useState(0);
 
-  const [contentFormat, setContentFormat] = useState<"markdown" | "blocks">("blocks");
+  const [contentFormat, setContentFormat] = useState<"markdown" | "blocks" | "html">("blocks");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [excerpt, setExcerpt] = useState("");
@@ -230,6 +230,34 @@ export default function CmaComposerPage() {
             onChange={(e) => setTitle(e.target.value)}
             className="w-full text-2xl font-bold border-0 border-b bg-transparent px-0 py-2 focus:outline-none focus:border-primary"
           />
+
+          {/* Content format toggle */}
+          <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg w-fit">
+            {([
+              { key: "blocks" as const, label: "Visual", icon: Blocks },
+              { key: "markdown" as const, label: "Markdown", icon: FileText },
+              { key: "html" as const, label: "HTML/CSS/JS", icon: FileCode2 },
+            ]).map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => {
+                  setContentFormat(key);
+                  // Reset content when switching formats to avoid format mismatch
+                  if (key !== contentFormat) setContent("");
+                  setEditorKey((k) => k + 1);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+                  contentFormat === key
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+
           <CmaEditorSwitcher
             key={editorKey}
             contentFormat={contentFormat}

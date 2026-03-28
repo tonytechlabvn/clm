@@ -67,12 +67,23 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
       throw new Error(`Content validation failed: ${validation.errors.join(", ")}`);
     }
 
-    // 7. Convert content → HTML (dual pipeline: styled blocks vs markdown)
+    // 7. Convert content → HTML (blocks / html / markdown pipelines)
     let htmlContent: string;
     if (post.contentFormat === "blocks") {
       const blocks = JSON.parse(post.content);
       // Apply theme inline styles for WordPress compatibility
       htmlContent = blocksToStyledHtml(blocks, post.styleTheme || "default");
+    } else if (post.contentFormat === "html") {
+      // HTML format: content is JSON { html, css, js } — combine into self-contained HTML
+      try {
+        const parsed = JSON.parse(post.content);
+        const css = parsed.css ? `<style>${parsed.css}</style>` : "";
+        const js = parsed.js ? `<script>${parsed.js}<\/script>` : "";
+        htmlContent = `${css}${parsed.html || ""}${js}`;
+      } catch {
+        // Fallback: treat as raw HTML string
+        htmlContent = post.content;
+      }
     } else {
       htmlContent = await markdownToThemedHtml(post.content, post.styleTheme || "default");
     }
