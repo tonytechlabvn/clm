@@ -6,13 +6,12 @@ import type { AIProvider } from "@/types";
 import { checkAiBudget, trackTokenUsage } from "./content-ai-service";
 
 // Use Claude for high-quality original content generation
-const GENERATION_PROVIDER: AIProvider = "gemini";
-const GENERATION_MODEL = "gemini-2.5-flash";
-
-function getGeminiKey(): string {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY not configured");
-  return key;
+// Pick AI provider based on available API keys — prefers Gemini, falls back to OpenAI/Claude
+function getAiConfig(): { provider: AIProvider; model: string; apiKey: string } {
+  if (process.env.GEMINI_API_KEY) return { provider: "gemini", model: "gemini-2.5-flash", apiKey: process.env.GEMINI_API_KEY };
+  if (process.env.OPENAI_API_KEY) return { provider: "openai", model: "gpt-4o-mini", apiKey: process.env.OPENAI_API_KEY };
+  if (process.env.ANTHROPIC_API_KEY) return { provider: "claude", model: "claude-sonnet-4-20250514", apiKey: process.env.ANTHROPIC_API_KEY };
+  throw new Error("No AI API key configured (GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY)");
 }
 
 export type ContentTone = "professional" | "casual" | "technical" | "educational";
@@ -72,7 +71,8 @@ Target length: ~${targetWordCount} words`;
 
   const fullPrompt = `${OUTLINE_SYSTEM_PROMPT}\n\n${userMessage}`;
 
-  const result = await callAI(GENERATION_PROVIDER, getGeminiKey(), fullPrompt, 2048, GENERATION_MODEL);
+  const ai = getAiConfig();
+  const result = await callAI(ai.provider, ai.apiKey, fullPrompt, 2048, ai.model);
   await trackTokenUsage(orgId, result.usage.totalTokens);
 
   const parsed = parseJsonSafe(result.text);
@@ -122,7 +122,8 @@ Return valid JSON only (no markdown fences):
   const userMessage = `Title: ${outline.title}\n\nOutline:\n${outlineText}`;
   const fullPrompt = `${systemPrompt}\n\n${userMessage}`;
 
-  const result = await callAI(GENERATION_PROVIDER, getGeminiKey(), fullPrompt, 8192, GENERATION_MODEL);
+  const ai = getAiConfig();
+  const result = await callAI(ai.provider, ai.apiKey, fullPrompt, 8192, ai.model);
   await trackTokenUsage(orgId, result.usage.totalTokens);
 
   const parsed = parseJsonSafe(result.text);
