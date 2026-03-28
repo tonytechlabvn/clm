@@ -48,22 +48,26 @@ export async function getOverview(orgId: string, days: number): Promise<Overview
 
   for (const post of posts) {
     const m = post.metrics;
-    if (m) {
-      totalReach += m.reach;
-      totalClicks += m.clicks;
-      const engagement = m.clicks * 3 + m.shares * 2 + m.likes;
-      totalEngagement += engagement;
-      topPosts.push({
-        id: post.id,
-        title: post.title,
-        publishedAt: post.publishedAt?.toISOString() || null,
-        reach: m.reach,
-        clicks: m.clicks,
-        likes: m.likes,
-        shares: m.shares,
-        engagementScore: engagement,
-      });
-    }
+    const reach = m?.reach ?? 0;
+    const clicks = m?.clicks ?? 0;
+    const likes = m?.likes ?? 0;
+    const shares = m?.shares ?? 0;
+    const engagement = clicks * 3 + shares * 2 + likes;
+
+    totalReach += reach;
+    totalClicks += clicks;
+    totalEngagement += engagement;
+
+    topPosts.push({
+      id: post.id,
+      title: post.title,
+      publishedAt: post.publishedAt?.toISOString() || null,
+      reach,
+      clicks,
+      likes,
+      shares,
+      engagementScore: engagement,
+    });
 
     for (const pp of post.platforms) {
       const plat = pp.account.platform;

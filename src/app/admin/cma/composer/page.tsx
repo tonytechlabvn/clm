@@ -30,6 +30,8 @@ export default function CmaComposerPage() {
   const [templateId, setTemplateId] = useState<string | undefined>(undefined);
   const [styleTheme, setStyleTheme] = useState<string>("default");
   const [initialBlocks, setInitialBlocks] = useState<PartialBlock[] | undefined>(undefined);
+  // Key to force editor re-mount when template is applied
+  const [editorKey, setEditorKey] = useState(0);
 
   const [contentFormat, setContentFormat] = useState<"markdown" | "blocks">("blocks");
   const [title, setTitle] = useState("");
@@ -63,6 +65,8 @@ export default function CmaComposerPage() {
       setTemplateId(undefined);
       setStyleTheme("default");
     }
+    // Force editor re-mount so new initialBlocks take effect
+    setEditorKey((k) => k + 1);
   }
 
   async function handleSaveDraft() {
@@ -227,6 +231,7 @@ export default function CmaComposerPage() {
             className="w-full text-2xl font-bold border-0 border-b bg-transparent px-0 py-2 focus:outline-none focus:border-primary"
           />
           <CmaEditorSwitcher
+            key={editorKey}
             contentFormat={contentFormat}
             content={content}
             onContentChange={handleContentChange}
