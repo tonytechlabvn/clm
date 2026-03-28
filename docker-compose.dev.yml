@@ -1,0 +1,9 @@
+services:
+  clm-db:
+    # Inherits from docker-compose.yml — DB only for local dev
+    ports:
+      - "5433:5432"
+
+  clm:
+    # Disable app container in dev — run via npm run dev on host
+    profiles: ["production"]

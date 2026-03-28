@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+*.md
+plans/
+docs/
+.claude/
+.opencode/
+claudekit-engineer/
+.env
+.env.*
+!.env.example

@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Authentication & Users ───
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  wpId          Int?      @unique
+  role          String    @default("user") // "root" | "admin" | "user"
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts            Account[]
+  orgMemberships      OrgMember[]
+  aiQuota             UserAiQuota?
+  cmaPlatformAccounts CmaPlatformAccount[]
+  cmaPosts            CmaPost[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// ─── Organizations ───
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  logoUrl     String?
+  isActive    Boolean  @default(true)
+  isArchived  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members             OrgMember[]
+  cmaPlatformAccounts CmaPlatformAccount[]
+  cmaPosts            CmaPost[]
+}
+
+model OrgMember {
+  id       String   @id @default(cuid())
+  userId   String
+  orgId    String
+  role     String   @default("member") // "owner" | "admin" | "member"
+  joinedAt DateTime @default(now())
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+}
+
+// ─── System Config ───
+
+model SystemSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+// ─── AI Quota & Usage ───
+
+model UserAiQuota {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  freeUsesLeft Int       @default(0)
+  paidUsesLeft Int       @default(0)
+  totalUsed    Int       @default(0)
+  lastUsedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model AiUsageLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  source    String // "pool" | "byok"
+  provider  String?
+  model     String?
+  tokens    Int?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action])
+}
+
+// ─── CMA: Content Marketing Automation ───
+
+model CmaPlatformAccount {
+  id           String    @id @default(cuid())
+  orgId        String
+  userId       String // who connected this account
+  platform     String // "wordpress" | "facebook" | "linkedin"
+  label        String // user-friendly name e.g. "tonytechlab.com"
+  siteUrl      String? // WordPress site URL
+  username     String? // WordPress username
+  accessToken  String    @db.Text // encrypted Application Password or OAuth token
+  refreshToken String?   @db.Text // encrypted, for OAuth platforms
+  tokenExpiry  DateTime?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  org   Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts CmaPostPlatform[]
+
+  @@index([orgId])
+  @@index([userId])
+}
+
+model CmaPost {
+  id            String    @id @default(cuid())
+  orgId         String
+  authorId      String
+  title         String
+  slug          String?
+  content       String    @db.Text // markdown source
+  excerpt       String?   @db.Text
+  featuredImage String? // local path or URL
+  categories    String[] // synced with WP taxonomy
+  tags          String[] // synced with WP taxonomy
+  status        String    @default("draft") // "draft" | "approved" | "scheduled" | "publishing" | "published" | "failed"
+  publishError  String?   @db.Text
+  scheduledAt   DateTime?
+  publishedAt   DateTime?
+  pgBossJobId   String? // pg-boss job ID for cancellation on reschedule
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  org       Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  author    User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  platforms CmaPostPlatform[]
+  media     CmaMedia[]
+
+  @@index([orgId])
+  @@index([authorId])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+// Tracks per-platform publish state for a post
+model CmaPostPlatform {
+  id             String    @id @default(cuid())
+  postId         String
+  accountId      String
+  platformPostId String? // external ID on the platform
+  platformUrl    String? // URL on the platform
+  status         String    @default("pending") // "pending" | "publishing" | "published" | "failed"
+  publishError   String?   @db.Text
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  post    CmaPost            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  account CmaPlatformAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, accountId])
+  @@index([postId])
+  @@index([accountId])
+}
+
+// Media files uploaded for CMA posts
+model CmaMedia {
+  id           String   @id @default(cuid())
+  orgId        String
+  postId       String?
+  fileName     String // UUID-based filename
+  originalName String // original upload name (for display)
+  mimeType     String
+  size         Int // bytes
+  localPath    String // path on disk
+  wpMediaId    Int? // WordPress attachment ID after upload
+  createdAt    DateTime @default(now())
+
+  post CmaPost? @relation(fields: [postId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([postId])
+}
