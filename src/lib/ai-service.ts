@@ -50,6 +50,11 @@ const MODEL_MAX_TOKENS: Record<string, number> = {
   "gemini-1.5-flash": 8192,
   "gemini-2.5-pro": 65536,
   "gemini-2.5-flash": 65536,
+  "gemini-3.0-pro": 65536,
+  "gemini-3.0-flash": 65536,
+  "gemini-3.1-pro-preview": 65536,
+  "gemini-3.1-flash": 65536,
+  "gemini-3.1-flash-lite": 65536,
   "gpt-4o-mini": 16384,
   "gpt-4o": 16384,
   "gpt-4-turbo": 4096,
@@ -59,6 +64,16 @@ const MODEL_MAX_TOKENS: Record<string, number> = {
   "claude-3-5-sonnet-20241022": 8192,
   "claude-3-5-haiku-20241022": 8192,
 };
+
+// Gemini thinking models use thinking tokens that consume the maxOutputTokens budget.
+// We multiply the requested tokens by this factor to ensure enough room for actual output.
+const THINKING_MODEL_PATTERNS = ["gemini-2.5-", "gemini-3.0-", "gemini-3.1-"];
+const THINKING_TOKEN_MULTIPLIER = 4;
+
+/** Check if a model is a thinking model that uses thinking tokens */
+function isThinkingModel(model: string): boolean {
+  return THINKING_MODEL_PATTERNS.some((p) => model.startsWith(p));
+}
 
 const GEMINI_FALLBACK = "gemini-2.0-flash-lite";
 
@@ -85,7 +100,12 @@ async function callGeminiWithApiKey(
   for (const modelName of models) {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        const clampedTokens = clampTokens(maxTokens, modelName);
+        // Thinking models consume maxOutputTokens for both thinking and output,
+        // so we multiply the requested tokens to ensure enough room for actual content
+        const effectiveTokens = isThinkingModel(modelName)
+          ? maxTokens * THINKING_TOKEN_MULTIPLIER
+          : maxTokens;
+        const clampedTokens = clampTokens(effectiveTokens, modelName);
         const model = genAI.getGenerativeModel({
           model: modelName,
           generationConfig: { maxOutputTokens: clampedTokens },
