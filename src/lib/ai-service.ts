@@ -66,18 +66,28 @@ const MODEL_MAX_TOKENS: Record<string, number> = {
 };
 
 // Thinking/reasoning models use internal tokens that consume the output token budget.
-// We multiply the requested tokens by this factor to ensure enough room for actual output.
+// We add a fixed reasoning overhead to ensure enough room for actual content output.
 // Applies to: Gemini 2.5+/3.x (thinking), OpenAI o-series and GPT-5+ (reasoning).
 const THINKING_MODEL_PATTERNS = [
   "gemini-2.5-", "gemini-3.0-", "gemini-3.1-",
   "o1", "o3", "o4",
   "gpt-5",
 ];
-const THINKING_TOKEN_MULTIPLIER = 4;
+// Fixed reasoning token overhead added to requested tokens for thinking models.
+// Most reasoning uses 1000-4000 tokens; 8192 gives generous headroom without
+// inflating large requests (e.g., 16384 content tokens → 24576 total, not 65536).
+const THINKING_OVERHEAD_TOKENS = 8192;
 
 /** Check if a model uses thinking/reasoning tokens that consume output budget */
 function isThinkingModel(model: string): boolean {
   return THINKING_MODEL_PATTERNS.some((p) => model.startsWith(p));
+}
+
+/** Calculate effective tokens for thinking models: requested + fixed reasoning overhead */
+function getEffectiveTokens(requestedTokens: number, model: string): number {
+  return isThinkingModel(model)
+    ? requestedTokens + THINKING_OVERHEAD_TOKENS
+    : requestedTokens;
 }
 
 const GEMINI_FALLBACK = "gemini-2.0-flash-lite";
@@ -106,10 +116,8 @@ async function callGeminiWithApiKey(
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         // Thinking models consume maxOutputTokens for both thinking and output,
-        // so we multiply the requested tokens to ensure enough room for actual content
-        const effectiveTokens = isThinkingModel(modelName)
-          ? maxTokens * THINKING_TOKEN_MULTIPLIER
-          : maxTokens;
+        // so we add a fixed reasoning overhead to ensure enough room for actual content
+        const effectiveTokens = getEffectiveTokens(maxTokens, modelName);
         const clampedTokens = clampTokens(effectiveTokens, modelName);
         const model = genAI.getGenerativeModel({
           model: modelName,
@@ -188,9 +196,7 @@ export async function callAI(
       const openaiModel = modelId || "gpt-4o-mini";
       const openai = getOpenAIClient(apiKey);
       // Reasoning models (o-series, GPT-5+) use reasoning tokens from the output budget
-      const effectiveTokens = isThinkingModel(openaiModel)
-        ? maxTokens * THINKING_TOKEN_MULTIPLIER
-        : maxTokens;
+      const effectiveTokens = getEffectiveTokens(maxTokens, openaiModel);
       const clampedTokens = clampTokens(effectiveTokens, openaiModel);
       const LEGACY_MODELS = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"];
       const isLegacy = LEGACY_MODELS.includes(openaiModel);
