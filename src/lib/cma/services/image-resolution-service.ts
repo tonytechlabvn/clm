@@ -21,7 +21,8 @@ export interface ImageResolutionResult {
 }
 
 const MAX_IMAGES_PER_POST = 5;
-const IMAGE_PLACEHOLDER_REGEX = /<p>\s*\[IMAGE\]\s*<\/p>/gi;
+// Match [IMAGE] in any context: standalone paragraphs, inline in lists, etc.
+const IMAGE_PLACEHOLDER_REGEX = /\[IMAGE\]/i;
 
 /**
  * Resolve [IMAGE] placeholders in HTML with real Unsplash images.
@@ -34,23 +35,19 @@ export async function resolveImagePlaceholders(
   adapter: PlatformAdapter
 ): Promise<ImageResolutionResult> {
   if (!adapter.uploadMedia) {
-    // Remove placeholders if adapter doesn't support media upload
-    return { html: html.replace(IMAGE_PLACEHOLDER_REGEX, ""), uploadedMediaIds: [] };
+    // Remove all placeholders if adapter doesn't support media upload
+    return { html: html.replace(/\[IMAGE\]/gi, ""), uploadedMediaIds: [] };
   }
 
-  const matches = html.match(IMAGE_PLACEHOLDER_REGEX);
-  if (!matches?.length) return { html, uploadedMediaIds: [] };
+  // Count occurrences
+  const totalPlaceholders = (html.match(/\[IMAGE\]/gi) || []).length;
+  if (totalPlaceholders === 0) return { html, uploadedMediaIds: [] };
 
   const uploadedMediaIds: number[] = [];
   let processedCount = 0;
 
-  // Replace each [IMAGE] placeholder sequentially
-  for (const _match of matches) {
-    if (processedCount >= MAX_IMAGES_PER_POST) {
-      // Remove remaining placeholders
-      html = html.replace(IMAGE_PLACEHOLDER_REGEX, "");
-      break;
-    }
+  // Replace each [IMAGE] placeholder sequentially (one at a time)
+  while (IMAGE_PLACEHOLDER_REGEX.test(html) && processedCount < MAX_IMAGES_PER_POST) {
 
     const query = ctx.suggestedImagePrompts[processedCount] || ctx.postTitle;
 
@@ -107,6 +104,9 @@ export async function resolveImagePlaceholders(
 
     processedCount++;
   }
+
+  // Remove any remaining [IMAGE] placeholders beyond the limit
+  html = html.replace(/\[IMAGE\]/gi, "");
 
   return { html, uploadedMediaIds };
 }
