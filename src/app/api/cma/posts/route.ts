@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { orgId, title, content, excerpt, categories, tags, featuredImage } = body;
+    const { orgId, title, content, contentFormat, templateId, styleTheme, excerpt, categories, tags, featuredImage } = body;
 
     if (!orgId || !title || !content) {
       return NextResponse.json(
@@ -47,6 +47,9 @@ export async function POST(request: Request) {
       authorId: auth.userId,
       title,
       content,
+      contentFormat,
+      templateId,
+      styleTheme,
       excerpt,
       categories,
       tags,

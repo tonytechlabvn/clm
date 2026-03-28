@@ -1,10 +1,10 @@
-# Codebase Summary — CLM Phase 4
+# Codebase Summary — CLM Phase 7
 
 **Project:** Tony Tech Lab Core Learning Management (CLM)
 **Modules:** Content Management (CMA) + Classroom System + Learning Management System (LMS)
-**Phase:** 4 (Classroom + LMS + AI Integration)
+**Phase:** 7 (CMA Post Template System & UI Overhaul)
 **Last Updated:** 2026-03-28
-**Status:** Complete
+**Status:** In Progress
 
 ---
 
@@ -129,7 +129,7 @@ src/
 ├── middleware.ts
 ├── types/
 └── prisma/
-    └── schema.prisma               # 22 models (10 Phase 4 new)
+    └── schema.prisma               # 26 models (Phase 3-7)
 ```
 
 ---
@@ -185,6 +185,10 @@ src/
 - **@fullcalendar/daygrid** 6.1.20
 - **@fullcalendar/interaction** 6.1.20
 - **@uiw/react-md-editor** 4.0.11 (markdown editor)
+- **@blocknote/core** 0.47.3 (block editor logic)
+- **@blocknote/react** 0.47.3 (React wrapper)
+- **@blocknote/shadcn** 0.47.3 (shadcn/ui theme)
+- **@base-ui/react** 1.3.0 (shadcn v4 dependency)
 - **lucide-react** 0.577.0 (icons)
 
 ### Date Handling
@@ -196,10 +200,11 @@ src/
 ### Content Processing
 - **unified** 11.0.5 (markdown AST)
 - **remark-parse** 11.0.0
-- **remark-rehype** 11.1.2
-- **rehype-sanitize** 6.0.0
-- **rehype-stringify** 10.0.1
-- **rehype-raw** 7.0.0
+- **remark-rehype** 11.1.2 (markdown → HTML AST)
+- **rehype-parse** 9.0.1 (HTML → AST, Phase 7)
+- **rehype-raw** 7.0.0 (raw HTML handling, Phase 7)
+- **rehype-sanitize** 6.0.0 (XSS prevention, Phase 7)
+- **rehype-stringify** 10.0.1 (AST → HTML, Phase 7)
 
 ### Testing & Linting
 - **Vitest** 4.1.0 (unit/integration tests)
@@ -211,7 +216,7 @@ src/
 
 ---
 
-## Data Model (Prisma) — 22 Models
+## Data Model (Prisma) — 26 Models (Phase 3-7)
 
 ### Phase 3: Content Management (3 models)
 
@@ -655,15 +660,48 @@ npx prisma migrate deploy
 |-------|---------|--------|
 | `POST /api/integration/classroom-courses` | Link course to classroom assignment | Complete |
 
+### Phase 7: Block Editor, Templates & Image System
+
+| Component | Location | Purpose | Status |
+|-----------|----------|---------|--------|
+| `cma-block-editor.tsx` | `components/cma/` | BlockNote editor (Notion-like blocks) | Complete |
+| `cma-template-picker.tsx` | `components/cma/` | Template selection modal with gallery | Complete |
+| `cma-featured-image-picker.tsx` | `components/cma/` | Image picker (upload/unsplash/AI) | Complete |
+| `cma-ai-image-generator-panel.tsx` | `components/cma/` | DALL-E 3 prompt UI with preview | Complete |
+| `cma-styled-preview.tsx` | `components/cma/` | Theme preview (default/editorial) | Complete |
+| `template-service.ts` | `lib/cma/services/` | Template CRUD, seeding, validation | Complete |
+| `image-generation-service.ts` | `lib/cma/services/` | DALL-E 3 integration + rate limiting | Complete |
+| `unsplash-service.ts` | `lib/cma/services/` | Unsplash API (search, download) | Complete |
+| `template-definitions.ts` | `lib/cma/templates/` | Pre-built template block definitions | Complete |
+| `seed-system-templates.ts` | `lib/cma/templates/` | Seeder for system templates | Complete |
+| `/api/cma/templates` | `app/api/cma/` | GET/POST templates | Complete |
+| `/api/cma/templates/[id]` | `app/api/cma/` | GET/PUT/DELETE template | Complete |
+| `/api/cma/images/*` | `app/api/cma/` | Unsplash search, download, DALL-E gen | Complete |
+| `/admin/cma/templates` | `app/admin/cma/` | Template gallery page | Complete |
+| `/admin/cma/composer` | `app/admin/cma/` | Redesigned composer with block editor | Complete |
+
+### New shadcn/ui Components (Phase 7)
+
+- `dialog` — Modal for templates, image generation
+- `tabs` — Content/Images/Settings tabs
+- `select` — Theme dropdown selector
+- `sheet` — Collapsible sidebar
+- `separator` — Visual dividers
+- `skeleton` — Loading states
+- `input` / `textarea` — Form controls
+- `tooltip` — Feature hints
+
 ---
 
 ## Version History
 
-| Version | Date | Status |
-|---------|------|--------|
-| 0.1.0-phase3 | 2026-03-28 | Complete (this version) |
-| 0.1.0-phase2 | [TBD] | Complete |
-| 0.1.0-phase1 | [TBD] | Complete |
+| Version | Date | Status | Phase |
+|---------|------|--------|-------|
+| 0.1.0-phase7 | 2026-03-28 | In Progress | Block Editor, Templates, Image System |
+| 0.1.0-phase4 | 2026-03-28 | Complete | Classroom + LMS + AI |
+| 0.1.0-phase3 | 2026-03-28 | Complete | Scheduled Publishing |
+| 0.1.0-phase2 | [TBD] | Complete | Platform Publishing |
+| 0.1.0-phase1 | [TBD] | Complete | Post CRUD |
 
 See [project-changelog.md](./project-changelog.md) for detailed phase notes.
 

@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     const file = formData.get("file") as File | null;
     const orgId = formData.get("orgId") as string | null;
     const postId = formData.get("postId") as string | null;
+    const source = (formData.get("source") as string | null) ?? "upload";
 
     if (!file || !orgId) {
       return NextResponse.json(
@@ -108,6 +109,7 @@ export async function POST(request: Request) {
         mimeType: file.type,
         size: file.size,
         localPath,
+        source,
       },
     });
 

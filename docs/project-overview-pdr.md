@@ -18,7 +18,7 @@
 
 ---
 
-## Product Scope (Phase 3 Complete)
+## Product Scope (Phase 7 In Progress)
 
 ### CMA Module: Content Management Application
 
@@ -39,14 +39,34 @@
 - ✅ Next.js instrumentation hook for worker startup
 - ✅ Compensation transactions for rollback on failure
 
-#### Planned: Phase 4+ Features
-- [ ] Approval workflow (draft → pending approval → scheduled)
-- [ ] Content templates & reusable components
+#### Phase 4-6: AI Curation, Generation & Analytics (Complete)
+- ✅ RSS feed management and crawling
+- ✅ AI content curation and approval workflow
+- ✅ AI outline generation and full content generation
+- ✅ Analytics dashboard (reach, clicks, engagement metrics)
+- ✅ Time-series metrics snapshots for charts
+- ✅ CSV export of performance data
+
+#### Phase 7: Block Editor, Templates & Image System (In Progress)
+- ✅ BlockNote block editor (Notion-like, dual-mode with markdown)
+- ✅ Template system (CRUD, 3 pre-built: Tutorial, News, Announcement)
+- ✅ Template gallery page with preview
+- ✅ Unsplash stock photo integration with search
+- ✅ DALL-E 3 AI image generation with per-org rate limiting
+- ✅ Featured image picker (upload/unsplash/AI tabs)
+- ✅ Styled publishing with multi-theme support (default, editorial)
+- ✅ Redesigned composer UI with collapsible sidebar
+- ✅ HTML sanitization for XSS prevention
+- ✅ New shadcn/ui components (dialog, tabs, select, sheet, separator, skeleton, tooltip)
+
+#### Planned: Phase 8+ Features
+- [ ] Approval workflow enhancement (draft → pending approval → scheduled)
 - [ ] Multi-language support
-- [ ] Analytics dashboard (publish success, engagement)
 - [ ] Bulk operations (import/schedule in batch)
 - [ ] Webhooks for platform events
 - [ ] A/B testing variants
+- [ ] Social media adapters (Facebook, LinkedIn)
+- [ ] UTM tracking and conversion attribution
 
 ---
 

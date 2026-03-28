@@ -1,6 +1,8 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ImageIcon, X } from "lucide-react";
 
 interface PlatformAccount {
   id: string;
@@ -19,6 +21,9 @@ interface Props {
   accountId: string;
   onAccountChange: (v: string) => void;
   accounts: PlatformAccount[];
+  featuredImage?: string;
+  onFeaturedImageChange?: (url: string | undefined) => void;
+  onOpenImagePicker?: () => void;
 }
 
 export function CmaPostMetaForm({
@@ -27,9 +32,40 @@ export function CmaPostMetaForm({
   tags, onTagsChange,
   accountId, onAccountChange,
   accounts,
+  featuredImage,
+  onFeaturedImageChange,
+  onOpenImagePicker,
 }: Props) {
   return (
     <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Featured Image</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {featuredImage ? (
+            <div className="relative rounded-md overflow-hidden border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={featuredImage} alt="Featured" className="w-full h-32 object-cover" />
+              <button
+                onClick={() => onFeaturedImageChange?.(undefined)}
+                className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-black/80"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="rounded-md border-2 border-dashed border-muted-foreground/30 h-24 flex items-center justify-center text-xs text-muted-foreground">
+              No image selected
+            </div>
+          )}
+          <Button variant="outline" size="sm" className="w-full" onClick={onOpenImagePicker}>
+            <ImageIcon className="h-3.5 w-3.5 mr-1.5" />
+            {featuredImage ? "Change Image" : "Select Image"}
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Publish To</CardTitle>

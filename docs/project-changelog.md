@@ -4,6 +4,152 @@ All notable changes to Tony Tech Lab CLM are documented here. Format: [ISO 8601 
 
 ---
 
+## [2026-03-28] — v0.1.0-phase7 — CMA Post Template System & UI Overhaul Complete
+
+### Added (Phase 7: Block Editor, Templates, Image System, Styled Publishing)
+
+**Database Models (2 new)**
+- `CmaTemplate` — Post templates with BlockNote JSON blocks (id, orgId?, name, slug unique, description, category, blocks JSON, styleTheme, isDefault, timestamps)
+- `CmaAiImageUsage` — Daily per-org AI image generation quota tracking (orgId, date, imageCount, timestamps)
+
+**CmaPost & CmaMedia Fields**
+- `CmaPost.contentFormat: String` — "markdown" (default) | "blocks" for dual-mode editor
+- `CmaPost.templateId: String?` — FK to CmaTemplate for template-based posts
+- `CmaPost.styleTheme: String` — "default" | "editorial" | future themes
+- `CmaMedia.source: String` — "upload" | "unsplash" | "ai-generated" (tracks image origin)
+- `CmaMedia.sourceUrl: String?` — Unsplash photo URL for attribution
+- `CmaMedia.aiPrompt: String?` — Prompt used for AI image generation
+- `CmaMedia.aiProvider: String?` — "openai" (DALL-E 3) | "google" (Gemini)
+
+**Block Editor (BlockNote Integration)**
+- `cma-block-editor.tsx` — Notion-like block editor (coexists indefinitely with markdown)
+- Block types: paragraphs, headings, lists, code, images, embeds
+- Drag-to-reorder blocks, nested structures, rich text formatting
+- BlockNote JSON stored in CmaPost when contentFormat="blocks"
+
+**Template System (CRUD + Gallery)**
+- `template-service.ts` — Template CRUD, system template seeding, validation
+- `template-definitions.ts` — Pre-built template block definitions
+- `seed-system-templates.ts` — Seeder for 3 system templates: Tutorial, News, Announcement
+- `cma-template-picker.tsx` — Template gallery modal with preview & selection
+- Template categories: "tutorial", "news", "announcement"
+- System templates (orgId=null) shared across orgs; org templates (orgId!=null) private
+
+**Image System (Unsplash + DALL-E 3)**
+- `unsplash-service.ts` — Unsplash API search & download with attribution
+- `image-generation-service.ts` — DALL-E 3 integration with daily per-org rate limiting
+- `cma-featured-image-picker.tsx` — Image picker UI (upload/unsplash/ai tabs)
+- `cma-ai-image-generator-panel.tsx` — Prompt input, generation progress, preview
+
+**Styled Publishing (Multi-Theme Support)**
+- `cma-styled-preview.tsx` — Theme preview component (default/editorial)
+- styleTheme: "default" (clean, minimal) | "editorial" (magazine-style)
+- Inline CSS injected into post HTML for WordPress compatibility
+- Featured image, heading styles, typography vary by theme
+
+**HTML Sanitization (Security)**
+- Packages: rehype-parse, rehype-raw, rehype-sanitize, rehype-stringify, remark-rehype
+- Block HTML → AST → sanitized (remove scripts, event handlers) → safe HTML
+
+**API Routes (4 new)**
+- GET/POST `/api/cma/templates` — List templates + create custom
+- GET/PUT/DELETE `/api/cma/templates/[id]` — Detail, update, delete
+- GET `/api/cma/images/unsplash-search?q=...` — Search Unsplash
+- POST `/api/cma/images/unsplash-download` — Download Unsplash photo
+- POST `/api/cma/images/generate` — Generate image via DALL-E 3
+- POST `/api/cma/images/[id]` — Set featured image
+
+**UI Pages (2 new)**
+- `/admin/cma/templates` — Template gallery, management, preview
+- Enhanced `/admin/cma/composer` with collapsible sidebar, tabs, theme selector
+
+**UI Components (New shadcn/ui Components)**
+- `dialog` — Template picker, image generator modal
+- `tabs` — Content (markdown/blocks), Images, Settings tabs
+- `select` — Theme selector dropdown
+- `sheet` — Collapsible sidebar for templates/images/publishing
+- `separator` — Visual dividers
+- `skeleton` — Loading states
+- `input` / `textarea` — Improved form inputs
+- `tooltip` — Feature hints
+- Package: `@base-ui/react@1.3.0` — shadcn v4 dependency
+
+**Block Editor Packages**
+- `@blocknote/core@0.47.3` — Core block editor
+- `@blocknote/react@0.47.3` — React integration
+- `@blocknote/shadcn@0.47.3` — shadcn/ui theme
+
+### Changed
+
+**Composer UI Redesign**
+- Sidebar now collapsible with template, image, theme sections
+- Tab-based content layout (Markdown/Blocks, Images, Settings, Preview)
+- Sheet component for advanced publishing options
+- Improved UX with reduced visual clutter
+
+**Post Editor Workflow**
+- Users now choose contentFormat when creating post
+- Template selection available in composer sidebar
+- Image picker integrated in Images tab (upload/unsplash/AI)
+- Theme selection before publishing
+
+**CmaPost Schema**
+- New optional fields: contentFormat, templateId, styleTheme
+- Backward compatible: existing posts default to contentFormat="markdown"
+
+### Testing
+
+**New Tests**
+- [x] Template CRUD and seeding
+- [x] Block editor content storage & retrieval
+- [x] Template picker UI interaction
+- [x] Unsplash search and download
+- [x] DALL-E 3 image generation with rate limiting
+- [x] HTML sanitization (XSS prevention)
+- [x] Styled publishing output (CSS injection)
+- [x] Feature image picker workflow
+
+### Documentation
+
+- [x] `docs/system-architecture.md` — Phase 7 block editor, templates, image system, styled publishing
+- [x] `docs/project-changelog.md` — This file
+
+### Dependencies Added
+
+```json
+{
+  "@blocknote/core": "^0.47.3",
+  "@blocknote/react": "^0.47.3",
+  "@blocknote/shadcn": "^0.47.3",
+  "@base-ui/react": "^1.3.0",
+  "rehype-parse": "^9.0.1",
+  "rehype-raw": "^7.0.0",
+  "rehype-sanitize": "^6.0.0",
+  "rehype-stringify": "^10.0.1",
+  "remark-rehype": "^11.1.2"
+}
+```
+
+### Migration Notes
+
+**Database Migration**
+```bash
+# Assumes migration file for Phase 7
+npx prisma migrate deploy  # Production
+npx prisma migrate dev --name phase7  # Dev
+```
+
+**Startup Sequence (Unchanged)**
+- Workers and APIs remain compatible with Phase 4-6
+- New template seeding optional (system templates auto-created on first run)
+
+**No Breaking Changes**
+- Existing posts, scheduling, publishing unaffected
+- Markdown editor still default; users opt-in to blocks
+- All new features are backward compatible
+
+---
+
 ## [2026-03-28] — v0.1.0-phase4 — Classroom + LMS + AI Integration Complete
 
 ### Added (Phase 4: Classroom System + Learning Management + AI)

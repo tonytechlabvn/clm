@@ -1,0 +1,3 @@
+[     167ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://tonytechlab.com/wp-admin/plugin-editor.php?file=cvmaker-sso.php&plugin=cvmaker-sso.php:0
+[    5890ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://tonytechlab.com/wp-json/cvmaker/v1/userinfo:0
+[   12818ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://tonytechlab.com/wp-admin/admin-ajax.php:0

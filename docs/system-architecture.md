@@ -8,7 +8,7 @@ The **Core Learning Management (CLM)** platform is a Next.js-based integrated sy
 - **AI Integration:** Auto-generate quizzes, summarize content, review code submissions
 - **Cross-system Integration:** Link courses to classroom assignments
 
-### Current Architecture (Phase 4 Complete)
+### Current Architecture (Phase 7 In Progress)
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -384,6 +384,163 @@ NEXT_RUNTIME=nodejs            # Enables instrumentation
 
 ---
 
+## Phase 7: CMA Post Template System & UI Overhaul
+
+### 1. BlockNote Block Editor (Dual-mode Editor)
+
+**New Component:**
+- `cma-block-editor.tsx` — Notion-like block editor alongside markdown (indefinite coexistence)
+
+**Key Features:**
+- Block-based editing: paragraphs, headings, lists, code, images, embeds
+- Markdown mode preserved as alternative (users choose `contentFormat`)
+- BlockNote JSON blocks stored in `CmaPost.content` when `contentFormat="blocks"`
+- Rich formatting: bold, italic, strikethrough, code, links
+- Drag-to-reorder blocks, nested structures
+
+**Packages:**
+- `@blocknote/core@0.47.3` — Core block editor logic
+- `@blocknote/react@0.47.3` — React wrapper
+- `@blocknote/shadcn@0.47.3` — shadcn/ui integration
+
+**API:**
+- POST/PATCH `/api/cma/posts` now accept `contentFormat` ("markdown" | "blocks")
+- Content stored as BlockNote JSON or markdown based on format
+
+### 2. Template System (CRUD + Gallery)
+
+**New Models:**
+- `CmaTemplate` (id, orgId?, name, slug unique, description, category, blocks JSON, styleTheme, isDefault)
+  - System templates (orgId=null) shared across orgs
+  - Org templates (orgId!=null) private to organization
+  - Categories: "tutorial", "news", "announcement"
+
+**API Routes (4):**
+- `GET/POST /api/cma/templates` — List templates + create custom template
+- `GET /api/cma/templates/[id]` — Template detail (blocks, metadata)
+- `PUT /api/cma/templates/[id]` — Update template
+- `DELETE /api/cma/templates/[id]` — Delete org template
+
+**Services:**
+- `template-service.ts` — CRUD, seeding system templates, validation
+- `seed-system-templates.ts` — Seed 3 pre-built: Tutorial, News, Announcement
+- `template-definitions.ts` — Template block definitions
+
+**UI Components:**
+- `cma-template-picker.tsx` — Template gallery modal, preview, select
+- `src/app/admin/cma/templates/page.tsx` — Template management page
+
+**Features:**
+- Template picker in composer UI (select template before editing)
+- Clone template blocks into new post
+- Edit post based on template baseline
+- Preview template before using
+
+### 3. Image System (Unsplash + AI Generation)
+
+**New Services:**
+- `unsplash-service.ts` — Search Unsplash API, download/attribution
+- `image-generation-service.ts` — DALL-E 3 integration with org rate limiting
+
+**API Routes (4):**
+- `GET /api/cma/images/unsplash-search?q=...` — Search Unsplash stock photos
+- `POST /api/cma/images/unsplash-download` — Download Unsplash photo (triggers attribution)
+- `POST /api/cma/images/generate` — Generate image via DALL-E 3 with prompt
+- `POST /api/cma/images/[id]` — Set as featured image
+
+**New Models:**
+- `CmaAiImageUsage` — Daily per-org AI image generation count (for rate limiting)
+  - Unique constraint: (orgId, date)
+  - Tracks daily quota (e.g., max 5 AI images/day/org)
+
+**Media Model Updates:**
+- `CmaMedia.source` — "upload" | "unsplash" | "ai-generated"
+- `CmaMedia.sourceUrl` — Unsplash photo URL for attribution
+- `CmaMedia.aiPrompt` — Prompt used for AI generation
+- `CmaMedia.aiProvider` — "openai" (DALL-E 3) or "google" (Gemini)
+
+**UI Components:**
+- `cma-featured-image-picker.tsx` — Image selection modal (upload/unsplash/ai)
+- `cma-ai-image-generator-panel.tsx` — Prompt input, image preview, generation status
+
+### 4. Styled Publishing (Multi-Theme Support)
+
+**New Theme System:**
+- `styleTheme` on CmaPost & CmaTemplate — "default" | "editorial"
+- Themes render different CSS for WordPress compatibility
+
+**CSS Injection:**
+- Generated CSS embedded in post HTML for WordPress
+- Theme applies to featured image, heading styles, spacing, typography
+
+**Themes:**
+- **Default** — Clean, minimal WordPress styling
+- **Editorial** — Magazine-style with bold typography, large featured image
+
+**Features:**
+- User selects theme when publishing post
+- Theme applied to HTML output before platform publishing
+- Inline CSS prevents WordPress from overriding styles
+- Theme preview in composer UI
+
+### 5. Redesigned Composer UI
+
+**Sidebar Collapse Feature:**
+- Collapsible sidebar with template gallery, image picker, theme selector
+- Expandable sections: Templates, Images, Publishing Settings, Theme
+- Reduces visual clutter in editor
+
+**New UI Controls:**
+- Tab-based: Content (markdown/blocks), Images, Preview, Settings
+- Sheet component for advanced options (publishing targets, scheduling)
+- Tooltips for complex features
+
+**New shadcn/ui Components:**
+- `dialog` — Template picker, image generator modal
+- `tabs` — Content/Images/Settings tabs in composer
+- `select` — Theme selector dropdown
+- `sheet` — Sidebar panel for publishing options
+- `separator` — Visual dividers
+- `skeleton` — Loading states for image generation
+- `input` / `textarea` — Form inputs (improved styling)
+- `tooltip` — Feature hints
+
+**Package:** `@base-ui/react@1.3.0` — v4 shadcn dependency
+
+### 6. Template Gallery Page
+
+**New Page:** `/admin/cma/templates`
+- Grid view of all templates (system + org)
+- Categories filter tabs
+- Template preview modal
+- Create custom template button
+- Edit/delete for org templates only
+- "Use Template" button links to composer
+
+### 7. Block HTML Sanitization
+
+**Package:** `rehype-*` suite for HTML safety
+- `rehype-parse@9.0.1` — Parse HTML to AST
+- `rehype-raw@7.0.0` — Handle raw HTML blocks
+- `rehype-sanitize@6.0.0` — Remove unsafe HTML (XSS prevention)
+- `rehype-stringify@10.0.1` — Stringify back to HTML
+- `remark-rehype@11.1.2` — Convert markdown to rehype AST
+
+**Flow:**
+1. Block editor output → BlockNote JSON
+2. JSON blocks → HTML rendering
+3. HTML parsed → AST
+4. Sanitized (remove scripts, event handlers)
+5. Stringified → Safe HTML for publishing
+
+### 8. New CmaPost Fields (Phase 7)
+
+- `contentFormat: String` — "markdown" (default) | "blocks"
+- `templateId: String?` — FK to CmaTemplate (optional)
+- `styleTheme: String` — "default" (default) | "editorial" | future themes
+
+---
+
 ## Future Considerations
 
 - **Social Media Publishing:** Facebook + LinkedIn adapters (blocked on FB App Review)
@@ -406,6 +563,9 @@ NEXT_RUNTIME=nodejs            # Enables instrumentation
 | Job Queue | pg-boss | 12.14.0 |
 | Calendar | @fullcalendar | 6.1.20 |
 | Markdown | @uiw/react-md-editor | 4.0.11 |
+| Block Editor | @blocknote/core, react, shadcn | 0.47.3 |
+| UI Components | @base-ui/react | 1.3.0 |
+| HTML Processing | rehype-* | 6.0.0+ |
 | Auth | NextAuth.js | 4.24.13 |
-| AI Models | OpenAI API, Anthropic Claude | Latest |
+| AI Models | OpenAI (DALL-E 3), Anthropic Claude | Latest |
 

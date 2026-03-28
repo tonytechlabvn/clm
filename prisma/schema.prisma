@@ -67,6 +67,7 @@ model Organization {
   members             OrgMember[]
   cmaPlatformAccounts CmaPlatformAccount[]
   cmaPosts            CmaPost[]
+  cmaTemplates        CmaTemplate[]
 
   // LMS relations
   courses              Course[]
@@ -171,6 +172,10 @@ model CmaPost {
   outlineData       Json? // approved outline structure for reference
   originalAiDraft   String?   @db.Text // original AI output before human edits
   generationStatus  String? // "outline_approved" | "generating" | "generated" | "generation_failed"
+  // Phase 7: Block editor & template fields
+  contentFormat  String   @default("markdown") // "markdown" | "blocks"
+  templateId     String?                       // FK to CmaTemplate
+  styleTheme     String   @default("default")  // theme for styled publishing
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -182,6 +187,7 @@ model CmaPost {
   children  CmaPost[]           @relation("PostChildren")
   metrics   CmaPostMetrics?
   snapshots CmaMetricsSnapshot[]
+  template  CmaTemplate?        @relation(fields: [templateId], references: [id], onDelete: SetNull)
 
   @@index([orgId])
   @@index([authorId])
@@ -222,6 +228,11 @@ model CmaMedia {
   size         Int // bytes
   localPath    String // path on disk
   wpMediaId    Int? // WordPress attachment ID after upload
+  // Phase 7: Image source tracking
+  source      String  @default("upload") // "upload" | "unsplash" | "ai-generated"
+  sourceUrl   String? // Unsplash photo URL for attribution
+  aiPrompt    String? @db.Text // prompt used for AI generation
+  aiProvider  String? // "openai" | "google"
   createdAt    DateTime @default(now())
 
   post CmaPost? @relation(fields: [postId], references: [id], onDelete: SetNull)
@@ -262,6 +273,43 @@ model CmaAiUsage {
 
   @@unique([orgId, month])
   @@index([orgId])
+}
+
+// ─── CMA: Daily AI Image Usage Rate Limiting ───
+
+model CmaAiImageUsage {
+  id         String   @id @default(cuid())
+  orgId      String
+  date       String   // "YYYY-MM-DD" for daily bucketing
+  imageCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([orgId, date])
+  @@index([orgId])
+}
+
+// ─── CMA: Content Templates ───
+
+model CmaTemplate {
+  id          String   @id @default(cuid())
+  orgId       String?  // null = system-level template
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  category    String   // "tutorial" | "news" | "announce"
+  thumbnail   String?
+  blocks      Json     // BlockNote JSON block array
+  styleTheme  String   @default("default")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  org   Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  posts CmaPost[]
+
+  @@index([orgId])
+  @@index([category])
 }
 
 // ─── CMA: Post Metrics (Phase 6) ───

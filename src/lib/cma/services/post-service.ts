@@ -2,12 +2,16 @@
 
 import { prisma } from "@/lib/prisma-client";
 import type { Prisma } from "@prisma/client";
+import { validateContentFormat } from "../blocks-to-html";
 
 export interface CreatePostInput {
   orgId: string;
   authorId: string;
   title: string;
   content: string;
+  contentFormat?: "markdown" | "blocks";
+  templateId?: string;
+  styleTheme?: string;
   excerpt?: string;
   categories?: string[];
   tags?: string[];
@@ -17,6 +21,8 @@ export interface CreatePostInput {
 export interface UpdatePostInput {
   title?: string;
   content?: string;
+  contentFormat?: "markdown" | "blocks";
+  styleTheme?: string;
   excerpt?: string;
   categories?: string[];
   tags?: string[];
@@ -33,12 +39,22 @@ export interface PostListParams {
 }
 
 export async function createPost(input: CreatePostInput) {
+  const format = input.contentFormat || "markdown";
+
+  // Validate content matches declared format
+  if (!validateContentFormat(input.content, format)) {
+    throw new Error(`Content does not match declared format "${format}"`);
+  }
+
   return prisma.cmaPost.create({
     data: {
       orgId: input.orgId,
       authorId: input.authorId,
       title: input.title,
       content: input.content,
+      contentFormat: format,
+      templateId: input.templateId || null,
+      styleTheme: input.styleTheme || "default",
       excerpt: input.excerpt || null,
       categories: input.categories || [],
       tags: input.tags || [],
@@ -96,7 +112,16 @@ export async function updatePost(id: string, orgId: string, input: UpdatePostInp
 
   const data: Prisma.CmaPostUpdateInput = {};
   if (input.title !== undefined) data.title = input.title;
-  if (input.content !== undefined) data.content = input.content;
+  if (input.content !== undefined) {
+    // Validate content matches format (use new format if changing, else existing)
+    const format = input.contentFormat || post.contentFormat;
+    if (!validateContentFormat(input.content, format)) {
+      throw new Error(`Content does not match declared format "${format}"`);
+    }
+    data.content = input.content;
+  }
+  if (input.contentFormat !== undefined) data.contentFormat = input.contentFormat;
+  if (input.styleTheme !== undefined) data.styleTheme = input.styleTheme;
   if (input.excerpt !== undefined) data.excerpt = input.excerpt;
   if (input.categories !== undefined) data.categories = input.categories;
   if (input.tags !== undefined) data.tags = input.tags;

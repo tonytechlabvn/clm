@@ -39,7 +39,12 @@ src/
 │   ├── admin/cma/
 │   │   ├── dashboard/
 │   │   ├── calendar/
-│   │   └── posts/[id]/
+│   │   ├── posts/[id]/
+│   │   ├── composer/              # Post editor (Phase 7: block editor, templates)
+│   │   ├── templates/             # Template gallery (Phase 7)
+│   │   ├── approval/              # AI approval queue (Phase 5)
+│   │   ├── analytics/             # Metrics dashboard (Phase 6)
+│   │   └── settings/feeds/        # RSS feed management (Phase 4)
 │   ├── classroom/                 # Classroom UI (Phase 4)
 │   │   ├── page.tsx
 │   │   └── [id]/
@@ -54,13 +59,24 @@ src/
 │   └── ui/                        # Generic UI (inputs, buttons, etc.)
 ├── lib/                           # Business logic & utilities
 │   ├── prisma-client.ts
-│   ├── cma/                       # Content Management (Phase 3)
+│   ├── cma/                       # Content Management (Phase 3-7)
 │   │   ├── services/
-│   │   │   ├── pgboss-service.ts
-│   │   │   ├── scheduling-service.ts
-│   │   │   ├── publishing-service.ts
-│   │   │   ├── post-service.ts
-│   │   │   └── org-auth.ts
+│   │   │   ├── pgboss-service.ts       # Job queue lifecycle
+│   │   │   ├── scheduling-service.ts   # Post scheduling
+│   │   │   ├── publishing-service.ts   # Platform publishing
+│   │   │   ├── post-service.ts         # Post CRUD
+│   │   │   ├── org-auth.ts             # Multi-tenant auth
+│   │   │   ├── crawler-service.ts      # RSS crawling (Phase 4)
+│   │   │   ├── content-ai-service.ts   # AI curation (Phase 5)
+│   │   │   ├── content-generation-service.ts  # AI generation (Phase 5)
+│   │   │   ├── analytics-service.ts    # Metrics aggregation (Phase 6)
+│   │   │   ├── template-service.ts     # Template CRUD (Phase 7)
+│   │   │   ├── image-generation-service.ts  # DALL-E 3 (Phase 7)
+│   │   │   ├── unsplash-service.ts     # Unsplash API (Phase 7)
+│   │   │   └── url-safety.ts           # SSRF prevention
+│   │   ├── templates/                  # Template definitions (Phase 7)
+│   │   │   ├── template-definitions.ts
+│   │   │   └── seed-system-templates.ts
 │   │   ├── adapters/
 │   │   ├── hooks/
 │   │   │   └── use-cma-api.ts
@@ -96,7 +112,7 @@ src/
 ├── middleware.ts
 ├── types/
 └── prisma/
-    └── schema.prisma              # 22 models
+    └── schema.prisma              # 26 models (Phase 3-7)
 ```
 
 ---
@@ -417,6 +433,45 @@ export async function POST(request: NextRequest) {
   await schedulePost(postId, orgId, ...); // pass orgId from session
 }
 ```
+
+---
+
+## Phase 7: Block Editor & Templates
+
+### New CMA Components
+- `cma-block-editor.tsx` — BlockNote editor (Notion-like blocks)
+- `cma-template-picker.tsx` — Template selection modal with gallery
+- `cma-featured-image-picker.tsx` — Image picker (upload/unsplash/AI)
+- `cma-ai-image-generator-panel.tsx` — DALL-E 3 prompt UI
+- `cma-styled-preview.tsx` — Theme preview (default/editorial)
+
+### New shadcn/ui Components (Phase 7)
+- `dialog` — Modal for templates, image generation
+- `tabs` — Content/Images/Settings layout in composer
+- `select` — Theme dropdown selector
+- `sheet` — Collapsible sidebar panel
+- `separator` — Visual dividers
+- `skeleton` — Loading states for image generation
+- `input` / `textarea` — Enhanced form controls
+- `tooltip` — Feature hints
+
+### New Services
+- `template-service.ts` — Template CRUD, seeding, validation
+- `image-generation-service.ts` — DALL-E 3 integration with rate limiting
+- `unsplash-service.ts` — Unsplash API (search, download, attribution)
+
+### API Routes (Phase 7)
+- `GET/POST /api/cma/templates` — List & create templates
+- `GET/PUT/DELETE /api/cma/templates/[id]` — Template detail, update, delete
+- `GET /api/cma/images/unsplash-search` — Search Unsplash by query
+- `POST /api/cma/images/unsplash-download` — Download & store photo
+- `POST /api/cma/images/generate` — Generate image via DALL-E 3
+- `POST /api/cma/images/[id]` — Set featured image
+
+### HTML Sanitization
+- Use rehype-* packages for safe block HTML rendering
+- Sanitize removes scripts, event handlers, malicious attributes
+- Flow: BlockNote JSON → HTML → AST → sanitized → safe output
 
 ---
 

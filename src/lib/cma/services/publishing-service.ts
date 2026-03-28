@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma-client";
 import { getAdapter } from "../adapters/adapter-registry";
 import { decryptToken } from "../crypto-utils";
 import { markdownToSanitizedHtml } from "../markdown-to-html";
+import { blocksToSanitizedHtml } from "../blocks-to-html";
+import { blocksToStyledHtml } from "../themes/apply-theme-styles";
 
 export interface PublishRequest {
   postId: string;
@@ -63,8 +65,15 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
       throw new Error(`Content validation failed: ${validation.errors.join(", ")}`);
     }
 
-    // 7. Convert markdown → sanitized HTML
-    const htmlContent = await markdownToSanitizedHtml(post.content);
+    // 7. Convert content → HTML (dual pipeline: styled blocks vs markdown)
+    let htmlContent: string;
+    if (post.contentFormat === "blocks") {
+      const blocks = JSON.parse(post.content);
+      // Apply theme inline styles for WordPress compatibility
+      htmlContent = blocksToStyledHtml(blocks, post.styleTheme || "default");
+    } else {
+      htmlContent = await markdownToSanitizedHtml(post.content);
+    }
 
     // 8. Publish or update on platform
     let result;

@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cmaFetch, useCmaGet } from "@/lib/cma/use-cma-api";
 import { useCmaOrg } from "@/lib/cma/hooks/use-cma-org";
-import { CmaMarkdownEditor } from "@/components/cma/cma-markdown-editor";
-import { CmaPostMetaForm } from "@/components/cma/cma-post-meta-form";
+import { CmaEditorSwitcher } from "@/components/cma/cma-editor-switcher";
+import { CmaComposerSidebar } from "@/components/cma/cma-composer-sidebar";
+import { CmaTemplatePicker } from "@/components/cma/cma-template-picker";
+import { CmaFeaturedImagePicker } from "@/components/cma/cma-featured-image-picker";
 import { Loader2, Save, Send, Link2, Sparkles } from "lucide-react";
+import type { PartialBlock } from "@blocknote/core";
 
 interface PlatformAccount {
   id: string;
@@ -22,19 +25,45 @@ export default function CmaComposerPage() {
   const { org } = useCmaOrg();
   const { data: accountsData } = useCmaGet<{ accounts: PlatformAccount[] }>("/api/cma/accounts");
 
+  // Template picker — shown by default for new posts until dismissed
+  const [showTemplatePicker, setShowTemplatePicker] = useState(true);
+  const [templateId, setTemplateId] = useState<string | undefined>(undefined);
+  const [styleTheme, setStyleTheme] = useState<string>("default");
+  const [initialBlocks, setInitialBlocks] = useState<PartialBlock[] | undefined>(undefined);
+
+  const [contentFormat, setContentFormat] = useState<"markdown" | "blocks">("blocks");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [categories, setCategories] = useState("");
   const [tags, setTags] = useState("");
   const [accountId, setAccountId] = useState("");
+  const [featuredImage, setFeaturedImage] = useState<string | undefined>(undefined);
+  const [showImagePicker, setShowImagePicker] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [curateUrl, setCurateUrl] = useState("");
   const [curating, setCurating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handleContentChange = useCallback((val: string) => setContent(val), []);
   const accounts = accountsData?.accounts || [];
+
+  function handleTemplateSelect(
+    selection: { blocks: unknown[]; templateId: string; styleTheme: string } | null
+  ) {
+    setShowTemplatePicker(false);
+    if (selection) {
+      setInitialBlocks(selection.blocks as PartialBlock[]);
+      setTemplateId(selection.templateId);
+      setStyleTheme(selection.styleTheme);
+    } else {
+      // Blank post — reset to empty block editor
+      setInitialBlocks(undefined);
+      setTemplateId(undefined);
+      setStyleTheme("default");
+    }
+  }
 
   async function handleSaveDraft() {
     if (!org?.id) {
@@ -51,9 +80,13 @@ export default function CmaComposerPage() {
       const post = await cmaFetch<{ id: string }>("/api/cma/posts", {
         method: "POST",
         body: JSON.stringify({
-          orgId: org?.id,
+          orgId: org.id,
           title,
           content,
+          contentFormat,
+          templateId,
+          styleTheme,
+          featuredImage: featuredImage || undefined,
           excerpt: excerpt || undefined,
           categories: categories ? categories.split(",").map((s) => s.trim()) : [],
           tags: tags ? tags.split(",").map((s) => s.trim()) : [],
@@ -74,13 +107,16 @@ export default function CmaComposerPage() {
     setPublishing(true);
     setError(null);
     try {
-      // Save draft first, then publish
       const post = await cmaFetch<{ id: string }>("/api/cma/posts", {
         method: "POST",
         body: JSON.stringify({
-          orgId: org?.id,
+          orgId: org.id,
           title,
           content,
+          contentFormat,
+          templateId,
+          styleTheme,
+          featuredImage: featuredImage || undefined,
           excerpt: excerpt || undefined,
           categories: categories ? categories.split(",").map((s) => s.trim()) : [],
           tags: tags ? tags.split(",").map((s) => s.trim()) : [],
@@ -88,7 +124,7 @@ export default function CmaComposerPage() {
       });
       await cmaFetch(`/api/cma/posts/${post.id}/publish`, {
         method: "POST",
-        body: JSON.stringify({ accountId, orgId: org?.id }),
+        body: JSON.stringify({ accountId, orgId: org.id }),
       });
       router.push("/admin/cma/posts");
     } catch (err) {
@@ -127,6 +163,24 @@ export default function CmaComposerPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Template picker shown on initial load — only while org is available */}
+      {org?.id && (
+        <CmaTemplatePicker
+          open={showTemplatePicker}
+          onClose={() => setShowTemplatePicker(false)}
+          onSelect={handleTemplateSelect}
+          orgId={org.id}
+        />
+      )}
+      {org?.id && (
+        <CmaFeaturedImagePicker
+          open={showImagePicker}
+          onClose={() => setShowImagePicker(false)}
+          onSelect={setFeaturedImage}
+          orgId={org.id}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Compose Post</h1>
         <div className="flex gap-2">
@@ -172,10 +226,20 @@ export default function CmaComposerPage() {
             onChange={(e) => setTitle(e.target.value)}
             className="w-full text-2xl font-bold border-0 border-b bg-transparent px-0 py-2 focus:outline-none focus:border-primary"
           />
-          <CmaMarkdownEditor value={content} onChange={setContent} />
+          <CmaEditorSwitcher
+            contentFormat={contentFormat}
+            content={content}
+            onContentChange={handleContentChange}
+            initialBlocks={initialBlocks}
+            orgId={org?.id}
+          />
         </div>
 
-        <CmaPostMetaForm
+        <CmaComposerSidebar
+          featuredImage={featuredImage}
+          onFeaturedImageClick={() => setShowImagePicker(true)}
+          styleTheme={styleTheme}
+          onStyleThemeChange={setStyleTheme}
           excerpt={excerpt}
           onExcerptChange={setExcerpt}
           categories={categories}
@@ -185,6 +249,7 @@ export default function CmaComposerPage() {
           accountId={accountId}
           onAccountChange={setAccountId}
           accounts={accounts}
+          contentFormat={contentFormat}
         />
       </div>
     </div>

@@ -4,10 +4,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 import { useCmaOrg } from "@/lib/cma/hooks/use-cma-org";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CmaEditorSwitcher } from "@/components/cma/cma-editor-switcher";
+import type { PartialBlock } from "@blocknote/core";
 import {
   ArrowLeft,
   Save,
@@ -16,9 +17,6 @@ import {
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
-
-// Dynamic import for markdown editor (SSR-incompatible)
-const MDEditor = dynamic(() => import("@uiw/react-md-editor"), { ssr: false });
 
 interface PlatformAccount {
   id: string;
@@ -39,6 +37,8 @@ interface PostDetail {
   id: string;
   title: string;
   content: string;
+  contentFormat: "markdown" | "blocks";
+  styleTheme: string;
   excerpt: string | null;
   categories: string[];
   tags: string[];
@@ -59,6 +59,8 @@ export default function CmaPostEditPage() {
   const [selectedAccountId, setSelectedAccountId] = useState("");
 
   // Form state
+  const [contentFormat, setContentFormat] = useState<"markdown" | "blocks">("markdown");
+  const [initialBlocks, setInitialBlocks] = useState<PartialBlock[] | undefined>();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [excerpt, setExcerpt] = useState("");
@@ -79,6 +81,11 @@ export default function CmaPostEditPage() {
       setPost(data);
       setTitle(data.title);
       setContent(data.content);
+      setContentFormat(data.contentFormat || "markdown");
+      // Parse blocks for BlockNote editor initial content
+      if (data.contentFormat === "blocks") {
+        try { setInitialBlocks(JSON.parse(data.content)); } catch { setInitialBlocks(undefined); }
+      }
       setExcerpt(data.excerpt || "");
       setCategories(data.categories.join(", "));
       setTags(data.tags.join(", "));
@@ -159,7 +166,7 @@ export default function CmaPostEditPage() {
     const res = await fetch("/api/cma/preview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, contentFormat }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -246,7 +253,9 @@ export default function CmaPostEditPage() {
       {/* Content editor */}
       <div>
         <div className="flex items-center justify-between mb-1">
-          <label className="text-sm font-medium">Content (Markdown)</label>
+          <label className="text-sm font-medium">
+            Content ({contentFormat === "blocks" ? "Block Editor" : "Markdown"})
+          </label>
           <button
             onClick={handlePreview}
             className="text-xs text-blue-600 hover:underline cursor-pointer"
@@ -260,14 +269,13 @@ export default function CmaPostEditPage() {
             dangerouslySetInnerHTML={{ __html: previewHtml }}
           />
         ) : (
-          <div data-color-mode="light">
-            <MDEditor
-              value={content}
-              onChange={(val) => setContent(val || "")}
-              height={400}
-              preview="edit"
-            />
-          </div>
+          <CmaEditorSwitcher
+            contentFormat={contentFormat}
+            content={content}
+            onContentChange={setContent}
+            initialBlocks={initialBlocks}
+            orgId={org?.id}
+          />
         )}
       </div>
 
