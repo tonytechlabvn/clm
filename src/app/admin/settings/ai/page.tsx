@@ -162,7 +162,21 @@ export default function AiSettingsPage() {
         onApiKeyChange={(v) => setKeys((prev) => ({ ...prev, [tab]: v }))}
         maskedKey={data?.[tab]?.apiKey || ""}
         hasKey={data?.[tab]?.hasKey || false}
-        onSetActive={() => setActive(tab)}
+        onSetActive={() => {
+          setActive(tab);
+          // Auto-save active provider change immediately
+          setSaving(true); setError(null);
+          cmaFetch("/api/settings/ai", {
+            method: "PUT",
+            body: JSON.stringify({ activeProvider: tab }),
+          }).then(() => {
+            setSuccess(true);
+            refetch();
+            setTimeout(() => setSuccess(false), 3000);
+          }).catch((err: unknown) => {
+            setError(err instanceof Error ? err.message : "Failed to set active provider");
+          }).finally(() => setSaving(false));
+        }}
         baseUrl={tab === "local" ? baseUrl : undefined}
         onBaseUrlChange={tab === "local" ? setBaseUrl : undefined}
       />
