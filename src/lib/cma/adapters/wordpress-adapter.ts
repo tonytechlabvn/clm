@@ -7,6 +7,7 @@ import type {
   ContentValidation,
   ConnectPayload,
   MediaUploadResult,
+  PlatformMetrics,
 } from "./platform-adapter";
 
 // Builds Basic Auth header from WP username + Application Password
@@ -207,6 +208,48 @@ export class WordPressAdapter implements PlatformAdapter {
     });
     const media = await res.json();
     return { platformMediaId: media.id, url: media.source_url };
+  }
+
+  async getMetrics(
+    siteUrl: string,
+    username: string,
+    token: string,
+    platformPostId: string
+  ): Promise<PlatformMetrics> {
+    validatePlatformPostId(platformPostId);
+    // Try WP Statistics plugin API first, fallback to comment count
+    try {
+      const statsRes = await wpFetch(
+        wpApiUrl(siteUrl, `/statistic/post/${platformPostId}`),
+        username, token
+      );
+      const stats = await statsRes.json();
+      return {
+        views: stats.views ?? stats.hits ?? 0,
+        likes: 0, // WP doesn't have native likes
+        shares: 0,
+        comments: stats.comments ?? 0,
+        clicks: stats.views ?? 0, // Approximate clicks = views for WP
+      };
+    } catch {
+      // Fallback: just fetch the post for comment count
+      try {
+        const postRes = await wpFetch(
+          wpApiUrl(siteUrl, `/posts/${platformPostId}?_fields=id,comment_count`),
+          username, token
+        );
+        const post = await postRes.json();
+        return {
+          views: 0,
+          likes: 0,
+          shares: 0,
+          comments: typeof post.comment_count === "number" ? post.comment_count : 0,
+          clicks: 0,
+        };
+      } catch {
+        return { views: 0, likes: 0, shares: 0, comments: 0, clicks: 0 };
+      }
+    }
   }
 
   // Resolves category/tag names to WP term IDs, creating terms if they don't exist

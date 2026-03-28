@@ -329,11 +329,65 @@ NEXT_RUNTIME=nodejs            # Enables instrumentation
 
 ---
 
+## Phase 5-6: CMA AI Curation, Generation & Analytics
+
+### CMA AI Content Pipeline (Phase 4-5)
+
+**New Services:**
+- `crawler-service.ts` — RSS feed parsing, content extraction via @mozilla/readability, URL normalization, dedup
+- `content-ai-service.ts` — AI curation bridge (Gemini Flash), structured prompt with system/user separation
+- `content-generation-service.ts` — Two-step outline→content generation (Gemini 2.5 Flash)
+- `url-safety.ts` — SSRF prevention (DNS resolution, IP blocklist, scheme allowlist)
+- `analytics-service.ts` — Metrics aggregation (overview, timeseries, best-times, top posts)
+
+**New pg-boss Queues:**
+```
+- Job: 'cma:rss-crawl'     — RSS feed crawling (per-feed, configurable frequency)
+- Job: 'cma:curate'        — AI curation per article (3 retries, 120s timeout)
+- Job: 'cma:metrics-sync'  — Daily metrics sync at 03:00 UTC (2 retries, 600s timeout)
+```
+
+**New API Routes (Phase 4-6):**
+- `GET/POST /api/cma/feeds` — RSS feed CRUD
+- `PUT/DELETE /api/cma/feeds/[id]` — Feed update/delete
+- `POST /api/cma/ai/curate` — Curate content from URL
+- `GET/POST /api/cma/approval` — Approval queue (pending_review posts)
+- `POST /api/cma/ai/generate-outline` — AI outline generation
+- `POST /api/cma/ai/generate-content` — AI full content generation
+- `GET /api/cma/analytics/overview` — Dashboard summary
+- `GET /api/cma/analytics/timeseries` — Time-series chart data
+- `GET /api/cma/analytics/best-times` — Posting heatmap
+- `GET /api/cma/analytics/export` — CSV export
+
+**New UI Pages:**
+- `/admin/cma/settings/feeds` — RSS feed management
+- `/admin/cma/approval` — AI content approval queue
+- `/admin/cma/composer/ai-generator` — 4-step AI content wizard
+- `/admin/cma/analytics` — Analytics dashboard (Recharts)
+
+**New Schema Models:**
+- `CmaRssFeed` — RSS feed config (orgId, url, keywords, frequency, errorCount)
+- `CmaAiUsage` — Org AI token budget tracking (orgId, month, tokensUsed, tokenLimit)
+- `CmaPostMetrics` — Latest post metrics (reach, clicks, likes, shares, comments)
+- `CmaMetricsSnapshot` — Daily time-series snapshots (append-only)
+
+**CmaPost New Fields:**
+- `aiGenerated`, `sourceUrl`, `normalizedSourceUrl`, `parentPostId` (Phase 4)
+- `outlineData`, `originalAiDraft`, `generationStatus` (Phase 5)
+
+### Security Measures
+- SSRF prevention on RSS feeds and URL curation (DNS blocklist, scheme allowlist)
+- AI prompt injection prevention (system/user message separation, input sanitization)
+- Self-approval logic (single-admin: explicit ack, multi-admin: different userId)
+- Rate limiting on AI endpoints (5-10 req/hour/user)
+- Org-level AI token budget with 80% warn / 100% hard-stop
+
+---
+
 ## Future Considerations
 
-- **Batch Publishing:** Extend pg-boss to support bulk schedule operations
-- **Workflow Approval:** Add approval step before scheduled publish
-- **Analytics:** Track publish success rate & performance per platform
+- **Social Media Publishing:** Facebook + LinkedIn adapters (blocked on FB App Review)
+- **UTM Tracking:** Conversion attribution (blocked on CLM core)
 - **Webhook Notifications:** Platform-specific webhooks for publish events
 - **UI Calendar Improvements:** Drag-to-reschedule, mass calendar actions
 

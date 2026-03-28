@@ -157,23 +157,37 @@ model CmaPost {
   featuredImage String? // local path or URL
   categories    String[] // synced with WP taxonomy
   tags          String[] // synced with WP taxonomy
-  status        String    @default("draft") // "draft" | "approved" | "scheduled" | "publishing" | "published" | "failed"
+  status        String    @default("draft") // "draft" | "pending_review" | "approved" | "scheduled" | "publishing" | "published" | "failed"
   publishError  String?   @db.Text
   scheduledAt   DateTime?
   publishedAt   DateTime?
   pgBossJobId   String? // pg-boss job ID for cancellation on reschedule
+  // Phase 4: AI curation fields
+  aiGenerated       Boolean   @default(false)
+  sourceUrl         String?   @db.Text // original article URL for curated content
+  normalizedSourceUrl String? @db.Text // URL stripped of tracking params for dedup
+  parentPostId      String? // parent blog post ID for social excerpt children
+  // Phase 5: AI generation fields
+  outlineData       Json? // approved outline structure for reference
+  originalAiDraft   String?   @db.Text // original AI output before human edits
+  generationStatus  String? // "outline_approved" | "generating" | "generated" | "generation_failed"
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  org       Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  author    User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  org       Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  author    User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
   platforms CmaPostPlatform[]
   media     CmaMedia[]
+  parent    CmaPost?            @relation("PostChildren", fields: [parentPostId], references: [id], onDelete: SetNull)
+  children  CmaPost[]           @relation("PostChildren")
+  metrics   CmaPostMetrics?
+  snapshots CmaMetricsSnapshot[]
 
   @@index([orgId])
   @@index([authorId])
   @@index([status])
   @@index([scheduledAt])
+  @@index([normalizedSourceUrl])
 }
 
 // Tracks per-platform publish state for a post
@@ -214,6 +228,79 @@ model CmaMedia {
 
   @@index([orgId])
   @@index([postId])
+}
+
+// ─── CMA: RSS Feed Management (Phase 4) ───
+
+model CmaRssFeed {
+  id            String    @id @default(cuid())
+  orgId         String
+  name          String
+  url           String
+  keywords      String[] // keyword filters for article matching
+  language      String    @default("en")
+  fetchFrequency String   @default("daily") // "hourly" | "every_6h" | "daily"
+  isActive      Boolean   @default(true)
+  lastFetchedAt DateTime?
+  errorCount    Int       @default(0) // consecutive fetch failures
+  lastError     String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([orgId])
+  @@index([isActive])
+}
+
+// ─── CMA: AI Usage Budget Tracking (Phase 4-5) ───
+
+model CmaAiUsage {
+  id         String @id @default(cuid())
+  orgId      String
+  month      String // "2026-04" format
+  tokensUsed Int    @default(0)
+  tokenLimit Int    @default(1000000) // configurable per org
+
+  @@unique([orgId, month])
+  @@index([orgId])
+}
+
+// ─── CMA: Post Metrics (Phase 6) ───
+
+model CmaPostMetrics {
+  id                String    @id @default(cuid())
+  postId            String    @unique
+  reach             Int       @default(0)
+  impressions       Int       @default(0)
+  clicks            Int       @default(0)
+  likes             Int       @default(0)
+  shares            Int       @default(0)
+  comments          Int       @default(0)
+  pageViews         Int       @default(0)
+  lastMetricsSyncAt DateTime?
+  updatedAt         DateTime  @updatedAt
+
+  post CmaPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+}
+
+// Daily metrics snapshot for time-series charts (Phase 6)
+model CmaMetricsSnapshot {
+  id          String   @id @default(cuid())
+  postId      String
+  date        DateTime @db.Date // snapshot date
+  reach       Int      @default(0)
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  likes       Int      @default(0)
+  shares      Int      @default(0)
+  comments    Int      @default(0)
+
+  post CmaPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, date])
+  @@index([postId])
+  @@index([date])
 }
 
 // ─── CLM: Core Learning Management ───

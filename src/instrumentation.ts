@@ -14,6 +14,25 @@ export async function register() {
       );
       await registerScheduledPublishWorker(handleScheduledPublish);
       console.log("[instrumentation] CMA scheduled-publish worker registered");
+
+      // CMA RSS crawl + curation workers (Phase 4)
+      const { registerCrawlWorker, registerCurationWorker } = await import(
+        "@/lib/cma/services/pgboss-service"
+      );
+      const { handleRssCrawl } = await import("@/lib/cma/handlers/crawler-handler");
+      const { handleCuration } = await import("@/lib/cma/handlers/curation-handler");
+      await registerCrawlWorker(handleRssCrawl);
+      await registerCurationWorker(handleCuration);
+      console.log("[instrumentation] CMA crawl + curation workers registered");
+
+      // CMA metrics sync worker (Phase 6)
+      const { registerMetricsSyncWorker, scheduleMetricsSync } = await import(
+        "@/lib/cma/services/pgboss-service"
+      );
+      const { handleMetricsSync } = await import("@/lib/cma/workers/metrics-sync-worker");
+      await registerMetricsSyncWorker(handleMetricsSync);
+      await scheduleMetricsSync();
+      console.log("[instrumentation] CMA metrics sync worker registered");
     } catch (err) {
       console.error("[instrumentation] Failed to register CMA worker:", err);
     }

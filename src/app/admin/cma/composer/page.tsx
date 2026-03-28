@@ -8,7 +8,7 @@ import { cmaFetch, useCmaGet } from "@/lib/cma/use-cma-api";
 import { useCmaOrg } from "@/lib/cma/hooks/use-cma-org";
 import { CmaMarkdownEditor } from "@/components/cma/cma-markdown-editor";
 import { CmaPostMetaForm } from "@/components/cma/cma-post-meta-form";
-import { Loader2, Save, Send } from "lucide-react";
+import { Loader2, Save, Send, Link2, Sparkles } from "lucide-react";
 
 interface PlatformAccount {
   id: string;
@@ -30,6 +30,8 @@ export default function CmaComposerPage() {
   const [accountId, setAccountId] = useState("");
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [curateUrl, setCurateUrl] = useState("");
+  const [curating, setCurating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const accounts = accountsData?.accounts || [];
@@ -96,6 +98,33 @@ export default function CmaComposerPage() {
     }
   }
 
+  async function handleCurateFromUrl() {
+    if (!org?.id || !curateUrl.trim()) {
+      setError("Paste a URL to curate");
+      return;
+    }
+    setCurating(true);
+    setError(null);
+    try {
+      const result = await cmaFetch<{
+        title: string; blogDraft: string; fbExcerpt: string;
+        linkedinExcerpt: string; tags: string[];
+      }>("/api/cma/ai/curate", {
+        method: "POST",
+        body: JSON.stringify({ orgId: org.id, url: curateUrl.trim() }),
+      });
+      setTitle(result.title);
+      setContent(result.blogDraft);
+      setExcerpt(result.linkedinExcerpt);
+      setTags(result.tags.join(", "));
+      setCurateUrl("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Curation failed");
+    } finally {
+      setCurating(false);
+    }
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -115,6 +144,24 @@ export default function CmaComposerPage() {
       {error && (
         <div className="rounded-md bg-destructive/10 text-destructive px-4 py-3 text-sm">{error}</div>
       )}
+
+      {/* Curate from URL + AI Generate */}
+      <Card>
+        <CardContent className="flex items-center gap-3 py-3">
+          <Link2 className="h-4 w-4 text-muted-foreground shrink-0" />
+          <input type="url" placeholder="Paste URL to curate with AI..." value={curateUrl}
+            onChange={(e) => setCurateUrl(e.target.value)}
+            className="flex-1 border-0 bg-transparent text-sm focus:outline-none"
+            onKeyDown={(e) => e.key === "Enter" && handleCurateFromUrl()} />
+          <Button size="sm" variant="outline" onClick={handleCurateFromUrl} disabled={curating || !curateUrl.trim()}>
+            {curating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Curate"}
+          </Button>
+          <div className="border-l h-6" />
+          <Button size="sm" variant="outline" onClick={() => window.location.href = "/admin/cma/composer/ai-generator"}>
+            <Sparkles className="h-4 w-4 mr-1" /> Generate with AI
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="space-y-4">
