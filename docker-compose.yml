@@ -56,10 +56,18 @@ services:
       - WP_OAUTH_AUTHORIZE_URL=${WP_OAUTH_AUTHORIZE_URL}
       - WP_OAUTH_TOKEN_URL=${WP_OAUTH_TOKEN_URL}
       - WP_OAUTH_USERINFO_URL=${WP_OAUTH_USERINFO_URL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     ports:
       - "3001:3000"
     networks:
       - tony-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     logging:
       driver: "json-file"
       options:
