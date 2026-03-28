@@ -65,12 +65,17 @@ const MODEL_MAX_TOKENS: Record<string, number> = {
   "claude-3-5-haiku-20241022": 8192,
 };
 
-// Gemini thinking models use thinking tokens that consume the maxOutputTokens budget.
+// Thinking/reasoning models use internal tokens that consume the output token budget.
 // We multiply the requested tokens by this factor to ensure enough room for actual output.
-const THINKING_MODEL_PATTERNS = ["gemini-2.5-", "gemini-3.0-", "gemini-3.1-"];
+// Applies to: Gemini 2.5+/3.x (thinking), OpenAI o-series and GPT-5+ (reasoning).
+const THINKING_MODEL_PATTERNS = [
+  "gemini-2.5-", "gemini-3.0-", "gemini-3.1-",
+  "o1", "o3", "o4",
+  "gpt-5",
+];
 const THINKING_TOKEN_MULTIPLIER = 4;
 
-/** Check if a model is a thinking model that uses thinking tokens */
+/** Check if a model uses thinking/reasoning tokens that consume output budget */
 function isThinkingModel(model: string): boolean {
   return THINKING_MODEL_PATTERNS.some((p) => model.startsWith(p));
 }
@@ -182,7 +187,11 @@ export async function callAI(
     case "openai": {
       const openaiModel = modelId || "gpt-4o-mini";
       const openai = getOpenAIClient(apiKey);
-      const clampedTokens = clampTokens(maxTokens, openaiModel);
+      // Reasoning models (o-series, GPT-5+) use reasoning tokens from the output budget
+      const effectiveTokens = isThinkingModel(openaiModel)
+        ? maxTokens * THINKING_TOKEN_MULTIPLIER
+        : maxTokens;
+      const clampedTokens = clampTokens(effectiveTokens, openaiModel);
       const LEGACY_MODELS = ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"];
       const isLegacy = LEGACY_MODELS.includes(openaiModel);
       const tokenParam = isLegacy
