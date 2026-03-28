@@ -495,36 +495,41 @@ GROUP BY pg_boss_job_id;
 
 ### Local Development
 ```bash
-# Install dependencies
-npm install
-
-# Run dev server (with hot reload)
-npm run dev
-
-# Run tests
-npm run test
-npm run test:watch
-
-# Lint code
-npm run lint
+npm install              # Install dependencies
+npm run dev              # Dev server with hot reload
+npm run test             # Run tests
+npm run lint             # Lint code
 ```
 
-### Production Build
+### Production Deployment
 ```bash
-# Compile TypeScript + Next.js
-npm run build
+# Server: 72.60.211.23 | Path: /opt/tonytechlab/clm/
+# Containers: clm.tonytechlab.com (app:3001), clm-db (postgres:5433)
 
-# Start production server
-npm start
+# Deploy update:
+ssh root@72.60.211.23
+cd /opt/tonytechlab/clm
+git pull
+docker compose up -d --build
+
+# View logs:
+docker logs -f clm.tonytechlab.com
+docker logs -f clm-db
 ```
+
+### Docker Compose Services
+| Service | Container | Port | Image |
+|---------|-----------|------|-------|
+| clm | clm.tonytechlab.com | 3001→3000 | clm-clm (multi-stage build) |
+| clm-db | clm-db | 5433→5432 | postgres:16-alpine |
 
 ### Database Migration
 ```bash
-# Apply Prisma migrations
+# Migrations run automatically on container start via docker-entrypoint.sh
+# Manual migration (dev):
+npx prisma migrate dev --name description
+# Manual migration (prod):
 npx prisma migrate deploy
-
-# Reset DB (dev only)
-npx prisma migrate reset
 ```
 
 ---

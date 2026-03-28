@@ -4,6 +4,32 @@ All notable changes to Tony Tech Lab CLM are documented here. Format: [ISO 8601 
 
 ---
 
+## [2026-03-28] — v0.1.0 — Production Deployment
+
+### Deployed
+- Initial production deployment to server (72.60.211.23)
+- Git repository initialized and pushed to https://github.com/tonytechlabvn/clm
+- Docker Compose: PostgreSQL 16 (`clm-db`) + Next.js app (`clm.tonytechlab.com`)
+- Prisma migration `0001_init` applied — 11 tables created
+- All containers healthy, health endpoint verified
+- Auth providers configured: WordPress SSO + Google OAuth
+
+### Infrastructure
+- Server path: `/opt/tonytechlab/clm/`
+- App container: `clm.tonytechlab.com` (port 3001 → 3000)
+- DB container: `clm-db` (port 5433 → 5432)
+- Network: `tony-net` (shared with CVMaker)
+- Public URL: `https://clm.tonytechlab.com` (pending Cloudflare Tunnel config)
+
+### Fixed (Pre-deployment)
+- Added healthcheck on CLM app service (wget /api/health)
+- Added missing OPENAI_API_KEY, ANTHROPIC_API_KEY env vars in compose
+- Fixed Prisma migrate in Docker entrypoint (use `node` instead of `npx`)
+- Added `public/.gitkeep` for Docker build COPY step
+- Healthcheck uses `0.0.0.0` instead of `localhost` (Next.js binding)
+
+---
+
 ## [2026-03-28] — v0.1.0-phase3 — CMA Scheduled Publishing Complete
 
 ### Added (Phase 3: Scheduled Publishing)
