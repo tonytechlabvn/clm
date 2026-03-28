@@ -188,11 +188,24 @@ export async function callAI(
       const tokenParam = isLegacy
         ? { max_tokens: clampedTokens }
         : { max_completion_tokens: clampedTokens };
-      const completion = await openai.chat.completions.create({
-        model: openaiModel,
-        ...tokenParam,
-        messages: [{ role: "user", content: prompt }],
-      });
+      console.log(`[AI] OpenAI call: model=${openaiModel}, tokens=${clampedTokens}, promptLen=${prompt.length}`);
+      let completion;
+      try {
+        completion = await openai.chat.completions.create({
+          model: openaiModel,
+          ...tokenParam,
+          messages: [{ role: "user", content: prompt }],
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[AI] OpenAI ${openaiModel} error: ${msg}`);
+        // If JSON body parse error, it may be a transient issue or encoding problem
+        if (msg.includes("could not parse the JSON body")) {
+          console.error(`[AI] Prompt first 200 chars: ${prompt.slice(0, 200)}`);
+          console.error(`[AI] Prompt last 200 chars: ${prompt.slice(-200)}`);
+        }
+        throw err;
+      }
       const choice = completion.choices[0];
       const text = choice?.message?.content ?? "";
       const refusal = choice?.message?.refusal;
