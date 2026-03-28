@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft, Save, Eye, Code2 } from "lucide-react";
@@ -34,17 +34,12 @@ export function ContentReviewStep({
   imagePrompts, onBack, onSave, loading,
 }: ContentReviewStepProps) {
   const [viewMode, setViewMode] = useState<"preview" | "html" | "css">("preview");
-  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Update iframe preview when content or CSS changes
-  useEffect(() => {
-    if (!iframeRef.current || viewMode !== "preview") return;
-    const doc = iframeRef.current.contentDocument;
-    if (!doc) return;
-    doc.open();
-    doc.write(buildPreviewDoc(blogContent, blogCss));
-    doc.close();
-  }, [blogContent, blogCss, viewMode]);
+  // Use srcdoc for reliable cross-origin iframe rendering
+  const previewSrcdoc = useMemo(
+    () => buildPreviewDoc(blogContent, blogCss),
+    [blogContent, blogCss]
+  );
 
   return (
     <div className="space-y-4">
@@ -83,9 +78,8 @@ export function ContentReviewStep({
         <CardContent>
           {viewMode === "preview" ? (
             <iframe
-              ref={iframeRef}
+              srcDoc={previewSrcdoc}
               title="Content Preview"
-              sandbox="allow-scripts"
               className="w-full min-h-[500px] rounded-md border bg-white"
             />
           ) : viewMode === "html" ? (

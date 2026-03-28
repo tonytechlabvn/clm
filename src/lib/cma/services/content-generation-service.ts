@@ -104,30 +104,38 @@ SEO: Include target keywords naturally. Use H2/H3 headings.
 Length: ${targetWordCount} words.
 Language: ${language}
 
-Write engaging, informative content following the outline below as **semantic HTML** (not markdown).
+Write engaging, informative content following the outline below as **beautifully styled HTML with inline styles**.
 Include practical examples where relevant.
 Write a compelling introduction and conclusion.
 
-HTML RULES:
-- Use semantic HTML: <article>, <section>, <h2>, <h3>, <p>, <ul>, <ol>, <blockquote>, <figure>, <code>, <pre>, <table>
-- Add 2-4 image placeholders using: <figure class="ai-image" data-query="descriptive english search query"><figcaption>Caption text</figcaption></figure>
-  The data-query attribute should be 2-5 English words describing the image for stock photo search (e.g. "coding laptop workspace", "team collaboration office")
-- Do NOT include <style> tags, <html>, <head>, or <body> — just the article content
-- Do NOT use inline styles — only semantic HTML with class names
+CRITICAL HTML + INLINE STYLE RULES:
+- Every element MUST have inline style= attributes (WordPress strips <style> tags)
+- Wrap everything in: <div style="max-width:760px;margin:0 auto;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:#2d3748;line-height:1.8;padding:20px;">
+- H2: style="font-size:1.7em;font-weight:700;color:#1a365d;margin:1.8em 0 0.6em;padding-bottom:0.3em;border-bottom:3px solid #f6ad55;"
+- H3: style="font-size:1.3em;font-weight:600;color:#2d3748;margin:1.5em 0 0.4em;"
+- P: style="margin:0 0 1.3em;line-height:1.8;font-size:1.05em;"
+- UL/OL: style="margin:0 0 1.3em;padding-left:1.5em;"
+- LI: style="margin:0.4em 0;line-height:1.8;"
+- BLOCKQUOTE: style="border-left:4px solid #3182ce;padding:16px 20px;margin:1.5em 0;background:#ebf8ff;border-radius:0 10px 10px 0;color:#2a4365;line-height:1.7;"
+- CODE (inline): style="background:#edf2f7;padding:3px 7px;border-radius:6px;font-size:0.88em;font-family:monospace;color:#2d3748;"
+- PRE: style="background:#1a202c;color:#e2e8f0;padding:20px 24px;border-radius:10px;overflow-x:auto;margin:1.5em 0;font-size:0.9em;line-height:1.6;"
+- TABLE: style="width:100%;border-collapse:collapse;margin:1.5em 0;"
+- TH: style="padding:12px 16px;font-weight:600;text-align:left;color:#1a365d;border-bottom:2px solid #2d3748;background:#f7fafc;"
+- TD: style="padding:10px 16px;border-bottom:1px solid #e2e8f0;"
+- IMG: style="max-width:100%;height:auto;border-radius:12px;margin:1em 0;"
+- A: style="color:#3182ce;text-decoration:none;"
+- Use <strong> for emphasis, <em> for italics
 
-CSS RULES:
-- Provide a separate CSS string that styles the content beautifully
-- Use a root class ".ai-post" to scope all styles
-- Make it responsive, modern, and professional
-- Style headings, paragraphs, lists, code blocks, blockquotes, figures, tables
-- Add nice spacing, typography, and visual hierarchy
-- Use a cohesive color palette that matches ${tone} tone
-- Style .ai-image figures with a placeholder background (#f0f4f8) and min-height: 200px
+IMAGE PLACEHOLDERS (2-4 per post):
+- Use: <figure class="ai-image" data-query="descriptive english search query" style="margin:1.5em 0;text-align:center;"><figcaption style="font-size:0.85em;color:#718096;margin-top:0.5em;font-style:italic;">Caption text</figcaption></figure>
+- data-query: 2-5 English words for stock photo search (e.g. "coding laptop workspace", "team collaboration office")
+
+Do NOT include <style>, <html>, <head>, or <body> tags.
 
 Return valid JSON only (no markdown fences):
 {
-  "blogContent": "<article class='ai-post'>...full HTML content...</article>",
-  "blogCss": ".ai-post { ... } .ai-post h2 { ... } ...",
+  "blogContent": "<div style='...'>...full inline-styled HTML...</div>",
+  "blogCss": "",
   "metaDescription": "SEO meta description (150-160 chars)",
   "fbExcerpt": "Facebook excerpt (max 200 chars, engaging)",
   "linkedinExcerpt": "LinkedIn excerpt (max 300 chars, professional)",

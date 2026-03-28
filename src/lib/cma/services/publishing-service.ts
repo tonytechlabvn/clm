@@ -74,12 +74,12 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
       // Apply theme inline styles for WordPress compatibility
       htmlContent = blocksToStyledHtml(blocks, post.styleTheme || "default");
     } else if (post.contentFormat === "html") {
-      // HTML format: content is JSON { html, css, js } — combine into self-contained HTML
+      // HTML format: content is JSON { html, css, js }
+      // WordPress strips <style>/<script> tags, so only use the HTML body.
+      // AI-generated posts use inline styles; CSS field kept for preview only.
       try {
         const parsed = JSON.parse(post.content);
-        const css = parsed.css ? `<style>${parsed.css}</style>` : "";
-        const js = parsed.js ? `<script>${parsed.js}<\/script>` : "";
-        htmlContent = `${css}${parsed.html || ""}${js}`;
+        htmlContent = parsed.html || "";
       } catch {
         // Fallback: treat as raw HTML string
         htmlContent = post.content;
