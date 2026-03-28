@@ -73,21 +73,20 @@ const THINKING_MODEL_PATTERNS = [
   "o1", "o3", "o4",
   "gpt-5",
 ];
-// Fixed reasoning token overhead added to requested tokens for thinking models.
-// Most reasoning uses 1000-4000 tokens; 8192 gives generous headroom without
-// inflating large requests (e.g., 16384 content tokens → 24576 total, not 65536).
-const THINKING_OVERHEAD_TOKENS = 8192;
-
 /** Check if a model uses thinking/reasoning tokens that consume output budget */
 function isThinkingModel(model: string): boolean {
   return THINKING_MODEL_PATTERNS.some((p) => model.startsWith(p));
 }
 
-/** Calculate effective tokens for thinking models: requested + fixed reasoning overhead */
+/** Calculate effective tokens for thinking models.
+ * Small requests (≤4096): double to ensure reasoning doesn't consume all output.
+ * Large requests (>4096): add fixed 4096 overhead to stay within Cloudflare's 100s timeout.
+ */
 function getEffectiveTokens(requestedTokens: number, model: string): number {
-  return isThinkingModel(model)
-    ? requestedTokens + THINKING_OVERHEAD_TOKENS
-    : requestedTokens;
+  if (!isThinkingModel(model)) return requestedTokens;
+  return requestedTokens <= 4096
+    ? requestedTokens * 2
+    : requestedTokens + 4096;
 }
 
 const GEMINI_FALLBACK = "gemini-2.0-flash-lite";
