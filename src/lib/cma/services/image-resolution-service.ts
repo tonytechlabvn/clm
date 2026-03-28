@@ -25,6 +25,21 @@ const MAX_IMAGES_PER_POST = 5;
 const IMAGE_PLACEHOLDER_REGEX = /\[IMAGE\]/i;
 
 /**
+ * Simplify a title for Unsplash search — extract key English words,
+ * remove non-Latin characters, limit to ~5 words for relevant results.
+ */
+function simplifySearchQuery(title: string): string {
+  // Extract words that are mostly ASCII (English/tech terms)
+  const englishWords = title
+    .split(/[\s:,\-–—|?!.]+/)
+    .filter((w) => w.length > 2 && /^[a-zA-Z0-9]+$/.test(w))
+    .slice(0, 5);
+  if (englishWords.length >= 2) return englishWords.join(" ");
+  // Fallback: use first 40 chars of title
+  return title.substring(0, 40);
+}
+
+/**
  * Resolve [IMAGE] placeholders in HTML with real Unsplash images.
  * Each image is uploaded to WordPress via the adapter.
  * Failures are silently handled — placeholder is removed on error.
@@ -49,7 +64,8 @@ export async function resolveImagePlaceholders(
   // Replace each [IMAGE] placeholder sequentially (one at a time)
   while (IMAGE_PLACEHOLDER_REGEX.test(html) && processedCount < MAX_IMAGES_PER_POST) {
 
-    const query = ctx.suggestedImagePrompts[processedCount] || ctx.postTitle;
+    const rawQuery = ctx.suggestedImagePrompts[processedCount] || ctx.postTitle;
+    const query = simplifySearchQuery(rawQuery);
 
     try {
       // Search Unsplash for relevant image
@@ -126,7 +142,9 @@ export async function fetchAndUploadFeaturedImage(
   try {
     if (!adapter.uploadMedia) return undefined;
 
-    const results = await searchPhotos(query, 1, 1);
+    const simplifiedQuery = simplifySearchQuery(query);
+    console.log(`[image-resolution] Featured image search: "${simplifiedQuery}"`);
+    const results = await searchPhotos(simplifiedQuery, 1, 1);
     if (!results.results.length) return undefined;
 
     const photo = results.results[0];
