@@ -53,8 +53,10 @@ export async function resolveImagePlaceholders(
 
     try {
       // Search Unsplash for relevant image
+      console.log(`[image-resolution] Searching Unsplash for: "${query.substring(0, 50)}..."`);
       const searchResult = await searchPhotos(query, 1, 1);
       if (!searchResult.results.length) {
+        console.log(`[image-resolution] No results for query, removing placeholder`);
         html = html.replace(IMAGE_PLACEHOLDER_REGEX, ""); // remove one
         processedCount++;
         continue;
@@ -97,7 +99,8 @@ export async function resolveImagePlaceholders(
       // Replace first occurrence
       html = html.replace(IMAGE_PLACEHOLDER_REGEX, figureHtml);
     } catch (err) {
-      console.warn(`[image-resolution] Failed to resolve image ${processedCount}:`, err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[image-resolution] Failed to resolve image ${processedCount}: ${errMsg}`);
       // Remove the failed placeholder
       html = html.replace(IMAGE_PLACEHOLDER_REGEX, "");
     }
