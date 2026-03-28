@@ -2,17 +2,8 @@
 // Uses higher-quality models (Claude/GPT-4) for original content
 
 import { callAI } from "@/lib/ai-service";
-import type { AIProvider } from "@/types";
+import { getActiveAiConfig } from "@/lib/ai-settings-service";
 import { checkAiBudget, trackTokenUsage } from "./content-ai-service";
-
-// Use Claude for high-quality original content generation
-// Pick AI provider based on available API keys — prefers Gemini, falls back to OpenAI/Claude
-function getAiConfig(): { provider: AIProvider; model: string; apiKey: string } {
-  if (process.env.GEMINI_API_KEY) return { provider: "gemini", model: "gemini-2.5-flash", apiKey: process.env.GEMINI_API_KEY };
-  if (process.env.OPENAI_API_KEY) return { provider: "openai", model: "gpt-4o-mini", apiKey: process.env.OPENAI_API_KEY };
-  if (process.env.ANTHROPIC_API_KEY) return { provider: "claude", model: "claude-sonnet-4-20250514", apiKey: process.env.ANTHROPIC_API_KEY };
-  throw new Error("No AI API key configured (GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY)");
-}
 
 export type ContentTone = "professional" | "casual" | "technical" | "educational";
 
@@ -71,7 +62,7 @@ Target length: ~${targetWordCount} words`;
 
   const fullPrompt = `${OUTLINE_SYSTEM_PROMPT}\n\n${userMessage}`;
 
-  const ai = getAiConfig();
+  const ai = await getActiveAiConfig();
   const result = await callAI(ai.provider, ai.apiKey, fullPrompt, 2048, ai.model);
   await trackTokenUsage(orgId, result.usage.totalTokens);
 
@@ -122,7 +113,7 @@ Return valid JSON only (no markdown fences):
   const userMessage = `Title: ${outline.title}\n\nOutline:\n${outlineText}`;
   const fullPrompt = `${systemPrompt}\n\n${userMessage}`;
 
-  const ai = getAiConfig();
+  const ai = await getActiveAiConfig();
   const result = await callAI(ai.provider, ai.apiKey, fullPrompt, 8192, ai.model);
   await trackTokenUsage(orgId, result.usage.totalTokens);
 

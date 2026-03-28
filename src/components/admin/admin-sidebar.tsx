@@ -12,6 +12,10 @@ import {
   FileText,
   CalendarDays,
   Plug,
+  Bot,
+  BarChart3,
+  CheckCircle,
+  Rss,
 } from "lucide-react";
 
 const navItems = [
@@ -20,9 +24,12 @@ const navItems = [
   { href: "/admin/cma/posts", label: "Posts", icon: FileText },
   { href: "/admin/cma/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/admin/cma/settings", label: "Connections", icon: Plug },
+  { href: "/admin/cma/approval", label: "Approval", icon: CheckCircle },
+  { href: "/admin/cma/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
 const settingsItems = [
+  { href: "/admin/settings/ai", label: "A.I Settings", icon: Bot },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

@@ -4,15 +4,8 @@
 import { callAI } from "@/lib/ai-service";
 import { prisma } from "@/lib/prisma-client";
 import type { AIProvider } from "@/types";
+import { getActiveAiConfig } from "@/lib/ai-settings-service";
 import { sanitizeExtractedText } from "./crawler-service";
-
-// Pick AI provider based on available API keys — Gemini preferred (cheapest), OpenAI fallback
-function getAiConfig(): { provider: AIProvider; model: string; apiKey: string } {
-  if (process.env.GEMINI_API_KEY) return { provider: "gemini", model: "gemini-2.0-flash", apiKey: process.env.GEMINI_API_KEY };
-  if (process.env.OPENAI_API_KEY) return { provider: "openai", model: "gpt-4o-mini", apiKey: process.env.OPENAI_API_KEY };
-  if (process.env.ANTHROPIC_API_KEY) return { provider: "claude", model: "claude-sonnet-4-20250514", apiKey: process.env.ANTHROPIC_API_KEY };
-  throw new Error("No AI API key configured (GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY)");
-}
 
 export interface CurationResult {
   blogDraft: string;
@@ -41,7 +34,7 @@ export async function curateContent(
 
   const sanitized = sanitizeExtractedText(articleText);
   const userMessage = `Source: ${sourceUrl}\n\nArticle:\n${sanitized.slice(0, 8000)}`;
-  const ai = getAiConfig();
+  const ai = await getActiveAiConfig();
   const fullPrompt = `${CURATION_SYSTEM_PROMPT}\n\n---\n\n${userMessage}`;
 
   const result = await callAI(
