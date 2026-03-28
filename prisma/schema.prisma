@@ -27,13 +27,6 @@ model User {
   cmaPlatformAccounts CmaPlatformAccount[]
   cmaPosts            CmaPost[]
 
-  // Classroom relations
-  instructedClassrooms Classroom[]       @relation("ClassroomInstructor")
-  classroomMemberships ClassroomMember[]
-  createdAssignments   Assignment[]      @relation("AssignmentCreator")
-  submissions          Submission[]
-  givenFeedback        Feedback[]
-
   // LMS relations
   instructedCourses    Course[]          @relation("CourseInstructor")
   courseEnrollments     CourseEnrollment[]
@@ -75,8 +68,7 @@ model Organization {
   cmaPlatformAccounts CmaPlatformAccount[]
   cmaPosts            CmaPost[]
 
-  // Classroom + LMS relations
-  classrooms           Classroom[]
+  // LMS relations
   courses              Course[]
 }
 
@@ -224,100 +216,6 @@ model CmaMedia {
   @@index([postId])
 }
 
-// ─── Classroom System ───
-
-model Classroom {
-  id           String   @id @default(cuid())
-  orgId        String
-  instructorId String
-  name         String
-  description  String?  @db.Text
-  joinCode     String   @unique @db.VarChar(6)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  org         Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  instructor  User              @relation("ClassroomInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
-  members     ClassroomMember[]
-  assignments Assignment[]
-
-  @@index([orgId])
-  @@index([instructorId])
-}
-
-model ClassroomMember {
-  id          String   @id @default(cuid())
-  userId      String
-  classroomId String
-  role        String   @default("student") // "student" | "instructor"
-  joinedAt    DateTime @default(now())
-
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, classroomId])
-  @@index([classroomId])
-}
-
-model Assignment {
-  id             String    @id @default(cuid())
-  classroomId    String
-  title          String
-  description    String?   @db.Text
-  jobDescription String?   @db.Text // JD for CV-based assignments
-  dueDate        DateTime?
-  type           String    @default("cv_analysis") // "cv_analysis" | "cv_rewrite" | "course_completion" | "quiz"
-  status         String    @default("active") // "active" | "closed" | "archived"
-  linkedCourseId String?   // links to CLM Course for course_completion type
-  createdById    String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  classroom   Classroom    @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  createdBy   User         @relation("AssignmentCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  linkedCourse Course?     @relation(fields: [linkedCourseId], references: [id], onDelete: SetNull)
-  submissions Submission[]
-
-  @@index([classroomId])
-  @@index([createdById])
-}
-
-model Submission {
-  id           String    @id @default(cuid())
-  assignmentId String
-  studentId    String
-  content      String?   @db.Text
-  score        Float?
-  status       String    @default("pending") // "pending" | "submitted" | "graded" | "returned"
-  submittedAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  feedback   Feedback[]
-
-  @@unique([assignmentId, studentId])
-  @@index([assignmentId])
-  @@index([studentId])
-}
-
-model Feedback {
-  id           String   @id @default(cuid())
-  submissionId String
-  instructorId String
-  comment      String?  @db.Text
-  score        Float?
-  aiFeedback   String?  @db.Text // AI-generated feedback JSON
-  createdAt    DateTime @default(now())
-
-  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  instructor User       @relation(fields: [instructorId], references: [id], onDelete: Cascade)
-
-  @@index([submissionId])
-}
-
 // ─── CLM: Core Learning Management ───
 
 model Course {
@@ -339,7 +237,6 @@ model Course {
   instructor   User               @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
   sections     Section[]
   enrollments  CourseEnrollment[]
-  assignments  Assignment[]       // linked from classroom assignments
 
   @@index([orgId])
   @@index([instructorId])

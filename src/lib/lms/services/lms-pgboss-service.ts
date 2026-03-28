@@ -1,10 +1,9 @@
-// LMS pg-boss service — job queues for async AI batch processing
+// LMS pg-boss service — job queue for async AI quiz generation
 // Uses the shared pg-boss singleton from CMA service
 
 import { getPgBoss } from "@/lib/cma/services/pgboss-service";
 
 export const QUEUE_QUIZ_GENERATE = "lms-quiz-generate";
-export const QUEUE_BATCH_FEEDBACK = "classroom-batch-feedback";
 
 type QuizGenerateData = {
   courseId: string;
@@ -13,36 +12,20 @@ type QuizGenerateData = {
   questionCount: number;
 };
 
-type BatchFeedbackData = {
-  classroomId: string;
-  assignmentId: string;
-  instructorId: string;
-};
-
-/** Ensure LMS queues exist on the pg-boss instance */
-async function ensureLmsQueues(): Promise<void> {
+/** Ensure LMS queue exists on the pg-boss instance */
+async function ensureLmsQueue(): Promise<void> {
   const pgBoss = await getPgBoss();
-
-  await Promise.all([
-    pgBoss.createQueue(QUEUE_QUIZ_GENERATE, {
-      retryLimit: 3,
-      retryDelay: 30,
-      retryBackoff: true,
-      expireInSeconds: 600, // 10 min max
-    }).catch(() => { /* queue may already exist */ }),
-
-    pgBoss.createQueue(QUEUE_BATCH_FEEDBACK, {
-      retryLimit: 2,
-      retryDelay: 60,
-      retryBackoff: true,
-      expireInSeconds: 1800, // 30 min max for batch
-    }).catch(() => { /* queue may already exist */ }),
-  ]);
+  await pgBoss.createQueue(QUEUE_QUIZ_GENERATE, {
+    retryLimit: 3,
+    retryDelay: 30,
+    retryBackoff: true,
+    expireInSeconds: 600, // 10 min max
+  }).catch(() => { /* queue may already exist */ });
 }
 
 /** Enqueue a quiz generation job. Returns the pg-boss job ID. */
 export async function enqueueQuizGeneration(data: QuizGenerateData): Promise<string> {
-  await ensureLmsQueues();
+  await ensureLmsQueue();
   const pgBoss = await getPgBoss();
 
   const jobId = await pgBoss.send(QUEUE_QUIZ_GENERATE, data, {
@@ -56,28 +39,11 @@ export async function enqueueQuizGeneration(data: QuizGenerateData): Promise<str
   return jobId;
 }
 
-/** Enqueue a batch feedback job. Returns the pg-boss job ID. */
-export async function enqueueBatchFeedback(data: BatchFeedbackData): Promise<string> {
-  await ensureLmsQueues();
-  const pgBoss = await getPgBoss();
-
-  const jobId = await pgBoss.send(QUEUE_BATCH_FEEDBACK, data, {
-    singletonKey: `${data.assignmentId}:batch`,
-  });
-
-  if (!jobId) {
-    throw new Error("Failed to enqueue batch feedback job");
-  }
-  console.log(`[lms-ai] Enqueued batch feedback: assignmentId=${data.assignmentId} jobId=${jobId}`);
-  return jobId;
-}
-
-/** Register LMS workers. Call once at app startup from instrumentation.ts. */
+/** Register LMS quiz worker. Call once at app startup from instrumentation.ts. */
 export async function registerLmsWorkers(handlers: {
   quizHandler: (data: QuizGenerateData) => Promise<void>;
-  feedbackHandler: (data: BatchFeedbackData) => Promise<void>;
 }): Promise<void> {
-  await ensureLmsQueues();
+  await ensureLmsQueue();
   const pgBoss = await getPgBoss();
 
   await pgBoss.work<QuizGenerateData>(
@@ -90,15 +56,5 @@ export async function registerLmsWorkers(handlers: {
     }
   );
 
-  await pgBoss.work<BatchFeedbackData>(
-    QUEUE_BATCH_FEEDBACK,
-    async (jobs) => {
-      for (const job of jobs) {
-        console.log(`[lms-ai] Processing batch feedback: assignmentId=${job.data.assignmentId}`);
-        await handlers.feedbackHandler(job.data);
-      }
-    }
-  );
-
-  console.log("[lms-ai] Workers registered:", QUEUE_QUIZ_GENERATE, QUEUE_BATCH_FEEDBACK);
+  console.log("[lms-ai] Quiz worker registered:", QUEUE_QUIZ_GENERATE);
 }

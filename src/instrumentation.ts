@@ -23,12 +23,11 @@ export async function register() {
       const { registerLmsWorkers } = await import(
         "@/lib/lms/services/lms-pgboss-service"
       );
-      const { handleQuizGeneration, handleBatchFeedback } = await import(
+      const { handleQuizGeneration } = await import(
         "@/lib/lms/services/lms-worker-handlers"
       );
       await registerLmsWorkers({
         quizHandler: handleQuizGeneration,
-        feedbackHandler: handleBatchFeedback,
       });
       console.log("[instrumentation] LMS AI workers registered");
     } catch (err) {
