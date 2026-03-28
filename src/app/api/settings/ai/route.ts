@@ -21,6 +21,7 @@ export async function GET() {
     openai: { model: settings.openai.model, apiKey: maskApiKey(settings.openai.apiKey), hasKey: !!settings.openai.apiKey },
     claude: { model: settings.claude.model, apiKey: maskApiKey(settings.claude.apiKey), hasKey: !!settings.claude.apiKey },
     local: { model: settings.local.model, baseUrl: settings.local.baseUrl, apiKey: maskApiKey(settings.local.apiKey), hasKey: !!settings.local.apiKey },
+    unsplash: { apiKey: maskApiKey(settings.unsplashApiKey), hasKey: !!settings.unsplashApiKey },
     maxTokensAnalysis: settings.maxTokensAnalysis,
     maxTokensRewrite: settings.maxTokensRewrite,
   });
@@ -37,7 +38,7 @@ export async function PUT(request: Request) {
 
   try {
     const body = await request.json();
-    const { activeProvider, gemini, openai, claude, local, maxTokensAnalysis, maxTokensRewrite } = body;
+    const { activeProvider, gemini, openai, claude, local, unsplash, maxTokensAnalysis, maxTokensRewrite } = body;
 
     // Build partial update — only include fields that were actually changed
     const updates: Record<string, unknown> = {};
@@ -67,6 +68,7 @@ export async function PUT(request: Request) {
         baseUrl: local.baseUrl || undefined,
       };
     }
+    if (unsplash?.apiKey) updates.unsplashApiKey = unsplash.apiKey;
     if (maxTokensAnalysis !== undefined) updates.maxTokensAnalysis = Math.max(1, parseInt(maxTokensAnalysis) || 4096);
     if (maxTokensRewrite !== undefined) updates.maxTokensRewrite = Math.max(1, parseInt(maxTokensRewrite) || 16384);
 

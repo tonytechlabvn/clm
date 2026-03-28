@@ -1,5 +1,5 @@
 // Unsplash API wrapper — direct fetch(), no archived SDK
-// Requires UNSPLASH_ACCESS_KEY env var
+// Reads key from AI Settings (DB) with env var fallback
 
 export interface UnsplashPhoto {
   id: string;
@@ -29,14 +29,17 @@ interface SearchResponse {
 const BASE_URL = "https://api.unsplash.com";
 const VALID_DOWNLOAD_PREFIX = "https://api.unsplash.com/";
 
-function getAccessKey(): string {
-  const key = process.env.UNSPLASH_ACCESS_KEY;
-  if (!key) throw new Error("UNSPLASH_ACCESS_KEY is not configured");
+import { getAiSettings } from "@/lib/ai-settings-service";
+
+async function getAccessKey(): Promise<string> {
+  const settings = await getAiSettings();
+  const key = settings.unsplashApiKey || process.env.UNSPLASH_ACCESS_KEY;
+  if (!key) throw new Error("Unsplash API key is not configured. Set it in Admin → Settings → AI.");
   return key;
 }
 
-function authHeaders() {
-  return { Authorization: `Client-ID ${getAccessKey()}` };
+async function authHeaders() {
+  return { Authorization: `Client-ID ${await getAccessKey()}` };
 }
 
 /** Search photos by query string */
@@ -51,7 +54,7 @@ export async function searchPhotos(
     per_page: String(perPage),
   });
   const res = await fetch(`${BASE_URL}/search/photos?${params}`, {
-    headers: authHeaders(),
+    headers: await authHeaders(),
   });
   if (!res.ok) throw new Error(`Unsplash search failed: ${res.status}`);
   return res.json() as Promise<SearchResponse>;
@@ -60,7 +63,7 @@ export async function searchPhotos(
 /** Get single photo by ID — returns canonical download_location */
 export async function getPhoto(photoId: string): Promise<UnsplashPhoto> {
   const res = await fetch(`${BASE_URL}/photos/${photoId}`, {
-    headers: authHeaders(),
+    headers: await authHeaders(),
   });
   if (!res.ok) throw new Error(`Unsplash getPhoto failed: ${res.status}`);
   return res.json() as Promise<UnsplashPhoto>;
@@ -73,7 +76,7 @@ export async function trackDownload(downloadLocation: string): Promise<void> {
   }
   // download_location already contains authorization via query params when returned by API
   // but we still need the Client-ID header for the tracking call
-  await fetch(downloadLocation, { headers: authHeaders() });
+  await fetch(downloadLocation, { headers: await authHeaders() });
 }
 
 /** Download photo buffer — validates SSRF, tracks download, fetches image */
@@ -89,7 +92,7 @@ export async function downloadPhoto(
   await trackDownload(downloadLocation);
 
   // The tracking endpoint returns the actual download URL
-  const trackRes = await fetch(downloadLocation, { headers: authHeaders() });
+  const trackRes = await fetch(downloadLocation, { headers: await authHeaders() });
   const trackData = (await trackRes.json()) as { url?: string };
   const imageUrl = trackData.url;
   if (!imageUrl) throw new Error("No image URL returned from Unsplash download");

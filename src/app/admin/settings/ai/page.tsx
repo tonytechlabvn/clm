@@ -47,6 +47,7 @@ interface SettingsData {
   openai: { model: string; apiKey: string; hasKey: boolean };
   claude: { model: string; apiKey: string; hasKey: boolean };
   local: { model: string; apiKey: string; hasKey: boolean; baseUrl: string };
+  unsplash: { apiKey: string; hasKey: boolean };
   maxTokensAnalysis: number;
   maxTokensRewrite: number;
 }
@@ -63,6 +64,7 @@ export default function AiSettingsPage() {
   const [models, setModels] = useState({ gemini: "", openai: "", claude: "", local: "" });
   const [keys, setKeys] = useState({ gemini: "", openai: "", claude: "", local: "" });
   const [baseUrl, setBaseUrl] = useState("");
+  const [unsplashKey, setUnsplashKey] = useState("");
   const [tokensAnalysis, setTokensAnalysis] = useState(4096);
   const [tokensRewrite, setTokensRewrite] = useState(16384);
 
@@ -91,11 +93,13 @@ export default function AiSettingsPage() {
           openai: { model: models.openai, apiKey: keys.openai || undefined },
           claude: { model: models.claude, apiKey: keys.claude || undefined },
           local: { model: models.local, apiKey: keys.local || undefined, baseUrl },
+          unsplash: { apiKey: unsplashKey || undefined },
           maxTokensAnalysis: tokensAnalysis,
           maxTokensRewrite: tokensRewrite,
         }),
       });
-      setKeys({ gemini: "", openai: "", claude: "", local: "" }); // clear key inputs
+      setKeys({ gemini: "", openai: "", claude: "", local: "" });
+      setUnsplashKey(""); // clear key inputs
       setSuccess(true);
       refetch();
       setTimeout(() => setSuccess(false), 3000);
@@ -161,6 +165,27 @@ export default function AiSettingsPage() {
         baseUrl={tab === "local" ? baseUrl : undefined}
         onBaseUrlChange={tab === "local" ? setBaseUrl : undefined}
       />
+
+      {/* External API Keys */}
+      <Card>
+        <CardContent className="py-4 space-y-3">
+          <h3 className="font-semibold">External API Keys</h3>
+          <div>
+            <label className="text-sm font-medium">Unsplash Access Key</label>
+            <p className="text-xs text-muted-foreground mb-1">Required for stock photo search in the image picker.</p>
+            <input
+              type="password"
+              value={unsplashKey}
+              onChange={(e) => setUnsplashKey(e.target.value)}
+              placeholder={data?.unsplash?.hasKey ? "••••" + " (key saved — enter new to replace)" : "Enter Unsplash Access Key"}
+              className="w-full mt-1 rounded-md border px-3 py-2 text-sm"
+            />
+            {data?.unsplash?.hasKey && (
+              <p className="text-xs text-green-600 mt-1">Key configured: {data.unsplash.apiKey}</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Token Limits */}
       <Card>

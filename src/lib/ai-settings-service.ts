@@ -17,6 +17,7 @@ export interface AiSettings {
   openai: { model: string; apiKey: string };
   claude: { model: string; apiKey: string };
   local: { model: string; apiKey: string; baseUrl: string };
+  unsplashApiKey: string;
   maxTokensAnalysis: number;
   maxTokensRewrite: number;
 }
@@ -32,6 +33,7 @@ const SETTINGS_KEYS = {
   localModel: "ai_local_model",
   localApiKey: "ai_local_api_key",
   localBaseUrl: "ai_local_base_url",
+  unsplashApiKey: "ai_unsplash_api_key",
   maxTokensAnalysis: "ai_max_tokens_analysis",
   maxTokensRewrite: "ai_max_tokens_rewrite",
 } as const;
@@ -42,6 +44,7 @@ const DEFAULTS: AiSettings = {
   openai: { model: "gpt-4o-mini", apiKey: "" },
   claude: { model: "claude-sonnet-4-20250514", apiKey: "" },
   local: { model: "llama3", apiKey: "", baseUrl: "http://localhost:11434/v1" },
+  unsplashApiKey: "",
   maxTokensAnalysis: 4096,
   maxTokensRewrite: 16384,
 };
@@ -77,6 +80,7 @@ export async function getAiSettings(): Promise<AiSettings> {
       apiKey: map.get(SETTINGS_KEYS.localApiKey) || "",
       baseUrl: map.get(SETTINGS_KEYS.localBaseUrl) || DEFAULTS.local.baseUrl,
     },
+    unsplashApiKey: map.get(SETTINGS_KEYS.unsplashApiKey) || process.env.UNSPLASH_ACCESS_KEY || "",
     maxTokensAnalysis: parseInt(map.get(SETTINGS_KEYS.maxTokensAnalysis) || "") || DEFAULTS.maxTokensAnalysis,
     maxTokensRewrite: parseInt(map.get(SETTINGS_KEYS.maxTokensRewrite) || "") || DEFAULTS.maxTokensRewrite,
   };
@@ -120,6 +124,7 @@ export async function saveAiSettings(updates: Partial<AiSettings>): Promise<void
   if (updates.local?.model) writes.push({ key: SETTINGS_KEYS.localModel, value: updates.local.model });
   if (updates.local?.apiKey) writes.push({ key: SETTINGS_KEYS.localApiKey, value: updates.local.apiKey });
   if (updates.local?.baseUrl) writes.push({ key: SETTINGS_KEYS.localBaseUrl, value: updates.local.baseUrl });
+  if (updates.unsplashApiKey) writes.push({ key: SETTINGS_KEYS.unsplashApiKey, value: updates.unsplashApiKey });
   if (updates.maxTokensAnalysis !== undefined) writes.push({ key: SETTINGS_KEYS.maxTokensAnalysis, value: String(updates.maxTokensAnalysis) });
   if (updates.maxTokensRewrite !== undefined) writes.push({ key: SETTINGS_KEYS.maxTokensRewrite, value: String(updates.maxTokensRewrite) });
 
