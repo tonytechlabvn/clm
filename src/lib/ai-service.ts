@@ -193,9 +193,20 @@ export async function callAI(
         ...tokenParam,
         messages: [{ role: "user", content: prompt }],
       });
+      const choice = completion.choices[0];
+      const text = choice?.message?.content ?? "";
+      const refusal = choice?.message?.refusal;
+      if (refusal) {
+        throw new Error(`AI refused the request: ${refusal}`);
+      }
+      if (!text.trim()) {
+        const reason = choice?.finish_reason;
+        console.error(`[AI] OpenAI ${openaiModel} returned empty content. finish_reason=${reason}`);
+        throw new Error(`AI returned empty response${reason ? ` (reason: ${reason})` : ""}. Try again or use a different model.`);
+      }
       const u = completion.usage;
       return {
-        text: completion.choices[0]?.message?.content || "",
+        text,
         usage: {
           promptTokens: u?.prompt_tokens ?? 0,
           completionTokens: u?.completion_tokens ?? 0,
