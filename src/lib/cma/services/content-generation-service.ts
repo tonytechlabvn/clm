@@ -107,22 +107,20 @@ CSS is provided externally — you ONLY output HTML using these exact class name
 
 TEMPLATE STRUCTURE (follow this order):
 1. Wrap everything in: <div class="tn-cf-post">
-2. Start with intro box: <div class="tn-cf-intro">Italic intro paragraph with <strong>key topic</strong> highlighted...</div>
+2. Intro box: <div class="tn-cf-intro"><em>Intro text with <strong>key topic</strong> highlighted...</em></div>
 3. Table of contents: <div class="tn-cf-toc"><h3>📑 Mục Lục</h3><ul><li>👉 <a href="#section-id">Section Title</a></li>...</ul></div>
-4. Sections with: <h2 id="section-id">📌 Section Title</h2> (use relevant emojis)
+4. Regular sections: <h2 id="section-id">Section Title</h2> (use relevant emojis)
 5. Sub-sections: <h3>Sub-heading</h3>
-6. End with conclusion: <div class="tn-conclusion"><h2>Kết Luận</h2><p>Summary...</p><ul><li>✅ Key point</li>...</ul></div>
-7. End with tags: <div style="margin-top:2em;text-align:center;"><span class="tn-tag">Tag1</span> <span class="tn-tag">Tag2</span>...</div>
+6. Numbered step sections: <h2 class="tn-step-heading" id="step-x"><span class="tn-step-number">1</span> Step Title</h2>
+7. Conclusion: <div class="tn-conclusion"><h2>Title</h2><p>Summary...</p><ul><li><span class="tn-check-icon">✔</span> Key point</li>...</ul></div>
+8. Tags: <div class="tn-tags"><span class="tn-tag">#Tag1</span><span class="tn-tag">#Tag2</span>...</div>
 
 AVAILABLE COMPONENTS (use these class names exactly):
-- Info box: <div class="tn-highlight-box"><strong>💡 Title:</strong> Content...</div>
-- Warning box: <div class="tn-warning-box"><strong>⚠️ Title:</strong> Content...</div>
-- Success box: <div class="tn-success-box"><strong>✅ Title:</strong> Content...</div>
-- Code block: <div class="tn-code-block"><span class="tn-code-label">Label</span><pre>code here</pre></div>
-- Comparison table: <table class="tn-comparison-table"><thead><tr><th>Col1</th>...</tr></thead><tbody><tr><td>Data</td>...</tr></tbody></table>
-- Step heading: <h2 id="step-x"><span class="tn-step-number">1</span> Step Title</h2>
-- Conclusion: <div class="tn-conclusion"><h2>Title</h2><p>Text</p><ul><li>✅ Point</li></ul></div>
-- Tags: <span class="tn-tag">TagName</span>
+- Info callout: <div class="tn-callout tn-highlight-box"><strong>💡 Title:</strong> Content...</div>
+- Warning callout: <div class="tn-callout tn-warning-box"><strong>⚠️ Title:</strong> Content...</div>
+- Success callout: <div class="tn-callout tn-success-box"><strong>✅ Title:</strong> Content...</div>
+- Code block: <div class="tn-code-block"><span class="tn-code-label">Label</span><pre><code>code here</code></pre></div>
+- Table: <div class="tn-comparison-table-wrapper"><table class="tn-comparison-table"><thead><tr><th>Col1</th>...</tr></thead><tbody><tr><td>Data</td>...</tr></tbody></table></div>
 - Regular elements: <p>, <ul>, <ol>, <li>, <strong>, <em>, <code>, <a href="">
 
 IMAGE PLACEHOLDERS (2-4 per post):
@@ -134,6 +132,9 @@ RULES:
 - Use emojis in headings for visual appeal
 - Make content engaging with callout boxes, tables, code blocks
 - Include a TOC linking to section IDs
+- For numbered steps, ALWAYS use <h2 class="tn-step-heading"> with <span class="tn-step-number">N</span> inside — this renders the number as a circular badge inline with the heading text
+- For conclusion checklist items, use <span class="tn-check-icon">✔</span> before each point
+- Wrap tables in <div class="tn-comparison-table-wrapper"> for responsive scrolling
 
 Return valid JSON only (no markdown fences):
 {
