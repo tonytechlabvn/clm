@@ -9,6 +9,7 @@ import { blocksToStyledHtml } from "../themes/apply-theme-styles";
 import { markdownToThemedHtml } from "../themes/apply-theme-to-markdown-html";
 import { resolveImagePlaceholders, fetchAndUploadFeaturedImage } from "./image-resolution-service";
 import { TONYTECHLAB_CUSTOM_CSS } from "../themes/tonytechlab-custom-css";
+import { inlineCssIntoHtml } from "../css-inliner";
 
 export interface PublishRequest {
   postId: string;
@@ -76,12 +77,14 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
       htmlContent = blocksToStyledHtml(blocks, post.styleTheme || "default");
     } else if (post.contentFormat === "html") {
       // HTML format: content is JSON { html, css, js }
-      // Prepend TonyTechLab template CSS + any custom CSS, then the HTML body
+      // Inline CSS as style="" attributes for WordPress compatibility —
+      // WP strips <style> blocks depending on user role/theme/plugins.
+      // Pseudo-selectors (:hover, @media, nth-child) stay in a <style> fallback.
       try {
         const parsed = JSON.parse(post.content);
         const customCss = parsed.css ? parsed.css : "";
         const allCss = TONYTECHLAB_CUSTOM_CSS + (customCss ? `\n${customCss}` : "");
-        htmlContent = `<style>${allCss}</style>\n${parsed.html || ""}`;
+        htmlContent = inlineCssIntoHtml(parsed.html || "", allCss);
       } catch {
         // Fallback: treat as raw HTML string
         htmlContent = post.content;
