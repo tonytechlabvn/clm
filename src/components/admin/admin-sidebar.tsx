@@ -16,12 +16,14 @@ import {
   BarChart3,
   CheckCircle,
   Rss,
+  Palette,
 } from "lucide-react";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/cma/composer", label: "Composer", icon: PenSquare },
   { href: "/admin/cma/posts", label: "Posts", icon: FileText },
+  { href: "/admin/cma/templates", label: "Templates", icon: Palette },
   { href: "/admin/cma/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/admin/cma/settings", label: "Connections", icon: Plug },
   { href: "/admin/cma/approval", label: "Approval", icon: CheckCircle },
