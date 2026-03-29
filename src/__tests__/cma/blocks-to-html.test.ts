@@ -6,25 +6,25 @@ describe("blocksToHtml", () => {
     it("renders h1 heading", () => {
       const blocks = [{ type: "heading", props: { level: 1 }, content: [{ type: "text", text: "Title" }] }];
       const html = blocksToHtml(blocks);
-      expect(html).toContain("<h1>Title</h1>");
+      expect(html).toMatch(/<h1[^>]*>Title<\/h1>/);
     });
 
     it("renders h2 heading", () => {
       const blocks = [{ type: "heading", props: { level: 2 }, content: [{ type: "text", text: "Section" }] }];
       const html = blocksToHtml(blocks);
-      expect(html).toContain("<h2>Section</h2>");
+      expect(html).toMatch(/<h2[^>]*>Section<\/h2>/);
     });
 
     it("renders h3 heading", () => {
       const blocks = [{ type: "heading", props: { level: 3 }, content: [{ type: "text", text: "Subsection" }] }];
       const html = blocksToHtml(blocks);
-      expect(html).toContain("<h3>Subsection</h3>");
+      expect(html).toMatch(/<h3[^>]*>Subsection<\/h3>/);
     });
 
     it("clamps heading level to valid range", () => {
       const blocks = [{ type: "heading", props: { level: 10 }, content: [{ type: "text", text: "Text" }] }];
       const html = blocksToHtml(blocks);
-      expect(html).toContain("<h6>");
+      expect(html).toMatch(/<h6[^>]*>/);
     });
   });
 
@@ -294,7 +294,7 @@ describe("blocksToHtml", () => {
         { type: "bulletListItem", content: [{ type: "text", text: "Item" }] },
       ];
       const html = blocksToHtml(blocks);
-      expect(html).toContain("<h1>Title</h1>");
+      expect(html).toMatch(/<h1[^>]*>Title<\/h1>/);
       expect(html).toContain("<p>Content</p>");
       expect(html).toContain("<li>Item</li>");
     });

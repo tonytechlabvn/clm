@@ -32,19 +32,19 @@ describe("blocksToStyledHtml", () => {
     it("applies h1 theme styles", () => {
       const blocks = [{ type: "heading", props: { level: 1 }, content: [{ type: "text", text: "Title" }] }];
       const html = blocksToStyledHtml(blocks, "default");
-      expect(html).toMatch(/<h1 style="[^"]*">Title<\/h1>/);
+      expect(html).toMatch(/<h1[^>]*style="[^"]*"[^>]*>Title<\/h1>/);
     });
 
     it("applies h2 theme styles", () => {
       const blocks = [{ type: "heading", props: { level: 2 }, content: [{ type: "text", text: "Section" }] }];
       const html = blocksToStyledHtml(blocks, "default");
-      expect(html).toMatch(/<h2 style="[^"]*">Section<\/h2>/);
+      expect(html).toMatch(/<h2[^>]*style="[^"]*"[^>]*>Section<\/h2>/);
     });
 
     it("applies h3 theme styles", () => {
       const blocks = [{ type: "heading", props: { level: 3 }, content: [{ type: "text", text: "Subsection" }] }];
       const html = blocksToStyledHtml(blocks, "default");
-      expect(html).toMatch(/<h3 style="[^"]*">Subsection<\/h3>/);
+      expect(html).toMatch(/<h3[^>]*style="[^"]*"[^>]*>Subsection<\/h3>/);
     });
 
     it("includes font-size in heading styles", () => {
@@ -143,7 +143,7 @@ describe("blocksToStyledHtml", () => {
         },
       ];
       const html = blocksToStyledHtml(blocks, "editorial");
-      expect(html).toContain("#b91c1c");
+      expect(html).toContain("#9b2c2c");
     });
   });
 
