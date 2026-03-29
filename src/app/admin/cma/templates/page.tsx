@@ -1,27 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Globe, LayoutGrid } from "lucide-react";
 import Link from "next/link";
 import { TemplateStudioGallery } from "@/components/cma/template-studio-gallery";
 import { TemplateExtractWizard } from "@/components/cma/template-extract-wizard";
+import { TemplateEditModal } from "@/components/cma/template-edit-modal";
+import { useCmaOrg } from "@/lib/cma/hooks/use-cma-org";
 
 type StudioView = "gallery" | "extract";
 
 export default function CmaTemplateStudioPage() {
   const router = useRouter();
+  const { org } = useCmaOrg();
   const [view, setView] = useState<StudioView>("gallery");
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [galleryKey, setGalleryKey] = useState(0);
 
   function handleUseTemplate(id: string) {
     router.push(`/admin/cma/composer?templateId=${id}`);
   }
 
   function handleEditTemplate(id: string) {
-    // TODO: open template editor view
-    console.log("Edit template:", id);
+    setEditingTemplateId(id);
   }
+
+  const handleEditSaved = useCallback(() => {
+    setEditingTemplateId(null);
+    setGalleryKey((k) => k + 1);
+  }, []);
 
   return (
     <div className="p-6 space-y-6 max-w-6xl">
@@ -59,6 +68,7 @@ export default function CmaTemplateStudioPage() {
       {/* View */}
       {view === "gallery" && (
         <TemplateStudioGallery
+          key={galleryKey}
           onUseTemplate={handleUseTemplate}
           onEditTemplate={handleEditTemplate}
           onExtractNew={() => setView("extract")}
@@ -68,6 +78,15 @@ export default function CmaTemplateStudioPage() {
         <TemplateExtractWizard
           onBack={() => setView("gallery")}
           onComplete={() => setView("gallery")}
+        />
+      )}
+      {/* Edit modal */}
+      {org?.id && (
+        <TemplateEditModal
+          templateId={editingTemplateId}
+          orgId={org.id}
+          onClose={() => setEditingTemplateId(null)}
+          onSaved={handleEditSaved}
         />
       )}
     </div>
