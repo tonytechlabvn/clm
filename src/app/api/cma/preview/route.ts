@@ -5,6 +5,7 @@ import { withAdminAuth } from "@/lib/cma/services/org-auth";
 import { markdownToSanitizedHtml } from "@/lib/cma/markdown-to-html";
 import { blocksToSanitizedHtml } from "@/lib/cma/blocks-to-html";
 import { blocksToStyledHtml } from "@/lib/cma/themes/apply-theme-styles";
+import { TONYTECHLAB_CUSTOM_CSS } from "@/lib/cma/themes/tonytechlab-custom-css";
 
 // POST /api/cma/preview — render content to sanitized HTML (supports themes)
 export async function POST(request: Request) {
@@ -23,12 +24,13 @@ export async function POST(request: Request) {
       // Use styled output if theme specified, otherwise plain sanitized HTML
       html = theme ? blocksToStyledHtml(blocks, theme) : await blocksToSanitizedHtml(blocks);
     } else if (contentFormat === "html") {
-      // HTML format: JSON { html, css, js } — combine for preview
+      // HTML format: JSON { html, css, js } — combine with TonyTechLab theme CSS for preview
       try {
         const parsed = typeof content === "string" ? JSON.parse(content) : content;
-        const css = parsed.css ? `<style>${parsed.css}</style>` : "";
+        const customCss = parsed.css || "";
+        const allCss = TONYTECHLAB_CUSTOM_CSS + (customCss ? `\n${customCss}` : "");
         const js = parsed.js ? `<script>${parsed.js}<\/script>` : "";
-        html = `${css}${parsed.html || ""}${js}`;
+        html = `<style>${allCss}</style>${parsed.html || ""}${js}`;
       } catch {
         html = typeof content === "string" ? content : "";
       }
