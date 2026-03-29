@@ -26,11 +26,12 @@ model User {
   aiQuota             UserAiQuota?
   cmaPlatformAccounts CmaPlatformAccount[]
   cmaPosts            CmaPost[]
+  templateFavorites   CmaTemplateFavorite[]
 
   // LMS relations
-  instructedCourses    Course[]          @relation("CourseInstructor")
-  courseEnrollments     CourseEnrollment[]
-  lessonProgress       LessonProgress[]
+  instructedCourses Course[]           @relation("CourseInstructor")
+  courseEnrollments CourseEnrollment[]
+  lessonProgress    LessonProgress[]
 }
 
 model Account {
@@ -70,7 +71,7 @@ model Organization {
   cmaTemplates        CmaTemplate[]
 
   // LMS relations
-  courses              Course[]
+  courses Course[]
 }
 
 model OrgMember {
@@ -148,46 +149,47 @@ model CmaPlatformAccount {
 }
 
 model CmaPost {
-  id            String    @id @default(cuid())
-  orgId         String
-  authorId      String
-  title         String
-  slug          String?
-  content       String    @db.Text // markdown source
-  excerpt       String?   @db.Text
-  featuredImage String? // local path or URL
-  categories    String[] // synced with WP taxonomy
-  tags          String[] // synced with WP taxonomy
-  status        String    @default("draft") // "draft" | "pending_review" | "approved" | "scheduled" | "publishing" | "published" | "failed"
-  publishError  String?   @db.Text
-  scheduledAt   DateTime?
-  publishedAt   DateTime?
-  pgBossJobId   String? // pg-boss job ID for cancellation on reschedule
+  id                  String    @id @default(cuid())
+  orgId               String
+  authorId            String
+  title               String
+  slug                String?
+  content             String    @db.Text // markdown source
+  excerpt             String?   @db.Text
+  featuredImage       String? // local path or URL
+  categories          String[] // synced with WP taxonomy
+  tags                String[] // synced with WP taxonomy
+  status              String    @default("draft") // "draft" | "pending_review" | "approved" | "scheduled" | "publishing" | "published" | "failed"
+  publishError        String?   @db.Text
+  scheduledAt         DateTime?
+  publishedAt         DateTime?
+  pgBossJobId         String? // pg-boss job ID for cancellation on reschedule
   // Phase 4: AI curation fields
-  aiGenerated       Boolean   @default(false)
-  sourceUrl         String?   @db.Text // original article URL for curated content
-  normalizedSourceUrl String? @db.Text // URL stripped of tracking params for dedup
-  parentPostId      String? // parent blog post ID for social excerpt children
+  aiGenerated         Boolean   @default(false)
+  sourceUrl           String?   @db.Text // original article URL for curated content
+  normalizedSourceUrl String?   @db.Text // URL stripped of tracking params for dedup
+  parentPostId        String? // parent blog post ID for social excerpt children
   // Phase 5: AI generation fields
-  outlineData       Json? // approved outline structure for reference
-  originalAiDraft   String?   @db.Text // original AI output before human edits
-  generationStatus  String? // "outline_approved" | "generating" | "generated" | "generation_failed"
+  outlineData         Json? // approved outline structure for reference
+  originalAiDraft     String?   @db.Text // original AI output before human edits
+  generationStatus    String? // "outline_approved" | "generating" | "generated" | "generation_failed"
   // Phase 7: Block editor & template fields
-  contentFormat  String   @default("markdown") // "markdown" | "blocks"
-  templateId     String?                       // FK to CmaTemplate
-  styleTheme     String   @default("default")  // theme for styled publishing
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  contentFormat       String    @default("markdown") // "markdown" | "blocks"
+  templateId          String? // FK to CmaTemplate
+  styleTheme          String    @default("default") // theme for styled publishing
+  slotValues          Json? // Template Studio: slot values for re-editing HTML-slot template posts
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  org       Organization        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  author    User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  org       Organization         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  author    User                 @relation(fields: [authorId], references: [id], onDelete: Cascade)
   platforms CmaPostPlatform[]
   media     CmaMedia[]
-  parent    CmaPost?            @relation("PostChildren", fields: [parentPostId], references: [id], onDelete: SetNull)
-  children  CmaPost[]           @relation("PostChildren")
+  parent    CmaPost?             @relation("PostChildren", fields: [parentPostId], references: [id], onDelete: SetNull)
+  children  CmaPost[]            @relation("PostChildren")
   metrics   CmaPostMetrics?
   snapshots CmaMetricsSnapshot[]
-  template  CmaTemplate?        @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  template  CmaTemplate?         @relation(fields: [templateId], references: [id], onDelete: SetNull)
 
   @@index([orgId])
   @@index([authorId])
@@ -229,10 +231,10 @@ model CmaMedia {
   localPath    String // path on disk
   wpMediaId    Int? // WordPress attachment ID after upload
   // Phase 7: Image source tracking
-  source      String  @default("upload") // "upload" | "unsplash" | "ai-generated"
-  sourceUrl   String? // Unsplash photo URL for attribution
-  aiPrompt    String? @db.Text // prompt used for AI generation
-  aiProvider  String? // "openai" | "google"
+  source       String   @default("upload") // "upload" | "unsplash" | "ai-generated"
+  sourceUrl    String? // Unsplash photo URL for attribution
+  aiPrompt     String?  @db.Text // prompt used for AI generation
+  aiProvider   String? // "openai" | "google"
   createdAt    DateTime @default(now())
 
   post CmaPost? @relation(fields: [postId], references: [id], onDelete: SetNull)
@@ -244,19 +246,19 @@ model CmaMedia {
 // ─── CMA: RSS Feed Management (Phase 4) ───
 
 model CmaRssFeed {
-  id            String    @id @default(cuid())
-  orgId         String
-  name          String
-  url           String
-  keywords      String[] // keyword filters for article matching
-  language      String    @default("en")
-  fetchFrequency String   @default("daily") // "hourly" | "every_6h" | "daily"
-  isActive      Boolean   @default(true)
-  lastFetchedAt DateTime?
-  errorCount    Int       @default(0) // consecutive fetch failures
-  lastError     String?   @db.Text
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  orgId          String
+  name           String
+  url            String
+  keywords       String[] // keyword filters for article matching
+  language       String    @default("en")
+  fetchFrequency String    @default("daily") // "hourly" | "every_6h" | "daily"
+  isActive       Boolean   @default(true)
+  lastFetchedAt  DateTime?
+  errorCount     Int       @default(0) // consecutive fetch failures
+  lastError      String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([orgId])
   @@index([isActive])
@@ -280,7 +282,7 @@ model CmaAiUsage {
 model CmaAiImageUsage {
   id         String   @id @default(cuid())
   orgId      String
-  date       String   // "YYYY-MM-DD" for daily bucketing
+  date       String // "YYYY-MM-DD" for daily bucketing
   imageCount Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -292,24 +294,54 @@ model CmaAiImageUsage {
 // ─── CMA: Content Templates ───
 
 model CmaTemplate {
-  id          String   @id @default(cuid())
-  orgId       String?  // null = system-level template
-  name        String
-  slug        String   @unique
-  description String?  @db.Text
-  category    String   // "tutorial" | "news" | "announce"
-  thumbnail   String?
-  blocks      Json     // BlockNote JSON block array
-  styleTheme  String   @default("default")
-  isDefault   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String    @id @default(cuid())
+  orgId           String? // null = system-level template
+  name            String
+  slug            String    @unique
+  description     String?   @db.Text
+  category        String // "tutorial" | "news" | "announce"
+  thumbnail       String?
+  blocks          Json // BlockNote JSON block array
+  styleTheme      String    @default("default")
+  isDefault       Boolean   @default(false)
+  // Template Studio: type discriminator
+  templateType    String    @default("blocks") // "blocks" | "html-slots"
+  // Template Studio: HTML-slot template data
+  htmlTemplate    String?   @db.Text // Raw HTML with {{slot}} placeholders
+  cssScoped       String?   @db.Text // Scoped CSS string
+  slotDefinitions Json? // [{name, type, label, placeholder, maxLength, required}]
+  // Template Studio: source tracking
+  sourceUrl       String? // URL template was extracted from
+  // Template Studio: organization & discovery
+  tags            String[]  @default([])
+  usageCount      Int       @default(0)
+  lastUsedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  org   Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  posts CmaPost[]
+  org       Organization?         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  posts     CmaPost[]
+  favorites CmaTemplateFavorite[]
 
   @@index([orgId])
   @@index([category])
+  @@index([templateType])
+}
+
+// ─── CMA: Template Favorites (Template Studio) ───
+
+model CmaTemplateFavorite {
+  id         String   @id @default(cuid())
+  userId     String
+  templateId String
+  createdAt  DateTime @default(now())
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template CmaTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, templateId])
+  @@index([userId])
+  @@index([templateId])
 }
 
 // ─── CMA: Post Metrics (Phase 6) ───
@@ -368,10 +400,10 @@ model Course {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  org          Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  instructor   User               @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
-  sections     Section[]
-  enrollments  CourseEnrollment[]
+  org         Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  instructor  User               @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
+  sections    Section[]
+  enrollments CourseEnrollment[]
 
   @@index([orgId])
   @@index([instructorId])
@@ -380,7 +412,7 @@ model Course {
 
 model Section {
   id          String   @id @default(cuid())
-  courseId     String
+  courseId    String
   title       String
   order       Int      @default(0)
   isPublished Boolean  @default(false)
@@ -431,7 +463,7 @@ model LessonProgress {
 
 model CourseEnrollment {
   id          String    @id @default(cuid())
-  courseId     String
+  courseId    String
   userId      String
   progress    Float     @default(0) // 0-100 percentage
   enrolledAt  DateTime  @default(now())

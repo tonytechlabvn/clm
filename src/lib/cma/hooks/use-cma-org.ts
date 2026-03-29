@@ -32,5 +32,5 @@ export function useCmaOrg() {
       .finally(() => setLoading(false));
   }, [session?.dbUserId]);
 
-  return { org, loading };
+  return { org, loading, userId: session?.dbUserId ?? null };
 }

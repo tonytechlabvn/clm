@@ -541,12 +541,184 @@ NEXT_RUNTIME=nodejs            # Enables instrumentation
 
 ---
 
+## Phase 8: CMA Template Studio (URL Extraction & Advanced Features)
+
+### 1. Template Extraction Engine
+
+**New Services:**
+- `template-extraction-service.ts` — Main orchestrator for URL → HTML extraction → CSS scoping → AI slot detection → template creation
+- `template-css-scoper.ts` — CSS extraction + scoping logic (handles Tailwind, external stylesheets, computed styles)
+- `template-slot-detector.ts` — AI-powered slot detection + placeholder injection
+- `template-ai-service.ts` — AI template generation + content filling
+
+**Key Features:**
+- Extract content HTML from any public URL (strip nav/footer/ads/scripts)
+- Extract and scope relevant CSS under unique container class (`.tpl-{id}`)
+- Inline computed styles to capture Tailwind/utility CSS
+- AI-assisted detection of content slots (title, hero image, body sections, etc.)
+- Convert detected slots to `{{slot_name}}` placeholders in HTML
+- Sanitize HTML via DOMPurify (prevent XSS)
+
+**Architecture:**
+```
+URL → validateUrlSafety() → extract HTML + CSS
+  → inline computed styles → simplify for AI
+  → AI slot detection → placeholder injection
+  → return ExtractedTemplate (ready for preview/save)
+```
+
+### 2. Database Enhancements (CmaTemplate)
+
+**Extended CmaTemplate Model:**
+- `templateType: String` — "blocks" (BlockNote) | "html-slots" (extracted HTML)
+- `htmlTemplate: String?` — Raw HTML with `{{slot_name}}` placeholders
+- `cssScoped: String?` — Scoped CSS string
+- `slotDefinitions: JSON?` — `[{ name, type, label, placeholder, maxLength, required }]`
+- `sourceUrl: String?` — Original URL (for extracted templates)
+- `tags: String[]` — Categorization
+- `usageCount: Int` — Tracking
+- `lastUsedAt: DateTime?` — Recently used timestamp
+
+**New CmaTemplateFavorite Model:**
+- Per-user favorite marking (userId + templateId unique)
+- Enables filtering/sorting by user favorites in gallery
+
+**CmaPost Updates:**
+- `slotValues: JSON?` — Store slot values for re-editing HTML-slot templates
+
+### 3. API Routes (New)
+
+**Extraction & Management:**
+- `POST /api/cma/templates/extract` — Extract template from URL (preview)
+- `POST /api/cma/templates/ai-generate` — Generate template from natural language description
+- `POST /api/cma/templates/ai-fill` — Generate content for template slots
+- `POST /api/cma/templates/from-post` — Save existing post as template
+- `POST /api/cma/templates/[id]/favorite` — Toggle favorite (per-user)
+- `PATCH /api/cma/templates/[id]/usage` — Increment usage count
+
+**Enhanced Existing Routes:**
+- `GET /api/cma/templates` — Add favorites, usageCount, tags, templateType fields
+- `POST/PUT /api/cma/templates` — Support html-slots template fields
+
+### 4. Template Studio Page (Full Rewrite)
+
+**Page Structure:** `/admin/cma/templates`
+
+**New Components:**
+- `template-studio-gallery.tsx` — Grid gallery with search, filter (type/category/tags), sort (recent/popular/newest), favorites
+- `template-studio-card.tsx` — Template card: thumbnail preview, metadata, usage stats, action menu
+- `template-extract-wizard.tsx` — Multi-step URL extraction flow (URL input → review extraction → edit slots → save)
+- `template-ai-generator.tsx` — Natural language template generation UI
+- `template-slot-editor.tsx` — Table interface for reviewing/editing detected slots
+- `template-metadata-form.tsx` — Name, description, category, tags (reused in create/edit)
+- `template-html-preview.tsx` — Scoped HTML preview (isolated CSS, scaled thumbnail view)
+- `template-save-from-post-dialog.tsx` — Modal dialog for saving post as template
+
+**Views (via URL query params):**
+- `?view=gallery` — Browse all templates
+- `?view=extract` — URL extraction wizard
+- `?view=edit&id=xxx` — Edit template metadata
+
+### 5. Composer Integration (Phase 8)
+
+**Dual-Mode Editing:**
+- After template selection, detect `templateType` from API
+- If `blocks` → show existing BlockNote editor
+- If `html-slots` → show slot form + live preview (side-by-side)
+
+**New Components:**
+- `cma-slot-form.tsx` — Dynamic form (text, richtext, image, list inputs per slot)
+- `cma-html-live-preview.tsx` — Real-time preview with slot values injected
+- `template-slot-renderer.ts` — Utility function: inject slot values into HTML template string
+
+**Enhanced Picker:**
+- Visual thumbnails (HTML preview or block icons)
+- Type badges ("Blocks" / "HTML Slots")
+- Favorite star toggle
+- Search + filter
+- "Browse Studio" link
+
+**Publishing Flow (HTML-Slots):**
+```
+Slot form values + htmlTemplate + cssScoped
+  → renderSlotTemplate() (inject slot values)
+  → store post.slotValues for re-editing
+  → store post.contentHtml for publishing
+  → existing platform adapters handle final output
+```
+
+### 6. AI Features (Phase 8)
+
+**Template Generation:**
+- User provides natural language description
+- AI generates semantic HTML + CSS + slot definitions
+- User reviews in same extraction wizard UI
+
+**Content Filling:**
+- User clicks "AI Fill" in slot form
+- AI generates contextual content for all slots
+- Respects slot constraints (maxLength, type)
+- User can edit before publishing
+
+**Template Suggestions:**
+- Client-side keyword matching (no AI call)
+- Suggest templates based on post title/topic
+- Show in template picker suggestions section
+
+**Prompts:**
+- `cma-template-generation-prompt.ts` — System prompt for HTML/CSS generation
+- `cma-content-fill-prompt.ts` — System prompt for slot content generation
+- `cma-slot-detection-prompt.ts` — System prompt for AI slot detection from HTML
+
+### 7. Security & Validation
+
+**URL Extraction:**
+- SSRF prevention via `validateUrlSafety()` (DNS, IP blocklist)
+- HTML sanitization via DOMPurify before storage
+- AI injection prevention (sanitize HTML before passing to AI)
+- 5MB page size limit
+
+**HTML Preview:**
+- Server sanitization before storage
+- Client-side `dangerouslySetInnerHTML` safe (server-sanitized HTML)
+- CSS scoping prevents style bleed (`.tpl-{id}` prefix)
+
+**Slot Content:**
+- Sanitize slot values before HTML injection
+- Escape HTML entities for text slots
+- Validate image URLs (no `javascript:` URIs)
+
+**Rate Limiting:**
+- 10 extractions/hour per org (prevent abuse)
+- Budget checks before AI calls (token usage tracking)
+
+### 8. Performance Considerations
+
+**Token Efficiency:**
+- Simplify HTML before AI input (strip attributes, truncate text)
+- Target <2000 tokens for typical article
+- ~4000 token budget for template generation
+- ~2000 token budget for content filling
+
+**Extraction Timeline:**
+- Full pipeline target: <15s
+- 30s timeout via AbortSignal on API endpoint
+
+**Gallery Performance:**
+- Client-side filtering for <1s load (50+ templates)
+- Pagination if needed (100+ templates)
+
+---
+
 ## Future Considerations
 
 - **Social Media Publishing:** Facebook + LinkedIn adapters (blocked on FB App Review)
 - **UTM Tracking:** Conversion attribution (blocked on CLM core)
 - **Webhook Notifications:** Platform-specific webhooks for publish events
 - **UI Calendar Improvements:** Drag-to-reschedule, mass calendar actions
+- **Template Marketplace:** Share/discover community templates
+- **Advanced CSS Isolation:** Iframe-based preview for full CSS isolation
+- **Headless Browser Extraction:** Puppeteer/Playwright for dynamic sites (instead of JSDOM)
 
 ---
 

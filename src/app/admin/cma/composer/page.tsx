@@ -10,8 +10,13 @@ import { CmaEditorSwitcher } from "@/components/cma/cma-editor-switcher";
 import { CmaComposerSidebar } from "@/components/cma/cma-composer-sidebar";
 import { CmaTemplatePicker } from "@/components/cma/cma-template-picker";
 import { CmaFeaturedImagePicker } from "@/components/cma/cma-featured-image-picker";
+import { CmaSlotForm } from "@/components/cma/cma-slot-form";
+import { CmaHtmlLivePreview } from "@/components/cma/cma-html-live-preview";
+import { renderSlotTemplate } from "@/lib/cma/utils/template-slot-renderer";
 import { Loader2, Save, Send, Link2, Sparkles, FileCode2, Blocks, FileText } from "lucide-react";
 import type { PartialBlock } from "@blocknote/core";
+import type { SlotDefinition } from "@/types/cma-template-types";
+import type { SlotValues } from "@/types/cma-template-types";
 
 interface PlatformAccount {
   id: string;
@@ -32,6 +37,12 @@ export default function CmaComposerPage() {
   const [initialBlocks, setInitialBlocks] = useState<PartialBlock[] | undefined>(undefined);
   // Key to force editor re-mount when template is applied
   const [editorKey, setEditorKey] = useState(0);
+  // HTML-slot template state
+  const [htmlSlotMode, setHtmlSlotMode] = useState(false);
+  const [htmlTemplate, setHtmlTemplate] = useState("");
+  const [cssScoped, setCssScoped] = useState("");
+  const [slotDefinitions, setSlotDefinitions] = useState<SlotDefinition[]>([]);
+  const [slotValues, setSlotValues] = useState<SlotValues>({});
 
   const [contentFormat, setContentFormat] = useState<"markdown" | "blocks" | "html">("blocks");
   const [title, setTitle] = useState("");
@@ -52,20 +63,36 @@ export default function CmaComposerPage() {
   const accounts = accountsData?.accounts || [];
 
   function handleTemplateSelect(
-    selection: { blocks: unknown[]; templateId: string; styleTheme: string } | null
+    selection: {
+      blocks: unknown[]; templateId: string; styleTheme: string;
+      templateType?: string; htmlTemplate?: string; cssScoped?: string;
+      slotDefinitions?: SlotDefinition[];
+    } | null
   ) {
     setShowTemplatePicker(false);
     if (selection) {
-      setInitialBlocks(selection.blocks as PartialBlock[]);
       setTemplateId(selection.templateId);
       setStyleTheme(selection.styleTheme);
+
+      if (selection.templateType === "html-slots") {
+        // Switch to HTML-slot mode
+        setHtmlSlotMode(true);
+        setHtmlTemplate(selection.htmlTemplate || "");
+        setCssScoped(selection.cssScoped || "");
+        setSlotDefinitions(selection.slotDefinitions || []);
+        setSlotValues({});
+      } else {
+        // BlockNote mode
+        setHtmlSlotMode(false);
+        setInitialBlocks(selection.blocks as PartialBlock[]);
+      }
     } else {
-      // Blank post — reset to empty block editor
+      // Blank post — reset
+      setHtmlSlotMode(false);
       setInitialBlocks(undefined);
       setTemplateId(undefined);
       setStyleTheme("default");
     }
-    // Force editor re-mount so new initialBlocks take effect
     setEditorKey((k) => k + 1);
   }
 
@@ -74,7 +101,13 @@ export default function CmaComposerPage() {
       setError("No organization found. Go to Connections to set up your account first.");
       return;
     }
-    if (!title.trim() || !content.trim()) {
+    // For html-slots mode, generate content from slot values
+    const finalContent = htmlSlotMode && templateId
+      ? renderSlotTemplate(htmlTemplate, cssScoped, slotValues, templateId)
+      : content;
+    const finalFormat = htmlSlotMode ? "html" : contentFormat;
+
+    if (!title.trim() || (!htmlSlotMode && !content.trim())) {
       setError("Title and content are required");
       return;
     }
@@ -86,14 +119,15 @@ export default function CmaComposerPage() {
         body: JSON.stringify({
           orgId: org.id,
           title,
-          content,
-          contentFormat,
+          content: finalContent,
+          contentFormat: finalFormat,
           templateId,
           styleTheme,
           featuredImage: featuredImage || undefined,
           excerpt: excerpt || undefined,
           categories: categories ? categories.split(",").map((s) => s.trim()) : [],
           tags: tags ? tags.split(",").map((s) => s.trim()) : [],
+          ...(htmlSlotMode && { slotValues }),
         }),
       });
       router.push(`/admin/cma/posts/${post.id}`);
@@ -107,7 +141,11 @@ export default function CmaComposerPage() {
   async function handlePublish() {
     if (!org?.id) { setError("No organization found. Go to Connections to set up your account first."); return; }
     if (!accountId) { setError("Select a platform account first"); return; }
-    if (!title.trim() || !content.trim()) { setError("Title and content are required"); return; }
+    const pubContent = htmlSlotMode && templateId
+      ? renderSlotTemplate(htmlTemplate, cssScoped, slotValues, templateId)
+      : content;
+    const pubFormat = htmlSlotMode ? "html" : contentFormat;
+    if (!title.trim() || (!htmlSlotMode && !content.trim())) { setError("Title and content are required"); return; }
     setPublishing(true);
     setError(null);
     try {
@@ -116,14 +154,15 @@ export default function CmaComposerPage() {
         body: JSON.stringify({
           orgId: org.id,
           title,
-          content,
-          contentFormat,
+          content: pubContent,
+          contentFormat: pubFormat,
           templateId,
           styleTheme,
           featuredImage: featuredImage || undefined,
           excerpt: excerpt || undefined,
           categories: categories ? categories.split(",").map((s) => s.trim()) : [],
           tags: tags ? tags.split(",").map((s) => s.trim()) : [],
+          ...(htmlSlotMode && { slotValues }),
         }),
       });
       await cmaFetch(`/api/cma/posts/${post.id}/publish`, {
@@ -258,14 +297,33 @@ export default function CmaComposerPage() {
             ))}
           </div>
 
-          <CmaEditorSwitcher
-            key={editorKey}
-            contentFormat={contentFormat}
-            content={content}
-            onContentChange={handleContentChange}
-            initialBlocks={initialBlocks}
-            orgId={org?.id}
-          />
+          {htmlSlotMode ? (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <CmaSlotForm
+                slotDefinitions={slotDefinitions}
+                slotValues={slotValues}
+                onChange={setSlotValues}
+                orgId={org?.id}
+              />
+              {templateId && (
+                <CmaHtmlLivePreview
+                  htmlTemplate={htmlTemplate}
+                  cssScoped={cssScoped}
+                  slotValues={slotValues}
+                  templateId={templateId}
+                />
+              )}
+            </div>
+          ) : (
+            <CmaEditorSwitcher
+              key={editorKey}
+              contentFormat={contentFormat}
+              content={content}
+              onContentChange={handleContentChange}
+              initialBlocks={initialBlocks}
+              orgId={org?.id}
+            />
+          )}
         </div>
 
         <CmaComposerSidebar

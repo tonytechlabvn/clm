@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useCmaGet } from "@/lib/cma/use-cma-api";
 import { Loader2, X, FileText, LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { SlotDefinition } from "@/types/cma-template-types";
 
 interface CmaTemplate {
   id: string;
@@ -16,12 +17,20 @@ interface CmaTemplate {
   blocks: unknown[];
   styleTheme: string;
   orgId: string | null;
+  templateType?: string;
+  htmlTemplate?: string | null;
+  cssScoped?: string | null;
+  slotDefinitions?: SlotDefinition[] | null;
 }
 
 interface TemplateSelection {
   blocks: unknown[];
   templateId: string;
   styleTheme: string;
+  templateType?: string;
+  htmlTemplate?: string;
+  cssScoped?: string;
+  slotDefinitions?: SlotDefinition[];
 }
 
 interface CmaTemplatePickerProps {
@@ -71,6 +80,10 @@ export function CmaTemplatePicker({ open, onClose, onSelect, orgId }: CmaTemplat
       blocks: Array.isArray(template.blocks) ? template.blocks : [],
       templateId: template.id,
       styleTheme: template.styleTheme,
+      templateType: template.templateType,
+      htmlTemplate: template.htmlTemplate || undefined,
+      cssScoped: template.cssScoped || undefined,
+      slotDefinitions: Array.isArray(template.slotDefinitions) ? template.slotDefinitions as SlotDefinition[] : undefined,
     });
   }
 
@@ -151,13 +164,20 @@ export function CmaTemplatePicker({ open, onClose, onSelect, orgId }: CmaTemplat
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-medium text-sm leading-tight">{template.name}</p>
-                    <span
-                      className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${
-                        CATEGORY_COLORS[template.category] ?? "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {CATEGORY_LABELS[template.category] ?? template.category}
-                    </span>
+                    <div className="flex gap-1 shrink-0">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          CATEGORY_COLORS[template.category] ?? "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {CATEGORY_LABELS[template.category] ?? template.category}
+                      </span>
+                      {template.templateType === "html-slots" && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                          HTML
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {template.description && (
                     <p className="text-xs text-muted-foreground line-clamp-3 flex-1">

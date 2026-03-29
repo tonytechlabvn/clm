@@ -84,8 +84,8 @@ export async function fetchFeed(
   return { articles, errors };
 }
 
-/** Extract clean article text from a URL using Readability */
-export async function extractContent(url: string): Promise<ExtractedArticle> {
+/** Fetch a URL and return the raw HTML + JSDOM instance (shared by extractContent and extractContentHtml) */
+async function fetchUrlToDom(url: string): Promise<{ html: string; dom: JSDOM }> {
   await validateUrlSafety(url);
 
   const response = await fetch(url, {
@@ -95,7 +95,6 @@ export async function extractContent(url: string): Promise<ExtractedArticle> {
 
   if (!response.ok) throw new Error(`Failed to fetch URL: ${response.status}`);
 
-  // Enforce 5MB size limit (handles both Content-Length header and chunked responses)
   const MAX_SIZE = 5 * 1024 * 1024;
   const contentLength = response.headers.get("content-length");
   if (contentLength && parseInt(contentLength) > MAX_SIZE) {
@@ -108,6 +107,12 @@ export async function extractContent(url: string): Promise<ExtractedArticle> {
   }
   const html = new TextDecoder().decode(buffer);
   const dom = new JSDOM(html, { url });
+  return { html, dom };
+}
+
+/** Extract clean article text from a URL using Readability */
+export async function extractContent(url: string): Promise<ExtractedArticle> {
+  const { dom } = await fetchUrlToDom(url);
   const reader = new Readability(dom.window.document);
   const article = reader.parse();
 
@@ -118,6 +123,33 @@ export async function extractContent(url: string): Promise<ExtractedArticle> {
     url,
     content: sanitizeExtractedText(article.textContent || ""),
     author: article.byline || undefined,
+  };
+}
+
+/** Result from extractContentHtml — includes HTML content and full DOM for CSS extraction */
+export interface HtmlExtractionResult {
+  title: string;
+  contentHtml: string; // Readability-extracted content area HTML
+  fullDom: JSDOM; // Full DOM before Readability runs (for CSS extraction)
+  url: string;
+}
+
+/** Extract article content as HTML (not just text) — used by Template Studio */
+export async function extractContentHtml(url: string): Promise<HtmlExtractionResult> {
+  const { dom } = await fetchUrlToDom(url);
+
+  // Clone the document for Readability (it mutates the DOM)
+  const clonedDom = new JSDOM(dom.serialize(), { url });
+  const reader = new Readability(clonedDom.window.document);
+  const article = reader.parse();
+
+  if (!article) throw new Error("Could not extract article content");
+
+  return {
+    title: article.title || "Untitled",
+    contentHtml: article.content || "",
+    fullDom: dom, // Original DOM preserved for CSS extraction
+    url,
   };
 }
 

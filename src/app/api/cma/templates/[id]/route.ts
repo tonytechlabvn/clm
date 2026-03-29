@@ -35,11 +35,14 @@ export async function GET(request: Request, { params }: RouteParams) {
   }
 }
 
-// PUT /api/cma/templates/[id] — update org-owned template
+// PUT /api/cma/templates/[id] — update org-owned template (blocks or html-slots)
 export async function PUT(request: Request, { params }: RouteParams) {
   try {
     const body = await request.json();
-    const { orgId, name, description, category, blocks, styleTheme, thumbnail } = body;
+    const {
+      orgId, name, description, category, blocks, styleTheme, thumbnail,
+      templateType, htmlTemplate, cssScoped, slotDefinitions, sourceUrl, tags,
+    } = body;
 
     if (!orgId) {
       return NextResponse.json({ error: "orgId is required" }, { status: 400 });
@@ -51,7 +54,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const { id } = await params;
     const template = await updateTemplate(
       id,
-      { name, description, category, blocks, styleTheme, thumbnail },
+      {
+        name, description, category, blocks, styleTheme, thumbnail,
+        templateType, htmlTemplate, cssScoped, slotDefinitions, sourceUrl, tags,
+      },
       auth.orgId
     );
     return NextResponse.json(template);
