@@ -1,6 +1,9 @@
-// Scoped HTML preview renderer — renders extracted template HTML with isolated CSS
+// Isolated HTML preview renderer — uses iframe srcdoc for true CSS isolation
+// Prevents style bleed between multiple template previews on the same page
 
 "use client";
+
+import { useMemo } from "react";
 
 interface TemplateHtmlPreviewProps {
   htmlTemplate: string;
@@ -17,24 +20,29 @@ export function TemplateHtmlPreview({
   className = "",
   scale,
 }: TemplateHtmlPreviewProps) {
-  const containerStyle = scale
-    ? {
-        transform: `scale(${scale})`,
-        transformOrigin: "top left",
-        width: `${100 / scale}%`,
-        height: `${100 / scale}%`,
-      }
-    : undefined;
+  // Build a self-contained HTML document for the iframe
+  const srcdoc = useMemo(() => {
+    const scaleStyles = scale
+      ? `transform: scale(${scale}); transform-origin: top left; width: ${100 / scale}%; height: ${100 / scale}%;`
+      : "";
+
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>body { margin: 0; overflow: hidden; }</style>
+<style>${cssScoped}</style>
+</head><body>
+<div class="${scopeClass}" style="${scaleStyles}">${htmlTemplate}</div>
+</body></html>`;
+  }, [htmlTemplate, cssScoped, scopeClass, scale]);
 
   return (
     <div className={`overflow-hidden ${className}`}>
-      {/* Inject scoped CSS */}
-      <style dangerouslySetInnerHTML={{ __html: cssScoped }} />
-      {/* Render sanitized HTML inside scoped container */}
-      <div
-        className={scopeClass}
-        style={containerStyle}
-        dangerouslySetInnerHTML={{ __html: htmlTemplate }}
+      <iframe
+        srcDoc={srcdoc}
+        sandbox="allow-same-origin"
+        title="Template preview"
+        className="w-full h-full border-0"
+        style={{ pointerEvents: "none" }}
       />
     </div>
   );
