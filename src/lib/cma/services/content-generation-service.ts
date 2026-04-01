@@ -84,6 +84,49 @@ Target length: ~${targetWordCount} words`;
   };
 }
 
+/**
+ * Build a custom AI prompt that instructs the AI to generate content
+ * matching the provided template HTML structure exactly.
+ */
+function buildTemplatePrompt(
+  templateHtml: string,
+  tone: string,
+  language: string,
+  targetWordCount: number
+): string {
+  // Truncate template to save tokens — AI only needs the structure, not full content
+  const templatePreview = templateHtml.slice(0, 3000);
+
+  return `You are a content writer. Generate content that EXACTLY matches the HTML structure of the provided template.
+Style: ${tone}. Length: ~${targetWordCount} words. Language: ${language}.
+
+TEMPLATE HTML STRUCTURE (you MUST replicate this structure with new content):
+---
+${templatePreview}
+---
+
+INSTRUCTIONS:
+- Study the template HTML above carefully. It defines the visual layout and structure.
+- Generate NEW content that fits into this EXACT same HTML structure.
+- Keep ALL inline style= attributes exactly as they are in the template.
+- Keep ALL CSS class names exactly as they are in the template.
+- Replace ONLY the text content inside elements (the [bracketed placeholders] or placeholder text).
+- If the template has message bubbles (user/AI dialogue format), generate content as a dialogue.
+- If the template has sub-cards, insight boxes, or other components, fill them with relevant content.
+- Do NOT add the default TonyTechLab template classes (tn-cf-post, tn-cf-intro, etc.) — use ONLY the classes from the provided template.
+- Output the COMPLETE HTML that matches the template structure.
+
+Return valid JSON only (no markdown fences):
+{
+  "blogContent": "<full HTML matching the template structure with new content>",
+  "blogCss": "",
+  "metaDescription": "SEO meta description (150-160 chars)",
+  "fbExcerpt": "Facebook excerpt (max 200 chars, engaging)",
+  "linkedinExcerpt": "LinkedIn excerpt (max 300 chars, professional)",
+  "suggestedImagePrompts": ["image description 1", "..."]
+}`;
+}
+
 /** Generate full blog content from an approved outline, optionally enriched by source context */
 export async function generateFullContent(
   orgId: string,
@@ -91,7 +134,8 @@ export async function generateFullContent(
   tone: ContentTone,
   language: string,
   targetWordCount: number,
-  sourceContext?: string
+  sourceContext?: string,
+  templateHtml?: string
 ): Promise<GeneratedContent> {
   await checkAiBudget(orgId);
 
@@ -99,7 +143,10 @@ export async function generateFullContent(
     .map((s) => `## ${s.heading}\n${s.keyPoints.map((p) => `- ${p}`).join("\n")}`)
     .join("\n\n");
 
-  const systemPrompt = `You are a senior content writer for TonyTechLab, an EdTech company.
+  // When a template HTML is provided, use it as the format reference instead of default
+  const systemPrompt = templateHtml
+    ? buildTemplatePrompt(templateHtml, tone, language, targetWordCount)
+    : `You are a senior content writer for TonyTechLab, an EdTech company.
 Style: ${tone}. SEO: Use keywords naturally. Length: ~${targetWordCount} words. Language: ${language}.
 
 Generate a beautifully structured blog post using TonyTechLab's HTML template.

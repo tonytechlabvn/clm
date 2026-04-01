@@ -141,6 +141,7 @@ export default function CmaAiGeneratorPage() {
         body: JSON.stringify({
           orgId: org.id, outline: { title, sections }, tone, language, targetWordCount: wordCount,
           sourceContext: sourceContext || undefined,
+          templateId: templateId || undefined,
         }),
       });
       setBlogContent(result.blogContent); setBlogCss(result.blogCss || "");
@@ -159,29 +160,8 @@ export default function CmaAiGeneratorPage() {
       // If template is loaded, wrap AI content inside the template structure
       let finalHtml = blogContent;
       let finalCss = blogCss;
-      if (templateHtml) {
-        // Replace title/subtitle placeholders, then inject AI content into the body
-        finalHtml = templateHtml
-          .replace(/\[Tiêu đề bài viết\]/g, title)
-          .replace(/\[Phụ đề\]/g, "")
-          .replace(/\[Mô tả ngắn gọn[^\]]*\]/g, metaDesc || fbExcerpt || "")
-          .replace(/\[Trích dẫn[^\]]*\]/g, title);
-        // Find the content area between header and footer using regex (handles whitespace)
-        const contentAreaRegex = /(<div[^>]*display:\s*flex;\s*flex-direction:\s*column;\s*gap:\s*35px[^>]*>)([\s\S]*?)(<\/div>\s*<footer)/;
-        const match = finalHtml.match(contentAreaRegex);
-        if (match) {
-          finalHtml = finalHtml.replace(contentAreaRegex,
-            '<div style="padding: 20px;">' + blogContent + '</div>$3');
-        } else {
-          // Fallback: find footer and inject content before it
-          const footerIdx = finalHtml.indexOf('<footer');
-          if (footerIdx !== -1) {
-            finalHtml = finalHtml.slice(0, footerIdx) +
-              '<div style="padding: 20px;">' + blogContent + '</div>' +
-              finalHtml.slice(footerIdx);
-          }
-        }
-      }
+      // When templateId is set, the AI already generated content in the template format
+      // (the API passes templateHtml to the AI prompt). No merge needed — blogContent IS the final HTML.
       if (templateCss) {
         finalCss = `${templateCss}\n${blogCss}`;
       }

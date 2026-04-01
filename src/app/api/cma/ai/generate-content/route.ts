@@ -28,7 +28,7 @@ function checkRateLimit(userId: string): boolean {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { orgId, outline, tone, language, targetWordCount, saveAsDraft, sourceContext } = body;
+    const { orgId, outline, tone, language, targetWordCount, saveAsDraft, sourceContext, templateId } = body;
 
     if (!orgId || !outline?.title || !outline?.sections?.length) {
       return NextResponse.json(
@@ -47,13 +47,21 @@ export async function POST(request: Request) {
     const validTones: ContentTone[] = ["professional", "casual", "technical", "educational"];
     const safeTone = validTones.includes(tone) ? tone : "professional";
 
+    // Load template HTML to pass as format hint to AI
+    let templateHtml: string | undefined;
+    if (templateId) {
+      const template = await prisma.cmaTemplate.findUnique({ where: { id: templateId } });
+      if (template?.htmlTemplate) templateHtml = template.htmlTemplate;
+    }
+
     const result = await generateFullContent(
       orgId,
       outline,
       safeTone,
       language || "en",
       Math.min(Math.max(targetWordCount || 1500, 500), 5000),
-      typeof sourceContext === "string" ? sourceContext : undefined
+      typeof sourceContext === "string" ? sourceContext : undefined,
+      templateHtml
     );
 
     // Resolve AI image placeholders with real Unsplash photos
