@@ -3,16 +3,41 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma-client";
 import { withAdminAuth, withApiKeyOrSessionAuth } from "@/lib/cma/services/org-auth";
+import { validateApiKey, RateLimitError } from "@/lib/cma/services/api-key-service";
 import { getAdapter } from "@/lib/cma/adapters/adapter-registry";
 import { encryptToken } from "@/lib/cma/crypto-utils";
 
 // GET /api/cma/accounts — list connected platform accounts for user's orgs
-export async function GET() {
-  const auth = await withAdminAuth();
-  if (auth instanceof NextResponse) return auth;
+export async function GET(request: Request) {
+  // Support API key auth — resolve user from Bearer token
+  const authMethod = request.headers.get("x-auth-method");
+  let userId: string;
+
+  if (authMethod === "api-key") {
+    const bearerToken = request.headers.get("authorization")?.replace("Bearer ", "");
+    if (!bearerToken) {
+      return NextResponse.json({ error: "Missing Bearer token" }, { status: 401 });
+    }
+    try {
+      const apiKeyAuth = await validateApiKey(bearerToken);
+      if (!apiKeyAuth) {
+        return NextResponse.json({ error: "Invalid or expired API key" }, { status: 401 });
+      }
+      userId = apiKeyAuth.userId;
+    } catch (err) {
+      if (err instanceof RateLimitError) {
+        return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429, headers: { "Retry-After": "60" } });
+      }
+      throw err;
+    }
+  } else {
+    const auth = await withAdminAuth();
+    if (auth instanceof NextResponse) return auth;
+    userId = auth.userId;
+  }
 
   const accounts = await prisma.cmaPlatformAccount.findMany({
-    where: { user: { id: auth.userId } },
+    where: { user: { id: userId } },
     select: {
       id: true,
       orgId: true,
