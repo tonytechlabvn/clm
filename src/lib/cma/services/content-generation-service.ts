@@ -132,7 +132,7 @@ CRITICAL: Return valid JSON only (no markdown fences, no extra text).
 }`;
   }
 
-  // Default: fallback — should not reach here, but return empty
+  // Non-dialogue template: return empty to signal using default prompt
   return "";
 }
 
@@ -155,10 +155,9 @@ export async function generateFullContent(
     })
     .join("\n\n");
 
-  // When a template HTML is provided, use it as the format reference instead of default
-  const systemPrompt = templateHtml
-    ? buildTemplatePrompt(templateHtml, tone, language, targetWordCount)
-    : `You are a senior content writer for TonyTechLab, an EdTech company.
+  // When a dialogue template is provided, use custom prompt; otherwise use default
+  const templatePrompt = templateHtml ? buildTemplatePrompt(templateHtml, tone, language, targetWordCount) : "";
+  const systemPrompt = templatePrompt || `You are a senior content writer for TonyTechLab, an EdTech company.
 Style: ${tone}. SEO: Use keywords naturally. Length: ~${targetWordCount} words. Language: ${language}.
 
 Generate a beautifully structured blog post using TonyTechLab's HTML template.
