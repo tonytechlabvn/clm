@@ -85,8 +85,8 @@ Target length: ~${targetWordCount} words`;
 }
 
 /**
- * Build a custom AI prompt that instructs the AI to generate content
- * matching the provided template HTML structure exactly.
+ * Build a custom AI prompt by analyzing the template HTML to detect its format type,
+ * then instruct the AI to generate content in that format.
  */
 function buildTemplatePrompt(
   templateHtml: string,
@@ -94,37 +94,46 @@ function buildTemplatePrompt(
   language: string,
   targetWordCount: number
 ): string {
-  // Truncate template to save tokens — AI only needs the structure, not full content
-  const templatePreview = templateHtml.slice(0, 3000);
+  // Detect template format from HTML structure
+  const isDialogue = templateHtml.includes('message-bubble') || templateHtml.includes('tony-chat');
+  const hasSubCards = templateHtml.includes('ai-sub-card');
+  const hasInsightBox = templateHtml.includes('ai-insight-box');
+  const hasFooter = templateHtml.includes('<footer');
 
-  return `You are a content writer. Generate content that EXACTLY matches the HTML structure of the provided template.
+  if (isDialogue) {
+    // Dialogue chat template — generate as Tony x AI conversation
+    return `You are a content writer for TonyTechLab EdTech. Generate a dialogue/conversation between a human (Tony) and an AI assistant.
 Style: ${tone}. Length: ~${targetWordCount} words. Language: ${language}.
 
-TEMPLATE HTML STRUCTURE (you MUST replicate this structure with new content):
----
-${templatePreview}
----
+FORMAT: Generate as a dialogue with 5-8 message exchanges. Each exchange has:
+1. Tony asks a question or makes a statement
+2. AI responds with analysis, numbered points, bullet lists, or insight boxes
 
-INSTRUCTIONS:
-- Study the template HTML above carefully. It defines the visual layout and structure.
-- Generate NEW content that fits into this EXACT same HTML structure.
-- Keep ALL inline style= attributes exactly as they are in the template.
-- Keep ALL CSS class names exactly as they are in the template.
-- Replace ONLY the text content inside elements (the [bracketed placeholders] or placeholder text).
-- If the template has message bubbles (user/AI dialogue format), generate content as a dialogue.
-- If the template has sub-cards, insight boxes, or other components, fill them with relevant content.
-- Do NOT add the default TonyTechLab template classes (tn-cf-post, tn-cf-intro, etc.) — use ONLY the classes from the provided template.
-- Output the COMPLETE HTML that matches the template structure.
+Use TonyTechLab's HTML template structure exactly:
+- Wrap in: <div class="tony-chat-wrapper" style="max-width: 850px; margin: 30px auto; background: #ffffff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.06); padding: 45px; border: 1px solid #f0f0f0;">
+- Header: <header style="text-align: center; margin-bottom: 50px; border-bottom: 2px solid #f8fafc; padding-bottom: 30px;"><h1 style="font-size: 2.2em; color: #1e293b; line-height: 1.3; margin-bottom: 15px; font-weight: 700;">Title<br><span style="color: #2563eb;">Subtitle</span></h1><p style="color: #64748b; font-size: 1.1em; font-style: italic;">Description</p></header>
+- Messages container: <div style="display: flex; flex-direction: column; gap: 35px;">
+- Tony message: <div style="display: flex; flex-direction: column; align-items: flex-start;"><div style="display: flex; align-items: center; margin-bottom: 8px;"><span style="width: 32px; height: 32px; background: #2563eb; color: white; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 14px; font-weight: bold; margin-right: 10px;">T</span><span style="font-weight: 700; color: #1e293b; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Tony</span></div><div class="message-bubble" style="background-color: #f1f5f9; padding: 18px 25px; border-radius: 0 20px 20px 20px; border-left: 5px solid #2563eb; color: #334155; line-height: 1.7; max-width: 85%;"><p style="margin: 0;">Tony text here</p></div></div>
+- AI message: <div style="display: flex; flex-direction: column; align-items: flex-end;"><div style="display: flex; align-items: center; margin-bottom: 8px; flex-direction: row-reverse;"><span style="width: 32px; height: 32px; background: #059669; color: white; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 14px; font-weight: bold; margin-left: 10px;">AI</span><span style="font-weight: 700; color: #1e293b; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">AI TITLE</span></div><div class="message-bubble" style="background-color: #f0fdf4; padding: 25px; border-radius: 20px 0 20px 20px; border-right: 5px solid #059669; color: #1a2e21; line-height: 1.7; max-width: 90%; text-align: left;">AI content with <strong>bold</strong>, lists, sub-cards</div></div>
+${hasSubCards ? '- Sub-cards inside AI messages: <div class="ai-sub-card" style="background: #ffffff; padding: 15px; border-radius: 10px; border: 1px solid #dcfce7; margin-bottom: 12px;"><strong style="color: #059669;">Point Title</strong><p>Details</p></div>' : ""}
+${hasInsightBox ? '- Insight boxes: <div class="ai-insight-box" style="margin-top: 20px; padding: 25px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; color: #92400e;"><strong>Warning/Insight Title</strong><p>Content</p></div>' : ""}
+${hasFooter ? '- Footer: <footer style="margin-top: 60px; padding-top: 30px; border-top: 1px solid #f1f5f9; text-align: center;"><p style="font-weight: 600; color: #64748b; font-style: italic;">Closing quote</p><div style="color: #94a3b8; font-size: 0.8em; text-transform: uppercase; letter-spacing: 2px;">— End —</div></footer>' : ""}
 
-Return valid JSON only (no markdown fences):
+CRITICAL: Copy the inline style= attributes EXACTLY. Do NOT use class-only styling.
+CRITICAL: Return valid JSON only (no markdown fences, no extra text).
+
 {
-  "blogContent": "<full HTML matching the template structure with new content>",
+  "blogContent": "<complete HTML with the dialogue structure above>",
   "blogCss": "",
-  "metaDescription": "SEO meta description (150-160 chars)",
-  "fbExcerpt": "Facebook excerpt (max 200 chars, engaging)",
-  "linkedinExcerpt": "LinkedIn excerpt (max 300 chars, professional)",
-  "suggestedImagePrompts": ["image description 1", "..."]
+  "metaDescription": "SEO meta (150-160 chars)",
+  "fbExcerpt": "Facebook excerpt (max 200 chars)",
+  "linkedinExcerpt": "LinkedIn excerpt (max 300 chars)",
+  "suggestedImagePrompts": ["img desc 1", "img desc 2"]
 }`;
+  }
+
+  // Default: fallback — should not reach here, but return empty
+  return "";
 }
 
 /** Generate full blog content from an approved outline, optionally enriched by source context */
@@ -140,7 +149,10 @@ export async function generateFullContent(
   await checkAiBudget(orgId);
 
   const outlineText = outline.sections
-    .map((s) => `## ${s.heading}\n${s.keyPoints.map((p) => `- ${p}`).join("\n")}`)
+    .map(function(s) {
+      const points = s.keyPoints.map(function(p) { return "- " + p; }).join("\n");
+      return "## " + s.heading + "\n" + points;
+    })
     .join("\n\n");
 
   // When a template HTML is provided, use it as the format reference instead of default
