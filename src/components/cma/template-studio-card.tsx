@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, Copy, Trash2, MoreHorizontal } from "lucide-react";
@@ -40,7 +40,20 @@ export function TemplateStudioCard({
   onToggleFavorite,
 }: TemplateStudioCardProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const isSystem = !template.orgId;
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!showMenu) return;
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showMenu]);
   const isHtmlSlots = template.templateType === "html-slots";
 
   const lastUsed = template.lastUsedAt
@@ -48,9 +61,9 @@ export function TemplateStudioCard({
     : null;
 
   return (
-    <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow group">
+    <div className="border rounded-lg hover:shadow-md transition-shadow group">
       {/* Preview area */}
-      <div className="h-36 bg-muted/30 overflow-hidden relative">
+      <div className="h-36 bg-muted/30 overflow-hidden relative rounded-t-lg">
         {isHtmlSlots && template.htmlTemplate ? (
           <TemplateHtmlPreview
             htmlTemplate={template.htmlTemplate}
@@ -111,7 +124,7 @@ export function TemplateStudioCard({
               Edit
             </Button>
           )}
-          <div className="relative">
+          <div className="relative" ref={menuRef}>
             <Button
               size="sm"
               variant="ghost"
@@ -122,7 +135,7 @@ export function TemplateStudioCard({
               <MoreHorizontal className="h-3 w-3" />
             </Button>
             {showMenu && (
-              <div className="absolute right-0 top-8 z-10 bg-popover border rounded-md shadow-md py-1 min-w-[120px]">
+              <div className="absolute right-0 bottom-8 z-10 bg-popover border rounded-md shadow-md py-1 min-w-[120px]">
                 <button
                   className="w-full px-3 py-1.5 text-xs text-left hover:bg-muted flex items-center gap-2 cursor-pointer"
                   onClick={() => { onDuplicate(template.id); setShowMenu(false); }}
