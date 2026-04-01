@@ -28,6 +28,8 @@ interface SearchResponse {
 
 const BASE_URL = "https://api.unsplash.com";
 const VALID_DOWNLOAD_PREFIX = "https://api.unsplash.com/";
+// 10s timeout for all Unsplash API calls to prevent hung fetches from blocking the server
+const FETCH_TIMEOUT_MS = 10_000;
 
 import { getAiSettings } from "@/lib/ai-settings-service";
 
@@ -55,6 +57,7 @@ export async function searchPhotos(
   });
   const res = await fetch(`${BASE_URL}/search/photos?${params}`, {
     headers: await authHeaders(),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`Unsplash search failed: ${res.status}`);
   return res.json() as Promise<SearchResponse>;
@@ -64,6 +67,7 @@ export async function searchPhotos(
 export async function getPhoto(photoId: string): Promise<UnsplashPhoto> {
   const res = await fetch(`${BASE_URL}/photos/${photoId}`, {
     headers: await authHeaders(),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`Unsplash getPhoto failed: ${res.status}`);
   return res.json() as Promise<UnsplashPhoto>;
@@ -76,7 +80,7 @@ export async function trackDownload(downloadLocation: string): Promise<void> {
   }
   // download_location already contains authorization via query params when returned by API
   // but we still need the Client-ID header for the tracking call
-  await fetch(downloadLocation, { headers: await authHeaders() });
+  await fetch(downloadLocation, { headers: await authHeaders(), signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
 }
 
 /** Download photo buffer — validates SSRF, tracks download, fetches image */
@@ -92,12 +96,12 @@ export async function downloadPhoto(
   await trackDownload(downloadLocation);
 
   // The tracking endpoint returns the actual download URL
-  const trackRes = await fetch(downloadLocation, { headers: await authHeaders() });
+  const trackRes = await fetch(downloadLocation, { headers: await authHeaders(), signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   const trackData = (await trackRes.json()) as { url?: string };
   const imageUrl = trackData.url;
   if (!imageUrl) throw new Error("No image URL returned from Unsplash download");
 
-  const imgRes = await fetch(imageUrl);
+  const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!imgRes.ok) throw new Error(`Image fetch failed: ${imgRes.status}`);
 
   const contentType = imgRes.headers.get("content-type") || "image/jpeg";

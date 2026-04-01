@@ -24,8 +24,15 @@ function checkRateLimit(userId: string): boolean {
   return true;
 }
 
+// Hard timeout for the entire generate-content request (90s).
+// Prevents a hung AI call from locking the Node.js event loop and crashing the server.
+const REQUEST_TIMEOUT_MS = 90_000;
+
 // POST /api/cma/ai/generate-content
 export async function POST(request: Request) {
+  const abortController = new AbortController();
+  const timeout = setTimeout(() => abortController.abort(), REQUEST_TIMEOUT_MS);
+
   try {
     const body = await request.json();
     const { orgId, outline, tone, language, targetWordCount, saveAsDraft, sourceContext, templateId } = body;
@@ -54,6 +61,9 @@ export async function POST(request: Request) {
       if (template?.htmlTemplate) templateHtml = template.htmlTemplate;
     }
 
+    // Abort guard — throw early if timeout already fired
+    if (abortController.signal.aborted) throw new Error("Request timeout");
+
     const result = await generateFullContent(
       orgId,
       outline,
@@ -63,6 +73,8 @@ export async function POST(request: Request) {
       typeof sourceContext === "string" ? sourceContext : undefined,
       templateHtml
     );
+
+    if (abortController.signal.aborted) throw new Error("Request timeout");
 
     // Resolve AI image placeholders with real Unsplash photos
     const resolvedHtml = await resolveAiImagePlaceholders(result.blogContent);
@@ -122,7 +134,15 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    const status = message.includes("budget exceeded") ? 429 : 500;
-    return NextResponse.json({ error: message }, { status });
+    const isTimeout = abortController.signal.aborted || message.includes("timeout");
+    const isBudget = message.includes("budget exceeded");
+    const status = isTimeout ? 504 : isBudget ? 429 : 500;
+    if (isTimeout) console.error("[generate-content] Request timed out after 90s");
+    return NextResponse.json(
+      { error: isTimeout ? "Content generation timed out. Please try again." : message },
+      { status }
+    );
+  } finally {
+    clearTimeout(timeout);
   }
 }
