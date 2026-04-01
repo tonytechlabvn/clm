@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Globe, LayoutGrid } from "lucide-react";
+import { ArrowLeft, Code2, LayoutGrid } from "lucide-react";
 import Link from "next/link";
 import { TemplateStudioGallery } from "@/components/cma/template-studio-gallery";
 import { TemplateExtractWizard } from "@/components/cma/template-extract-wizard";
@@ -60,7 +60,7 @@ export default function CmaTemplateStudioPage() {
             size="sm"
             onClick={() => setView("extract")}
           >
-            <Globe className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline"> Extract from URL</span>
+            <Code2 className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline"> Create Template</span>
           </Button>
         </div>
       </div>

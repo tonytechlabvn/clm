@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Globe, Loader2, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowLeft, Code2, Loader2, CheckCircle2, Sparkles } from "lucide-react";
 import { useCmaOrg } from "@/lib/cma/hooks/use-cma-org";
 import { TemplateSlotEditor } from "./template-slot-editor";
 import { TemplateMetadataForm, type TemplateMetadata } from "./template-metadata-form";
@@ -14,7 +14,7 @@ import { TemplateHtmlPreview } from "./template-html-preview";
 import type { SlotDefinition } from "@/types/cma-template-types";
 
 type WizardStep = "url" | "loading" | "review" | "save" | "done";
-type InputMode = "url" | "ai";
+type InputMode = "html" | "ai";
 
 interface ExtractionResult {
   title: string;
@@ -31,9 +31,10 @@ interface TemplateExtractWizardProps {
 
 export function TemplateExtractWizard({ onBack, onComplete }: TemplateExtractWizardProps) {
   const { org } = useCmaOrg();
-  const [inputMode, setInputMode] = useState<InputMode>("url");
+  const [inputMode, setInputMode] = useState<InputMode>("html");
   const [step, setStep] = useState<WizardStep>("url");
-  const [url, setUrl] = useState("");
+  const [pastedHtml, setPastedHtml] = useState("");
+  const [pastedCss, setPastedCss] = useState("");
   const [aiDescription, setAiDescription] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -46,30 +47,34 @@ export function TemplateExtractWizard({ onBack, onComplete }: TemplateExtractWiz
     tags: "",
   });
 
-  async function handleExtract() {
-    if (!org?.id || !url.trim()) return;
+  function handlePasteHtmlCss() {
+    if (!pastedHtml.trim()) { setError("HTML content is required"); return; }
     setError("");
-    setStep("loading");
 
-    try {
-      const res = await fetch("/api/cma/templates/extract", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId: org.id, url: url.trim() }),
-      });
-      const json = await res.json();
-
-      if (!res.ok) throw new Error(json.error || json.details || "Extraction failed");
-
-      const data = json.data as ExtractionResult;
-      setExtraction(data);
-      setSlots(data.slotDefinitions);
-      setMetadata((prev) => ({ ...prev, name: data.title || "Extracted Template" }));
-      setStep("review");
-    } catch (err) {
-      setError((err as Error).message);
-      setStep("url");
+    // Extract CSS from <style> tags in the pasted HTML if user included them
+    let html = pastedHtml.trim();
+    let css = pastedCss.trim();
+    const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);
+    if (styleMatch) {
+      // Extract CSS from <style> blocks and remove them from HTML
+      const extractedCss = styleMatch.map(s => s.replace(/<\/?style[^>]*>/gi, "")).join("\n");
+      if (!css) css = extractedCss;
+      html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "").trim();
     }
+    // Remove <html>, <head>, <body> wrapper tags if present
+    html = html.replace(/<\/?(?:html|head|body|!DOCTYPE)[^>]*>/gi, "").trim();
+
+    const data: ExtractionResult = {
+      title: "Custom Template",
+      htmlTemplate: html,
+      cssScoped: css,
+      slotDefinitions: [{ name: "body_content", type: "richtext", label: "Body Content", placeholder: "Edit in HTML editor", maxLength: 50000, required: true }],
+      sourceUrl: "",
+    };
+    setExtraction(data);
+    setSlots(data.slotDefinitions);
+    setMetadata((prev) => ({ ...prev, name: "Custom Template" }));
+    setStep("review");
   }
 
   async function handleAiGenerate() {
@@ -145,11 +150,11 @@ export function TemplateExtractWizard({ onBack, onComplete }: TemplateExtractWiz
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div>
-          <h2 className="text-lg font-bold">Extract Template from URL</h2>
+          <h2 className="text-lg font-bold">Create Template</h2>
           <p className="text-sm text-muted-foreground">
-            {step === "url" && "Enter a public webpage URL to extract its layout"}
-            {step === "loading" && "Extracting content and detecting slots..."}
-            {step === "review" && "Review extracted content and adjust slots"}
+            {step === "url" && "Paste your tested HTML/CSS or generate with AI"}
+            {step === "loading" && "Processing template..."}
+            {step === "review" && "Review content and adjust slots"}
             {step === "save" && "Set template details and save"}
             {step === "done" && "Template saved successfully!"}
           </p>
@@ -162,12 +167,12 @@ export function TemplateExtractWizard({ onBack, onComplete }: TemplateExtractWiz
           {/* Mode toggle */}
           <div className="flex gap-1 p-1 bg-muted/50 rounded-lg w-fit">
             <button
-              onClick={() => setInputMode("url")}
+              onClick={() => setInputMode("html")}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors cursor-pointer ${
-                inputMode === "url" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+                inputMode === "html" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
               }`}
             >
-              <Globe className="h-3.5 w-3.5" /> Extract from URL
+              <Code2 className="h-3.5 w-3.5" /> Paste HTML/CSS
             </button>
             <button
               onClick={() => setInputMode("ai")}
@@ -179,20 +184,34 @@ export function TemplateExtractWizard({ onBack, onComplete }: TemplateExtractWiz
             </button>
           </div>
 
-          {inputMode === "url" ? (
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Globe className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="https://example.com/blog/great-article"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="pl-8"
-                  onKeyDown={(e) => e.key === "Enter" && handleExtract()}
+          {inputMode === "html" ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Paste your tested HTML and CSS from your blog. The system will convert it into a reusable template.
+                You can include &lt;style&gt; tags in the HTML — CSS will be extracted automatically.
+              </p>
+              <div>
+                <label className="block text-sm font-medium mb-1">HTML Content *</label>
+                <Textarea
+                  placeholder="<div class='my-wrapper'>&#10;  <h1>Title</h1>&#10;  <p>Content here...</p>&#10;</div>"
+                  value={pastedHtml}
+                  onChange={(e) => setPastedHtml(e.target.value)}
+                  rows={10}
+                  className="font-mono text-sm"
                 />
               </div>
-              <Button onClick={handleExtract} disabled={!url.trim()}>
-                Extract
+              <div>
+                <label className="block text-sm font-medium mb-1">CSS (optional — or include &lt;style&gt; in HTML above)</label>
+                <Textarea
+                  placeholder=".my-wrapper { max-width: 900px; margin: 0 auto; }&#10;.my-wrapper h1 { color: #2563eb; }"
+                  value={pastedCss}
+                  onChange={(e) => setPastedCss(e.target.value)}
+                  rows={6}
+                  className="font-mono text-sm"
+                />
+              </div>
+              <Button onClick={handlePasteHtmlCss} disabled={!pastedHtml.trim()}>
+                <Code2 className="h-4 w-4 mr-1" /> Create Template
               </Button>
             </div>
           ) : (
@@ -280,7 +299,7 @@ export function TemplateExtractWizard({ onBack, onComplete }: TemplateExtractWiz
           <CheckCircle2 className="h-12 w-12 text-green-500" />
           <p className="font-medium">Template saved successfully!</p>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => { setStep("url"); setUrl(""); setExtraction(null); }}>
+            <Button variant="outline" onClick={() => { setStep("url"); setPastedHtml(""); setPastedCss(""); setExtraction(null); }}>
               Extract Another
             </Button>
             <Button onClick={onComplete}>Back to Gallery</Button>
