@@ -270,7 +270,10 @@ export default function CmaComposerPage() {
             {curating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Curate"}
           </Button>
           <div className="border-l h-6" />
-          <Button size="sm" variant="outline" onClick={() => window.location.href = "/admin/cma/composer/ai-generator"}>
+          <Button size="sm" variant="outline" onClick={() => {
+            const params = templateId ? `?templateId=${templateId}` : "";
+            window.location.href = `/admin/cma/composer/ai-generator${params}`;
+          }}>
             <Sparkles className="h-4 w-4 mr-1" /> Generate with AI
           </Button>
         </CardContent>

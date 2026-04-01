@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cmaFetch } from "@/lib/cma/use-cma-api";
 import { useCmaOrg } from "@/lib/cma/hooks/use-cma-org";
@@ -26,8 +26,28 @@ interface SourceExtractionResult {
 
 export default function CmaAiGeneratorPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { org } = useCmaOrg();
   const [step, setStep] = useState(1);
+
+  // Template context — loaded when templateId is in URL params
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  const [templateHtml, setTemplateHtml] = useState<string | null>(null);
+  const [templateCss, setTemplateCss] = useState<string | null>(null);
+
+  // Load template data if templateId is provided
+  useEffect(() => {
+    const tplId = searchParams.get("templateId");
+    if (!tplId || !org?.id) return;
+    setTemplateId(tplId);
+    fetch(`/api/cma/templates/${tplId}?orgId=${org.id}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.htmlTemplate) setTemplateHtml(data.htmlTemplate);
+        if (data?.cssScoped) setTemplateCss(data.cssScoped);
+      })
+      .catch(() => {}); // silently fail — will use default if template load fails
+  }, [searchParams, org?.id]);
 
   // Step 1 state
   const [topic, setTopic] = useState("");
@@ -135,12 +155,31 @@ export default function CmaAiGeneratorPage() {
     if (!org?.id || !blogContent) return;
     setLoading(true); setError(null);
     try {
-      const htmlContent = JSON.stringify({ html: blogContent, css: blogCss, js: "" });
+      // If template is loaded, merge AI content into the template HTML structure
+      let finalHtml = blogContent;
+      let finalCss = blogCss;
+      if (templateHtml) {
+        // Replace placeholder text in template with AI-generated content
+        // The template has [bracketed placeholder] text that we replace
+        finalHtml = templateHtml
+          .replace(/\[Tiêu đề bài viết\]/g, title)
+          .replace(/\[Phụ đề\]/g, "")
+          .replace(/\[Mô tả ngắn gọn[^\]]*\]/g, metaDesc || fbExcerpt)
+          .replace(/\[Câu hỏi[^\]]*\]/g, blogContent.slice(0, 200))
+          .replace(/\[Nội dung phân tích[^\]]*\]/g, blogContent)
+          .replace(/\[Trích dẫn[^\]]*\]/g, "");
+      }
+      if (templateCss) {
+        finalCss = `${templateCss}\n${blogCss}`;
+      }
+
+      const htmlContent = JSON.stringify({ html: finalHtml, css: finalCss, js: "" });
       const post = await cmaFetch<{ id: string }>("/api/cma/posts", {
         method: "POST",
         body: JSON.stringify({
           orgId: org.id, title, content: htmlContent,
           contentFormat: "html",
+          templateId: templateId || undefined,
           excerpt: linkedinExcerpt || undefined,
           tags: [], categories: [],
         }),
@@ -170,6 +209,13 @@ export default function CmaAiGeneratorPage() {
           <div key={s} className={`h-1.5 flex-1 rounded-full ${s <= step ? "bg-primary" : "bg-muted"}`} />
         ))}
       </div>
+
+      {templateId && (
+        <div className="rounded-md bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 text-sm flex items-center gap-2">
+          <Sparkles className="h-4 w-4" />
+          Template applied: AI content will be merged into the selected template style when saved.
+        </div>
+      )}
 
       {error && (
         <div className="rounded-md bg-destructive/10 text-destructive px-4 py-3 text-sm">{error}</div>
