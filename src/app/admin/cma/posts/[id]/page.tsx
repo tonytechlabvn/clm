@@ -15,8 +15,10 @@ import {
   Send,
   ExternalLink,
   Loader2,
+  LayoutTemplate,
 } from "lucide-react";
 import Link from "next/link";
+import { CmaSaveAsTemplateModal } from "@/components/cma/cma-save-as-template-modal";
 
 interface PlatformAccount {
   id: string;
@@ -71,6 +73,7 @@ export default function CmaPostEditPage() {
   const [publishing, setPublishing] = useState(false);
   const [previewHtml, setPreviewHtml] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   const [error, setError] = useState("");
 
   const fetchPost = useCallback(async () => {
@@ -342,6 +345,10 @@ export default function CmaPostEditPage() {
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Save Draft
         </Button>
+        <Button onClick={() => setShowSaveTemplate(true)} variant="outline" className="gap-2">
+          <LayoutTemplate className="h-4 w-4" />
+          Save as Template
+        </Button>
         {canPublish && (
           <Button onClick={handlePublish} disabled={publishing} className="gap-2">
             {publishing ? (
@@ -361,6 +368,15 @@ export default function CmaPostEditPage() {
           </p>
         )}
       </div>
+
+      {/* Save as Template modal */}
+      <CmaSaveAsTemplateModal
+        open={showSaveTemplate}
+        onClose={() => setShowSaveTemplate(false)}
+        postId={postId}
+        postTitle={title}
+        orgId={org?.id || ""}
+      />
     </div>
   );
 }

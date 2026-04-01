@@ -1,14 +1,17 @@
-// POST /api/cma/templates/from-post — Save a template from an existing post
+// POST /api/cma/templates/from-post — Extract structure from a post and save as reusable template
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma-client";
 import { withOrgAuth } from "@/lib/cma/services/org-auth";
 import { createTemplate } from "@/lib/cma/services/template-service";
+import { extractBlocksStructure } from "@/lib/cma/utils/extract-blocks-structure";
+import { extractMarkdownStructure } from "@/lib/cma/utils/extract-markdown-structure";
+import { extractHtmlStructure } from "@/lib/cma/utils/extract-html-structure";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { orgId, postId, name, category } = body;
+    const { orgId, postId, name, category, description } = body;
 
     if (!orgId || !postId || !name || !category) {
       return NextResponse.json(
@@ -20,7 +23,6 @@ export async function POST(request: Request) {
     const auth = await withOrgAuth(orgId);
     if (auth instanceof NextResponse) return auth;
 
-    // Load post and verify org scope
     const post = await prisma.cmaPost.findFirst({
       where: { id: postId, orgId: auth.orgId },
     });
@@ -28,24 +30,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    // Save as blocks template — extract block structure with placeholder content
-    // Content is markdown, we store it as a single richtext block template
-    const blocks = [
-      { type: "heading", props: { level: 1 }, content: [{ type: "text", text: "{{title}}" }] },
-      { type: "paragraph", content: [{ type: "text", text: "{{body}}" }] },
-    ];
+    const autoDescription = description || `Structure extracted from: ${post.title}`;
+
+    // Branch on content format — extract real structure from post content
+    if (post.contentFormat === "html") {
+      // HTML → html-slots template
+      const { htmlTemplate, cssScoped, slotDefinitions } = extractHtmlStructure(post.content);
+      const template = await createTemplate(
+        { name, category, description: autoDescription, templateType: "html-slots", htmlTemplate, cssScoped, slotDefinitions },
+        auth.orgId
+      );
+      return NextResponse.json({ data: template }, { status: 201 });
+    }
+
+    // blocks or markdown → blocks template
+    let templateBlocks: unknown[];
+    if (post.contentFormat === "blocks") {
+      try {
+        const parsed = JSON.parse(post.content);
+        templateBlocks = extractBlocksStructure(Array.isArray(parsed) ? parsed : []);
+      } catch {
+        // Malformed blocks JSON — fallback to markdown extraction
+        templateBlocks = extractMarkdownStructure(post.content);
+      }
+    } else {
+      // markdown (default)
+      templateBlocks = extractMarkdownStructure(post.content);
+    }
 
     const template = await createTemplate(
-      {
-        name,
-        category,
-        blocks,
-        templateType: "blocks",
-        description: `Created from post: ${post.title}`,
-      },
+      { name, category, description: autoDescription, blocks: templateBlocks, templateType: "blocks" },
       auth.orgId
     );
-
     return NextResponse.json({ data: template }, { status: 201 });
   } catch (err) {
     console.error("[api/cma/templates/from-post POST]", err);
