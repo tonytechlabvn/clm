@@ -94,16 +94,16 @@ export function heuristicSlotDetection(html: string): SlotDefinition[] {
     });
   }
 
-  // Detect paragraph blocks as richtext
+  // Detect paragraph blocks as richtext — single body content slot
   const pBlocks = html.match(/<p[^>]*>[\s\S]*?<\/p>/gi) || [];
   if (pBlocks.length > 0) {
     sectionCount++;
     slots.push({
-      name: `body_section_${sectionCount}`,
+      name: "body_content",
       type: "richtext",
-      label: `Body Section ${sectionCount}`,
-      placeholder: "Content goes here...",
-      maxLength: 5000,
+      label: "Body Content",
+      placeholder: "Paste or write your content here...",
+      maxLength: 50000,
       required: true,
     });
   }
@@ -179,11 +179,30 @@ export function injectSlotPlaceholders(
         /(<h[1-3][^>]*>)([\s\S]*?)(<\/h[1-3]>)/i,
         `$1{{${slot.name}}}$3`
       );
+    } else if (slot.type === "richtext" || slot.type === "list") {
+      // For richtext/list slots: strip all inner content, replace with slot placeholder
+      // This ensures the template only keeps style, not original text
+      result = stripContentKeepStructure(result, slot.name);
     }
-    // Richtext/list slots: mark with data attribute for slot editor to handle
   }
 
   return result;
+}
+
+/**
+ * Strip text content from HTML while keeping the outermost wrapper structure.
+ * Replaces all inner content (paragraphs, lists, headings, text) with a single {{slot}} placeholder.
+ * Preserves CSS class names and structural divs so the styling still applies.
+ */
+function stripContentKeepStructure(html: string, slotName: string): string {
+  // Find the main content container — first major wrapper div or article
+  const wrapperMatch = html.match(/^(\s*<(?:div|article|section|main)[^>]*>)([\s\S]*?)(<\/(?:div|article|section|main)>\s*)$/i);
+  if (wrapperMatch) {
+    // Keep wrapper open/close tags, replace inner content with slot placeholder
+    return `${wrapperMatch[1]}\n{{${slotName}}}\n${wrapperMatch[3]}`;
+  }
+  // Fallback: replace entire html with slot in a wrapper div
+  return `<div>{{${slotName}}}</div>`;
 }
 
 function escapeRegex(str: string): string {
