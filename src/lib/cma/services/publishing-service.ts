@@ -113,8 +113,17 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
               templateHtml.substring(mainClose);
 
             const scopeClass = `tpl-${template.id.slice(0, 8)}`;
-            const rendered = `<style>${template.cssScoped}</style>\n<div class="${scopeClass}">${wrapped}</div>`;
-            const allCss = TONYTECHLAB_CUSTOM_CSS + `\n${template.cssScoped}`;
+            // Detect if template has dark background — extract base text color from CSS variables
+            const bgColorMatch = template.cssScoped.match(/--[\w-]*bg\s*:\s*(#[0-9a-fA-F]{3,8})/);
+            const textColorMatch = template.cssScoped.match(/--[\w-]*text\s*:\s*(#[0-9a-fA-F]{3,8})/);
+            const isDark = bgColorMatch && parseInt(bgColorMatch[1].slice(1, 3), 16) < 80;
+            const fallbackColor = isDark ? (textColorMatch?.[1] || "#e2e8f0") : "inherit";
+            // Force text color on markdown elements to prevent WordPress theme override
+            const contentColorFix = fallbackColor !== "inherit"
+              ? `\n.${scopeClass} main p, .${scopeClass} main li, .${scopeClass} main ul, .${scopeClass} main ol, .${scopeClass} main blockquote, .${scopeClass} main span, .${scopeClass} main strong, .${scopeClass} main em { color: ${fallbackColor}; }`
+              : "";
+            const rendered = `<style>${template.cssScoped}${contentColorFix}</style>\n<div class="${scopeClass}">${wrapped}</div>`;
+            const allCss = TONYTECHLAB_CUSTOM_CSS + `\n${template.cssScoped}${contentColorFix}`;
             htmlContent = inlineCssIntoHtml(rendered, allCss);
           }
         }
