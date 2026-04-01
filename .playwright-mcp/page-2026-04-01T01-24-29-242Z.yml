@@ -1,0 +1,114 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "CLM Admin" [ref=e6] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e8]
+          - generic [ref=e11]: CLM
+          - generic [ref=e12]: Admin
+        - button "Tony Nguyen - Sign out" [ref=e105] [cursor=pointer]:
+          - img [ref=e106]
+    - generic [ref=e15]:
+      - complementary [ref=e16]:
+        - navigation [ref=e17]:
+          - link "Dashboard" [ref=e18] [cursor=pointer]:
+            - /url: /admin
+            - img [ref=e19]
+            - text: Dashboard
+          - link "Composer" [ref=e24] [cursor=pointer]:
+            - /url: /admin/cma/composer
+            - img [ref=e25]
+            - text: Composer
+          - link "Posts" [ref=e28] [cursor=pointer]:
+            - /url: /admin/cma/posts
+            - img [ref=e29]
+            - text: Posts
+          - link "Templates" [ref=e32] [cursor=pointer]:
+            - /url: /admin/cma/templates
+            - img [ref=e33]
+            - text: Templates
+          - link "Calendar" [ref=e39] [cursor=pointer]:
+            - /url: /admin/cma/calendar
+            - img [ref=e40]
+            - text: Calendar
+          - link "Connections" [ref=e42] [cursor=pointer]:
+            - /url: /admin/cma/settings
+            - img [ref=e43]
+            - text: Connections
+          - link "Approval" [ref=e45] [cursor=pointer]:
+            - /url: /admin/cma/approval
+            - img [ref=e46]
+            - text: Approval
+          - link "Analytics" [ref=e49] [cursor=pointer]:
+            - /url: /admin/cma/analytics
+            - img [ref=e50]
+            - text: Analytics
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - generic [ref=e54]:
+              - img [ref=e55]
+              - text: Settings
+            - link "A.I Settings" [ref=e58] [cursor=pointer]:
+              - /url: /admin/settings/ai
+              - img [ref=e59]
+              - text: A.I Settings
+            - link "Settings" [ref=e62] [cursor=pointer]:
+              - /url: /admin/settings
+              - img [ref=e63]
+              - text: Settings
+          - generic [ref=e110]:
+            - img [ref=e112]
+            - generic [ref=e115]:
+              - paragraph [ref=e116]: Tony Nguyen
+              - paragraph [ref=e117]: admin
+      - main [ref=e66]:
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - link [ref=e69] [cursor=pointer]:
+              - /url: /admin/cma
+              - button [ref=e70]:
+                - img [ref=e71]
+            - generic [ref=e73]:
+              - heading "Template Studio" [level=1] [ref=e74]
+              - paragraph [ref=e75]: Create, manage, and extract reusable content templates
+            - generic [ref=e76]:
+              - button "Gallery" [ref=e77] [cursor=pointer]:
+                - img
+                - text: Gallery
+              - button "Extract from URL" [ref=e78] [cursor=pointer]:
+                - img
+                - text: Extract from URL
+          - generic [ref=e448]:
+            - generic [ref=e449]:
+              - button [ref=e450] [cursor=pointer]:
+                - img [ref=e451]
+              - generic [ref=e453]:
+                - heading "Extract Template from URL" [level=2] [ref=e454]
+                - paragraph [ref=e455]: Review extracted content and adjust slots
+            - generic [ref=e478]:
+              - generic [ref=e479]:
+                - heading "Extracted Content Preview" [level=3] [ref=e480]
+                - generic [ref=e502]: "{{body_content}}"
+              - generic [ref=e485]:
+                - generic [ref=e486]:
+                  - heading "Content Slots (1)" [level=3] [ref=e487]
+                  - button "Add Slot" [ref=e488] [cursor=pointer]:
+                    - img
+                    - text: Add Slot
+                - generic [ref=e490]:
+                  - textbox "slot_name" [ref=e491]: body_content
+                  - combobox [ref=e492] [cursor=pointer]:
+                    - generic [ref=e493]: richtext
+                    - img: ▼
+                  - textbox [ref=e494]: richtext
+                  - textbox "Label" [ref=e495]: Body Content
+                  - generic [ref=e496]:
+                    - checkbox "Req" [active] [ref=e497]
+                    - text: Req
+                  - button [ref=e498] [cursor=pointer]:
+                    - img
+              - generic [ref=e499]:
+                - button "Back" [ref=e500] [cursor=pointer]
+                - button "Continue to Save" [ref=e501] [cursor=pointer]
+  - alert [ref=e104]

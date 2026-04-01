@@ -1,0 +1,21 @@
+[     997ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://mac24h.vn/mac-mini-m4-2024.html?variation_id=64899&gad_source=1&gad_campaignid=11710901209&gbraid=0AAAAADnOvmQ3JBFuGeNk_e9qoHxCXhwBv&gclid=EAIaIQobChMIrJWa1svLkwMVbSqDAx2TIDAjEAQYASABEgIekfD_BwE:0
+[     998ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://mac24h.vn/mac-mini-m4-2024.html?variation_id=64899&gad_source=1&gad_campaignid=11710901209&gbraid=0AAAAADnOvmQ3JBFuGeNk_e9qoHxCXhwBv&gclid=EAIaIQobChMIrJWa1svLkwMVbSqDAx2TIDAjEAQYASABEgIekfD_BwE:0
+[    1331ms] [LOG] JQMIGRATE: Migrate is installed, version 3.3.0 @ https://mac24h.vn/js/lib/jquery/jquery-migrate-3.3.0.min.js?ver=1773121025:1
+[    1360ms] [LOG] Zalo Social Plugin is loaded successfully @ https://sp.zalo.me/plugins/sdk.js:1
+[    1361ms] [LOG] socialPluginsShare:  [] @ https://sp.zalo.me/plugins/sdk.js:1
+[   35876ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://mac24h.vn/mac-mini-m4-2024.html?variation_id=64691:0
+[  554517ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://mac24h.vn/mac-mini-m4-2024.html?variation_id=64692:0
+[  559975ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://mac24h.vn/mac-mini-m4-2024.html?variation_id=64692:0
+[  562274ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://mac24h.vn/checkout-cart.html:0
+[  562298ms] [LOG] JQMIGRATE: Migrate is installed, version 3.3.0 @ https://mac24h.vn/js/lib/jquery/jquery-migrate-3.3.0.min.js?ver=1773121025:1
+[  562672ms] [LOG] Zalo Social Plugin is loaded successfully @ https://sp.zalo.me/plugins/sdk.js:1
+[  562672ms] [LOG] socialPluginsShare:  [] @ https://sp.zalo.me/plugins/sdk.js:1
+[ 1042576ms] [LOG] s.fn.init @ https://mac24h.vn/var/cache/misc/assets/js/tygh/scripts-c982dace0d6361c7247def78ae4df772.js?1773121024:266
+[ 1042609ms] [LOG] s.fn.init @ https://mac24h.vn/var/cache/misc/assets/js/tygh/scripts-c982dace0d6361c7247def78ae4df772.js?1773121024:266
+[ 1042610ms] [LOG] s.fn.init @ https://mac24h.vn/var/cache/misc/assets/js/tygh/scripts-c982dace0d6361c7247def78ae4df772.js?1773121024:266
+[ 1042672ms] [LOG] s.fn.init @ https://mac24h.vn/var/cache/misc/assets/js/tygh/scripts-c982dace0d6361c7247def78ae4df772.js?1773121024:266
+[ 1054051ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://mac24h.vn/mac-mini-m4-2024.html?variation_id=64692:0
+[ 1054052ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://mac24h.vn/mac-mini-m4-2024.html?variation_id=64692:0
+[ 1054081ms] [LOG] JQMIGRATE: Migrate is installed, version 3.3.0 @ https://mac24h.vn/js/lib/jquery/jquery-migrate-3.3.0.min.js?ver=1773121025:1
+[ 1054210ms] [LOG] Zalo Social Plugin is loaded successfully @ https://sp.zalo.me/plugins/sdk.js:1
+[ 1054211ms] [LOG] socialPluginsShare:  [] @ https://sp.zalo.me/plugins/sdk.js:1

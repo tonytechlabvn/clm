@@ -1,0 +1,127 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "CLM Admin" [ref=e6] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e8]
+          - generic [ref=e11]: CLM
+          - generic [ref=e12]: Admin
+        - button "Tony Nguyen - Sign out" [ref=e70] [cursor=pointer]:
+          - img [ref=e71]
+    - generic [ref=e15]:
+      - complementary [ref=e16]:
+        - navigation [ref=e17]:
+          - link "Dashboard" [ref=e18] [cursor=pointer]:
+            - /url: /admin
+            - img [ref=e19]
+            - text: Dashboard
+          - link "Composer" [ref=e24] [cursor=pointer]:
+            - /url: /admin/cma/composer
+            - img [ref=e25]
+            - text: Composer
+          - link "Posts" [ref=e28] [cursor=pointer]:
+            - /url: /admin/cma/posts
+            - img [ref=e29]
+            - text: Posts
+          - link "Templates" [ref=e32] [cursor=pointer]:
+            - /url: /admin/cma/templates
+            - img [ref=e33]
+            - text: Templates
+          - link "Calendar" [ref=e39] [cursor=pointer]:
+            - /url: /admin/cma/calendar
+            - img [ref=e40]
+            - text: Calendar
+          - link "Connections" [ref=e42] [cursor=pointer]:
+            - /url: /admin/cma/settings
+            - img [ref=e43]
+            - text: Connections
+          - link "Approval" [ref=e45] [cursor=pointer]:
+            - /url: /admin/cma/approval
+            - img [ref=e46]
+            - text: Approval
+          - link "Analytics" [ref=e49] [cursor=pointer]:
+            - /url: /admin/cma/analytics
+            - img [ref=e50]
+            - text: Analytics
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - generic [ref=e54]:
+              - img [ref=e55]
+              - text: Settings
+            - link "A.I Settings" [ref=e58] [cursor=pointer]:
+              - /url: /admin/settings/ai
+              - img [ref=e59]
+              - text: A.I Settings
+            - link "Settings" [ref=e62] [cursor=pointer]:
+              - /url: /admin/settings
+              - img [ref=e63]
+              - text: Settings
+          - generic [ref=e75]:
+            - img [ref=e77]
+            - generic [ref=e80]:
+              - paragraph [ref=e81]: Tony Nguyen
+              - paragraph [ref=e82]: admin
+      - main [ref=e66]:
+        - generic [ref=e475]:
+          - generic [ref=e476]:
+            - link [ref=e477] [cursor=pointer]:
+              - /url: /admin/cma/posts
+              - button [ref=e478]:
+                - img [ref=e479]
+            - heading "Edit Post" [level=1] [ref=e482]
+            - generic [ref=e483]: published
+          - link "TonyTechLab" [ref=e485] [cursor=pointer]:
+            - /url: https://tonytechlab.com/nganh-it-sau-2026-dung-vung-truoc-ai-hay-doi-mat-dao-thai/
+            - img [ref=e486]
+            - text: TonyTechLab
+          - generic [ref=e490]:
+            - generic [ref=e491]: Title
+            - textbox "Post title" [ref=e492]: "Ngành IT Sau 2026: Đứng Vững Trước AI Hay Đối Mặt Đào Thải?"
+          - generic [ref=e493]:
+            - generic [ref=e494]:
+              - generic [ref=e495]: Content (HTML/CSS/JS)
+              - button "Preview" [ref=e496] [cursor=pointer]
+            - generic [ref=e497]:
+              - generic [ref=e498]:
+                - generic [ref=e499]:
+                  - button "HTML" [ref=e500] [cursor=pointer]
+                  - button "CSS" [ref=e501] [cursor=pointer]
+                  - button "JavaScript" [ref=e502] [cursor=pointer]
+                - generic [ref=e503]:
+                  - button "Hide preview" [ref=e504] [cursor=pointer]:
+                    - img [ref=e505]
+                  - button "Fullscreen" [ref=e510] [cursor=pointer]:
+                    - img [ref=e511]
+              - generic [ref=e516]:
+                - generic [ref=e517]:
+                  - generic [ref=e518]:
+                    - img [ref=e519]
+                    - generic [ref=e523]: HTML
+                  - textbox "<article> <h1>My Post Title</h1> <p>Write your content here...</p> </article>" [ref=e524]:
+                    - /placeholder: "<article>\n  <h1>My Post Title</h1>\n  <p>Write your content here...</p>\n</article>"
+                    - text: "<div class=\"tn-cf-post\"> <div class=\"tn-cf-intro\"> Trong bối cảnh công nghệ phát triển như vũ bão, đặc biệt là sự trỗi dậy mạnh mẽ của Trí tuệ Nhân tạo (AI), câu hỏi lớn đang đặt ra cho hàng triệu chuyên gia IT toàn cầu là: Ngành IT sau 2026 sẽ đi về đâu? Liệu chúng ta sẽ <strong>đứng vững trước làn sóng AI</strong>, tận dụng nó để phát triển hay đối mặt với nguy cơ <strong>bị đào thải</strong> khỏi thị trường lao động? Bài viết này của TonyTechLab sẽ đi sâu phân tích những thách thức, cơ hội và con đường phát triển bền vững cho dân IT trong kỷ nguyên mới. </div> <div class=\"tn-cf-toc\"> <h3>📑 Mục Lục</h3> <ul> <li>👉 <a href=\"#mo-dau-ai-it\">🚀 Mở Đầu: Nỗi Lo 'Đào Thải Hậu AI' Và Thực Tế Ngành IT</a></li> <li>👉 <a href=\"#ai-thay-doi-it\">⚙️ AI Đang Thay Đổi Cuộc Chơi Trong Ngành IT Như Thế Nào?</a></li> <li>👉 <a href=\"#vi-tri-nguy-co\">📉 Những Vị Trí IT Nào Có Nguy Cơ Bị Ảnh Hưởng Cao Nhất?</a></li> <li>👉 <a href=\"#co-hoi-ai\">✨ Cơ Hội Mới Nào Sẽ Mở Ra Trong Kỷ Nguyên AI Cho Dân IT?</a></li> <li>👉 <a href=\"#ky-nang-vang\">🌟 Kỹ Năng Vàng Để Không Bị Đào Thải Và Vươn Tầm Hậu AI</a></li> <li>👉 <a href=\"#tonytechlab-dong-hanh\">🎓 TonyTechLab: Đồng Hành Cùng Bạn Trên Hành Trình Chuyển Đổi Kỹ Năng</a></li> <li>👉 <a href=\"#ket-luan-chuyen-doi\">✅ Kết Luận: Chuyển Đổi Hay Bị Bỏ Lại – Lựa Chọn Là Ở Bạn</a></li> </ul> </div> <h2 id=\"mo-dau-ai-it\">🚀 Mở Đầu: Nỗi Lo 'Đào Thải Hậu AI' Và Thực Tế Ngành IT</h2> <p>Thế giới đang chứng kiến sự bùng nổ chưa từng có của <a href=\"#\" target=\"_blank\">Trí tuệ Nhân tạo (AI)</a>, đặc biệt là các mô hình Generative AI như ChatGPT, Midjourney, hay Copilot. Khả năng tự động hóa, xử lý dữ liệu khổng lồ và thậm chí là sáng tạo nội dung của AI đã khiến nhiều người lo ngại về tương lai công việc, trong đó <strong>ngành IT</strong> – vốn được xem là tiên phong – lại trở thành một trong những lĩnh vực chịu ảnh hưởng trực tiếp nhất. Nỗi lo về <em>'đào thải hậu AI'</em> không còn là viễn cảnh xa vời mà đang dần trở thành hiện thực với nhiều vị trí có tính lặp lại hoặc quy trình hóa cao.</p> <p>Tuy nhiên, thay vì chỉ tập trung vào những rủi ro, bài viết này của TonyTechLab mong muốn mang đến một cái nhìn toàn diện hơn: AI không chỉ là thách thức mà còn là <strong>cơ hội lớn</strong> cho những ai biết cách nắm bắt và thích nghi. Chúng ta sẽ cùng nhau khám phá cách AI đang định hình lại thị trường IT, những kỹ năng cần trang bị và con đường để không chỉ đứng vững mà còn vươn tầm trong kỷ nguyên số hóa mạnh mẽ này.</p> <h2 id=\"ai-thay-doi-it\">⚙️ AI Đang Thay Đổi Cuộc Chơi Trong Ngành IT Như Thế Nào?</h2> <p>Sự tiến hóa của AI từ các thuật toán Machine Learning cơ bản đến Generative AI phức tạp đã mở rộng đáng kể phạm vi ứng dụng của nó trong ngành IT. AI không chỉ dừng lại ở việc phân tích dữ liệu hay nhận diện mẫu mà còn có thể thực hiện các tác vụ đòi hỏi sự sáng tạo và tư duy logic ở mức độ nhất định.</p> <ul> <li><strong>Tự động hóa Kiểm thử (Test Automation):</strong> AI giúp tối ưu hóa việc tạo test case, thực thi kiểm thử và phân tích kết quả, giảm đáng kể thời gian và công sức của các kỹ sư kiểm thử thủ công.</li> <li><strong>Hỗ trợ Viết mã (Code Generation/Completion):</strong> Các công cụ như GitHub Copilot có thể gợi ý, hoàn thành mã, hoặc thậm chí viết toàn bộ hàm/chức năng dựa trên mô tả, giúp tăng tốc độ phát triển phần mềm.</li> <li><strong>Phân tích Dữ liệu Sơ cấp (Basic Data Analysis):</strong> AI có thể tự động thu thập, làm sạch và phân tích các tập dữ liệu lớn, tạo ra báo cáo hoặc biểu đồ cơ bản, giảm gánh nặng cho các nhà phân tích dữ liệu.</li> <li><strong>Hỗ trợ Kỹ thuật và Dịch vụ Khách hàng (Tech Support/Helpdesk):</strong> Chatbot và trợ lý ảo AI có thể giải quyết hầu hết các vấn đề phổ biến, trả lời câu hỏi và hướng dẫn người dùng, giải phóng nhân lực hỗ trợ cho các vấn đề phức tạp hơn.</li> </ul> <p>AI đang biến đổi vai trò của các chuyên gia IT, từ người thực hiện trực tiếp thành người quản lý, tối ưu hóa và tích hợp các giải pháp AI. Đây là một sự chuyển dịch hướng tới hiệu suất và giá trị cao hơn.</p> <div class=\"tn-callout tn-highlight-box\"> <strong>💡 Tăng Năng Suất, Không Thay Thế Hoàn Toàn:</strong> AI chủ yếu tập trung vào các tác vụ có tính lặp lại, quy trình rõ ràng. Nó đóng vai trò là một <em>công cụ mạnh mẽ</em> giúp tăng năng suất làm việc cho kỹ sư IT, cho phép họ tập trung vào các vấn đề phức tạp, sáng tạo và chiến lược hơn, thay vì thay thế hoàn toàn mọi vị trí. </div> <h2 id=\"vi-tri-nguy-co\">📉 Những Vị Trí IT Nào Có Nguy Cơ Bị Ảnh Hưởng Cao Nhất?</h2> <p>Không phải tất cả các vị trí IT đều có nguy cơ bị thay thế ngang nhau. Những công việc đòi hỏi ít sự sáng tạo, tư duy phản biện và khả năng giải quyết vấn đề phức tạp, mà chủ yếu dựa vào các quy trình lặp lại, có nguy cơ cao hơn. Dưới đây là một số ví dụ:</p> <ul> <li><strong>Kỹ sư Kiểm thử Thủ công (Manual Tester):</strong> Với sự phát triển của AI trong tự động hóa kiểm thử, nhu cầu về kiểm thử thủ công đang giảm dần. Các kỹ sư cần chuyển sang kiểm thử tự động, performance testing hoặc security testing.</li> <li><strong>Lập trình viên Entry-level (Junior Coder) cho các tác vụ đơn giản:</strong> Các công cụ AI có thể tự động viết mã cho những chức năng cơ bản, CRUD (Create, Read, Update, Delete) hay các module đơn giản, giảm nhu cầu tuyển dụng các lập trình viên mới chỉ chuyên về những tác vụ này.</li> <li><strong>Nhân viên Nhập liệu và Xử lý Dữ liệu Sơ cấp (Data Entry/Basic Data Processor):</strong> AI và tự động hóa Robotic Process Automation (RPA) có thể xử lý việc trích xuất, nhập liệu và làm sạch dữ liệu nhanh hơn và chính xác hơn con người.</li> <li><strong>Hỗ trợ Kỹ thuật cấp 1 (Level 1 Tech Support):</strong> Các câu hỏi và vấn đề thường gặp có thể được giải quyết bởi chatbot AI, chỉ những trường hợp phức tạp hơn mới cần đến sự can thiệp của con người.</li> </ul> <div class=\"tn-callout tn-warning-box\"> <strong>⚠️ Cảnh báo Chuyển đổi:</strong> Việc bị ảnh hưởng không có nghĩa là bị <em>xóa sổ</em> hoàn toàn. Thay vào đó, đó là một <strong>yêu cầu chuyển đổi kỹ năng</strong>. Những người ở các vị trí này cần nhanh chóng nâng cấp kiến thức và kỹ năng để thích nghi với các vai trò mới, tập trung vào những giá trị mà AI chưa thể thay thế. </div> <h2 id=\"co-hoi-ai\">✨ Cơ Hội Mới Nào Sẽ Mở Ra Trong Kỷ Nguyên AI Cho Dân IT?</h2> <p>Bên cạnh những thách thức, AI còn mở ra hàng loạt cơ hội việc làm mới và hấp dẫn, đòi hỏi những kỹ năng chuyên biệt mà chỉ con người mới có thể đáp ứng:</p> <figure class=\"ai-image tn-cf-figure\" data-query=\"AI specialist analyzing data on a futuristic screen, diverse team working in the background\"><figcaption class=\"tn-cf-figcaption\">Chuyên gia AI phân tích dữ liệu phức tạp, mở ra các cơ hội mới trong ngành IT.</figcaption></figure> <ul> <li><strong>AI Prompt Engineer:</strong> Chuyên gia về kỹ thuật gợi ý, phát triển các câu lệnh (prompts) hiệu quả để khai thác tối đa sức mạnh của các mô hình Generative AI.</li> <li><strong>AI Ethicist (Chuyên gia Đạo đức AI):</strong> Đảm bảo các hệ thống AI được phát triển và triển khai một cách công bằng, minh bạch và có trách nhiệm, tránh các thiên vị và hệ lụy tiêu cực.</li> <li><strong>Machine Learning Engineer (Kỹ sư ML):</strong> Thiết kế, xây dựng và triển khai các mô hình Machine Learning, từ việc thu thập dữ liệu đến tối ưu hóa hiệu suất và tích hợp vào sản phẩm.</li> <li><strong>Data Scientist Chuyên sâu:</strong> Không chỉ phân tích dữ liệu mà còn phát triển các mô hình dự đoán, khuyến nghị phức tạp, giải quyết các bài toán kinh doanh chiến lược bằng dữ liệu.</li> <li><strong>AI Solution Architect (Kiến trúc sư Giải pháp AI):</strong> Thiết kế kiến trúc tổng thể cho các hệ thống tích hợp AI, đảm bảo khả năng mở rộng, bảo mật và hiệu quả hoạt động.</li> <li><strong>AI Trainer/Curator:</strong> Dạy, tinh chỉnh và quản lý dữ liệu huấn luyện cho các mô hình AI, đảm bảo chúng hoạt động chính xác và phù hợp với mục tiêu.</li> </ul> <p>Sự chuyển dịch rõ rệt từ vai trò “coder thuần túy” sang “kiến trúc sư hệ thống”, “người giải quyết vấn đề phức tạp” và “nhà tư vấn công nghệ” đang diễn ra mạnh mẽ. Kỹ năng giám sát, tích hợp, tối ưu hóa hệ thống AI và phát triển các giải pháp sáng tạo với AI sẽ là chìa khóa để thành công.</p> <h2 id=\"ky-nang-vang\">🌟 Kỹ Năng Vàng Để Không Bị Đào Thải Và Vươn Tầm Hậu AI</h2> <p>Để thích nghi và phát triển trong kỷ nguyên AI, chuyên gia IT cần trang bị một bộ kỹ năng tổng hợp, bao gồm cả kỹ năng cứng chuyên môn và kỹ năng mềm thiết yếu. Đây là hành trang không thể thiếu để bạn trở thành tài sản quý giá mà AI chưa thể thay thế.</p> <figure class=\"ai-image tn-cf-figure\" data-query=\"diverse group of young professionals learning new skills, laptops and whiteboards, modern classroom setting\"><figcaption class=\"tn-cf-figcaption\">Học hỏi kỹ năng mới là chìa khóa để phát triển sự nghiệp IT trong kỷ nguyên AI.</figcaption></figure> <h3>Kỹ năng cứng (Hard Skills): Nền tảng chuyên môn vững chắc</h3> <ul> <li><strong>Hiểu biết sâu về AI/ML:</strong> Nắm vững các thuật toán Machine Learning, Deep Learning, Generative AI, MLOps, và cách triển khai chúng.</li> <li><strong>Lập trình nâng cao:</strong> Thành thạo các ngôn ngữ phổ biến trong AI như Python, R, Java, cùng với các framework như TensorFlow, PyTorch.</li> <li><strong>Cloud Computing:</strong> Khả năng làm việc với các nền tảng đám mây (AWS, Azure, GCP) để triển khai và quản lý các ứng dụng AI.</li> <li><strong>Cybersecurity:</strong> Kỹ năng bảo mật là cực kỳ quan trọng khi xử lý dữ liệu và hệ thống AI nhạy cảm.</li> <li><strong>Data Science và Data Engineering:</strong> Khả năng thu thập, xử lý, phân tích dữ liệu lớn và thiết kế kiến trúc dữ liệu hiệu quả.</li> <li><strong>DevOps và MLOps:</strong> Tự động hóa quy trình phát triển và triển khai các mô hình AI.</li> </ul> <div class=\"tn-code-block\"> <span class=\"tn-code-label\">Ví dụ Python cho AI</span> <pre><code> import pandas as pd from sklearn.model_selection import train_test_split from sklearn.linear_model import LogisticRegression from sklearn.metrics import accuracy_score # Tải dữ liệu (ví dụ: Titanic dataset) data = pd.read_csv('titanic.csv') # Tiền xử lý dữ liệu đơn giản data = data.dropna(subset=['Age', 'Fare']) data['Sex'] = data['Sex'].map({'male': 0, 'female': 1}) X = data[['Pclass', 'Sex', 'Age', 'Fare']] y = data['Survived'] # Chia tập dữ liệu X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42) # Huấn luyện mô hình Logistic Regression model = LogisticRegression(max_iter=200) model.fit(X_train, y_train) # Đánh giá mô hình y_pred = model.predict(X_test) print(f\"Độ chính xác của mô hình: {accuracy_score(y_test, y_pred):.2f}\") </code></pre> </div> <h3>Kỹ năng mềm (Soft Skills): Giá trị cốt lõi của con người</h3> <ul> <li><strong>Tư duy phản biện và Giải quyết vấn đề phức tạp:</strong> Khả năng phân tích sâu sắc, nhìn nhận vấn đề từ nhiều góc độ và đưa ra giải pháp sáng tạo, hiệu quả.</li> <li><strong>Sáng tạo và Đổi mới:</strong> Tạo ra ý tưởng mới, không ngừng cải tiến và tìm kiếm các ứng dụng đột phá của công nghệ.</li> <li><strong>Học hỏi liên tục (Lifelong Learning):</strong> Ngành IT thay đổi nhanh chóng, việc không ngừng học hỏi kiến thức và công nghệ mới là yếu tố sống còn.</li> <li><strong>Khả năng Thích ứng:</strong> Linh hoạt điều chỉnh bản thân trước những thay đổi của công nghệ và thị trường.</li> <li><strong>Giao tiếp hiệu quả và Làm việc nhóm:</strong> Truyền đạt ý tưởng rõ ràng, hợp tác tốt với đồng nghiệp và các bên liên quan.</li> <li><strong>Tư duy Hệ thống:</strong> Hiểu rõ cách các thành phần công nghệ và kinh doanh tương tác với nhau để tạo ra một giải pháp toàn diện.</li> </ul> <div class=\"tn-comparison-table-wrapper\"> <table class=\"tn-comparison-table\"> <thead> <tr> <th>Kỹ năng (Trước AI)</th> <th>Kỹ năng (Kỷ nguyên AI)</th> </tr> </thead> <tbody> <tr> <td>Viết mã thủ công</td> <td>Thiết kế kiến trúc AI, Tối ưu Prompt</td> </tr> <tr> <td>Kiểm thử thủ công</td> <td>Kiểm thử tự động, Đảm bảo chất lượng AI</td> </tr> <tr> <td>Phân tích dữ liệu cơ bản</td> <td>Data Science chuyên sâu, ML Engineering</td> </tr> <tr> <td>Vận hành thủ công</td> <td>DevOps, MLOps, Tự động hóa hạ tầng</td> </tr> <tr> <td>Theo dõi quy trình</td> <td>Tư duy phản biện, Giải quyết vấn đề phức tạp</td> </tr> </tbody> </table> </div> <h2 id=\"tonytechlab-dong-hanh\">🎓 TonyTechLab: Đồng Hành Cùng Bạn Trên Hành Trình Chuyển Đổi Kỹ Năng</h2> <p>Hiểu rõ những thách thức và cơ hội mà kỷ nguyên AI mang lại, TonyTechLab tự hào là đối tác tin cậy, cung cấp các khóa học và lộ trình học tập được thiết kế chuyên biệt để giúp bạn phát triển kỹ năng và vững vàng trong tương lai <strong>ngành IT</strong>.</p> <figure class=\"ai-image tn-cf-figure\" data-query=\"online learning platform dashboard, student engaged with courses, modern tech education\"><figcaption class=\"tn-cf-figcaption\">TonyTechLab cung cấp các khóa học IT chất lượng cao, giúp học viên trang bị kiến thức cho tương lai.</figcaption></figure> <p>Tại TonyTechLab, chúng tôi không chỉ dạy lý thuyết mà còn tập trung vào thực hành, dự án thực tế, giúp bạn áp dụng kiến thức ngay lập tức:</p> <ul> <li><strong>Khóa học chuyên sâu về AI/Machine Learning:</strong> Từ cơ bản đến nâng cao, bao gồm Deep Learning, Generative AI, MLOps.</li> <li><strong>Data Science và Big Data:</strong> Trang bị kỹ năng phân tích dữ liệu, xây dựng mô hình dự đoán và quản lý dữ liệu lớn.</li> <li><strong>Cloud Computing (AWS, Azure, GCP):</strong> Làm chủ các nền tảng đám mây, triển khai và quản lý các ứng dụng AI/ML.</li> <li><strong>Cybersecurity:</strong> Các khóa học về bảo mật hệ thống, bảo vệ dữ liệu và phòng chống tấn công mạng.</li> <li><strong>Lập trình Python, R nâng cao:</strong> Ngôn ngữ chính cho phát triển AI và Data Science.</li> <li><strong>Phát triển Kỹ năng mềm:</strong> Các workshop và module chuyên biệt giúp nâng cao tư duy phản biện, sáng tạo và giao tiếp.</li> </ul> <div class=\"tn-callout tn-success-box\"> <strong>✅ Định Hướng Sự Nghiệp:</strong> TonyTechLab cung cấp lộ trình học tập cá nhân hóa, giúp bạn xác định mục tiêu, phát triển kỹ năng cần thiết và kết nối với các cơ hội việc làm hấp dẫn trong kỷ nguyên AI. Hãy để chúng tôi đồng hành cùng bạn! </div> <h2 id=\"ket-luan-chuyen-doi\">✅ Kết Luận: Chuyển Đổi Hay Bị Bỏ Lại – Lựa Chọn Là Ở Bạn</h2> <p>Ngành IT sau 2026 chắc chắn sẽ không còn như cũ. Sự phát triển vũ bão của AI đang tạo ra một bước ngoặt lớn, đòi hỏi sự chủ động và linh hoạt từ mỗi chuyên gia IT. AI không phải là mối đe dọa để xóa sổ công việc mà là một công cụ mạnh mẽ, một yếu tố xúc tác cho sự chuyển đổi và phát triển.</p> <p>Lựa chọn là ở bạn: bị động chờ đợi và đối mặt với nguy cơ bị đào thải, hay chủ động học hỏi, thích nghi và nắm bắt những cơ hội vàng để vươn tầm trong kỷ nguyên mới. Hãy bắt đầu chuẩn bị ngay hôm nay để không chỉ đứng vững mà còn trở thành người dẫn đầu trong <strong>ngành IT hậu AI</strong>.</p> <ul> <li><span class=\"tn-check-icon\">✔</span> AI là công cụ tăng năng suất, không phải mối đe dọa xóa sổ.</li> <li><span class=\"tn-check-icon\">✔</span> Các vị trí lặp lại có nguy cơ bị ảnh hưởng cao, cần chuyển đổi kỹ năng.</li> <li><span class=\"tn-check-icon\">✔</span> Nhiều vai trò mới hấp dẫn xuất hiện trong kỷ nguyên AI.</li> <li><span class=\"tn-check-icon\">✔</span> Kỹ năng cứng (AI/ML, Cloud, Data) và kỹ năng mềm (tư duy phản biện, sáng tạo) là chìa khóa.</li> <li><span class=\"tn-check-icon\">✔</span> TonyTechLab hỗ trợ bạn phát triển toàn diện, định hình tương lai sự nghiệp.</li> </ul> <div class=\"tn-tags\"> <span class=\"tn-tag\">#NgànhIT</span> <span class=\"tn-tag\">#TươngLaiIT</span> <span class=\"tn-tag\">#AI</span> <span class=\"tn-tag\">#ĐàoThảiIT</span> <span class=\"tn-tag\">#CơHộiAI</span> <span class=\"tn-tag\">#KỹNăngAI</span> <span class=\"tn-tag\">#TonyTechLab</span> <span class=\"tn-tag\">#ChuyểnĐổiSố</span> <span class=\"tn-tag\">#HọcKỹNăngMới</span> </div> </div>"
+                - generic [ref=e525]:
+                  - generic [ref=e526]:
+                    - img [ref=e527]
+                    - generic [ref=e530]: Preview
+                  - iframe [ref=e531]:
+                    
+          - generic [ref=e532]:
+            - generic [ref=e533]: Excerpt
+            - textbox "Brief summary (optional)" [ref=e534]: AI đang định hình lại ngành IT sau năm 2026, mang đến cả thách thức và cơ hội chưa từng có. Các chuyên gia IT cần trang bị những kỹ năng mới như AI/ML, Cloud, Data Science cùng tư duy phản biện và sáng tạo để đứng vững. TonyTechLab cung cấp các khóa học chuyên sâu giúp bạn nâng cấp bản thân và phát
+          - generic [ref=e535]:
+            - generic [ref=e536]:
+              - generic [ref=e537]: Categories
+              - textbox "Comma-separated" [ref=e538]
+            - generic [ref=e539]:
+              - generic [ref=e540]: Tags
+              - textbox "Comma-separated" [ref=e541]
+          - generic [ref=e542]:
+            - button "Save Draft" [ref=e543] [cursor=pointer]:
+              - img
+              - text: Save Draft
+            - button "Save as Template" [ref=e544] [cursor=pointer]:
+              - img
+              - text: Save as Template
+  - alert [ref=e69]

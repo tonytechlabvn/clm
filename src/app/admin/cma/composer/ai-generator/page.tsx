@@ -160,23 +160,26 @@ export default function CmaAiGeneratorPage() {
       let finalHtml = blogContent;
       let finalCss = blogCss;
       if (templateHtml) {
-        // Replace ALL bracketed placeholders with AI-generated content
-        // First replace title/subtitle, then inject full content into the body area
+        // Replace title/subtitle placeholders, then inject AI content into the body
         finalHtml = templateHtml
           .replace(/\[Tiêu đề bài viết\]/g, title)
           .replace(/\[Phụ đề\]/g, "")
           .replace(/\[Mô tả ngắn gọn[^\]]*\]/g, metaDesc || fbExcerpt || "")
           .replace(/\[Trích dẫn[^\]]*\]/g, title);
-        // Replace all remaining [placeholder] content with AI blog content
-        // Remove all message pair divs and replace with the AI-generated HTML
-        const contentStart = finalHtml.indexOf('<div style="display: flex; flex-direction: column; gap: 35px;">');
-        const contentEnd = finalHtml.indexOf('</div>\n  <footer');
-        if (contentStart !== -1 && contentEnd !== -1) {
-          finalHtml = finalHtml.slice(0, contentStart) +
-            '<div style="display: flex; flex-direction: column; gap: 20px;">' +
-            blogContent +
-            '</div>' +
-            finalHtml.slice(contentEnd + 6);
+        // Find the content area between header and footer using regex (handles whitespace)
+        const contentAreaRegex = /(<div[^>]*display:\s*flex;\s*flex-direction:\s*column;\s*gap:\s*35px[^>]*>)([\s\S]*?)(<\/div>\s*<footer)/;
+        const match = finalHtml.match(contentAreaRegex);
+        if (match) {
+          finalHtml = finalHtml.replace(contentAreaRegex,
+            '<div style="padding: 20px;">' + blogContent + '</div>$3');
+        } else {
+          // Fallback: find footer and inject content before it
+          const footerIdx = finalHtml.indexOf('<footer');
+          if (footerIdx !== -1) {
+            finalHtml = finalHtml.slice(0, footerIdx) +
+              '<div style="padding: 20px;">' + blogContent + '</div>' +
+              finalHtml.slice(footerIdx);
+          }
         }
       }
       if (templateCss) {

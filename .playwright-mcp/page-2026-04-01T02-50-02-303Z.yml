@@ -1,0 +1,348 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "CLM Admin" [ref=e6] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e8]
+          - generic [ref=e11]: CLM
+          - generic [ref=e12]: Admin
+        - button "Tony Nguyen - Sign out" [ref=e105] [cursor=pointer]:
+          - img [ref=e106]
+    - generic [ref=e15]:
+      - complementary [ref=e16]:
+        - navigation [ref=e17]:
+          - link "Dashboard" [ref=e18] [cursor=pointer]:
+            - /url: /admin
+            - img [ref=e19]
+            - text: Dashboard
+          - link "Composer" [ref=e24] [cursor=pointer]:
+            - /url: /admin/cma/composer
+            - img [ref=e25]
+            - text: Composer
+          - link "Posts" [ref=e28] [cursor=pointer]:
+            - /url: /admin/cma/posts
+            - img [ref=e29]
+            - text: Posts
+          - link "Templates" [ref=e32] [cursor=pointer]:
+            - /url: /admin/cma/templates
+            - img [ref=e33]
+            - text: Templates
+          - link "Calendar" [ref=e39] [cursor=pointer]:
+            - /url: /admin/cma/calendar
+            - img [ref=e40]
+            - text: Calendar
+          - link "Connections" [ref=e42] [cursor=pointer]:
+            - /url: /admin/cma/settings
+            - img [ref=e43]
+            - text: Connections
+          - link "Approval" [ref=e45] [cursor=pointer]:
+            - /url: /admin/cma/approval
+            - img [ref=e46]
+            - text: Approval
+          - link "Analytics" [ref=e49] [cursor=pointer]:
+            - /url: /admin/cma/analytics
+            - img [ref=e50]
+            - text: Analytics
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - generic [ref=e54]:
+              - img [ref=e55]
+              - text: Settings
+            - link "A.I Settings" [ref=e58] [cursor=pointer]:
+              - /url: /admin/settings/ai
+              - img [ref=e59]
+              - text: A.I Settings
+            - link "Settings" [ref=e62] [cursor=pointer]:
+              - /url: /admin/settings
+              - img [ref=e63]
+              - text: Settings
+          - generic [ref=e110]:
+            - img [ref=e112]
+            - generic [ref=e115]:
+              - paragraph [ref=e116]: Tony Nguyen
+              - paragraph [ref=e117]: admin
+      - main [ref=e66]:
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - link [ref=e69] [cursor=pointer]:
+              - /url: /admin/cma
+              - button [ref=e70]:
+                - img [ref=e71]
+            - generic [ref=e73]:
+              - heading "Template Studio" [level=1] [ref=e74]
+              - paragraph [ref=e75]: Create, manage, and extract reusable content templates
+            - generic [ref=e76]:
+              - button "Gallery" [ref=e77] [cursor=pointer]:
+                - img
+                - text: Gallery
+              - button "Extract from URL" [ref=e78] [cursor=pointer]:
+                - img
+                - text: Extract from URL
+          - generic [ref=e79]:
+            - generic [ref=e118]:
+              - generic [ref=e119]:
+                - img [ref=e120]
+                - textbox "Search templates..." [ref=e123]
+              - generic [ref=e124]:
+                - button "all" [ref=e125] [cursor=pointer]
+                - button "tutorial" [ref=e126] [cursor=pointer]
+                - button "news" [ref=e127] [cursor=pointer]
+                - button "announce" [ref=e128] [cursor=pointer]
+                - button "article" [ref=e129] [cursor=pointer]
+                - button "other" [ref=e130] [cursor=pointer]
+            - generic [ref=e131]:
+              - button "All Types" [ref=e132] [cursor=pointer]
+              - button "BlockNote" [ref=e133] [cursor=pointer]
+              - button "HTML Slots" [ref=e134] [cursor=pointer]
+              - generic [ref=e135]: ·
+              - button "Favorites" [ref=e136] [cursor=pointer]
+              - generic [ref=e137]: ·
+              - combobox [ref=e138]:
+                - option "Newest" [selected]
+                - option "Most Used"
+                - option "Recently Used"
+              - generic [ref=e139]: 4 templates
+            - generic [ref=e140]:
+              - generic [ref=e141]:
+                - generic [ref=e142]:
+                  - generic [ref=e143]: BlockNote Template
+                  - button [ref=e144] [cursor=pointer]:
+                    - img [ref=e145]
+                - generic [ref=e147]:
+                  - generic [ref=e148]:
+                    - heading "Tech Tutorial" [level=3] [ref=e149]
+                    - generic [ref=e150]:
+                      - generic [ref=e151]: tutorial
+                      - generic [ref=e152]: Blocks
+                  - paragraph [ref=e153]: Step-by-step technical guide with code examples, prerequisites, and clear learning outcomes.
+                  - generic [ref=e155]: System · Used 0x · never
+                  - generic [ref=e156]:
+                    - button "Use" [ref=e157] [cursor=pointer]
+                    - button [ref=e159] [cursor=pointer]:
+                      - img
+              - generic [ref=e160]:
+                - generic [ref=e161]:
+                  - generic [ref=e162]: BlockNote Template
+                  - button [ref=e163] [cursor=pointer]:
+                    - img [ref=e164]
+                - generic [ref=e166]:
+                  - generic [ref=e167]:
+                    - heading "News Article" [level=3] [ref=e168]
+                    - generic [ref=e169]:
+                      - generic [ref=e170]: news
+                      - generic [ref=e171]: Blocks
+                  - paragraph [ref=e172]: Professional news format with headline, lead paragraph, background, and source attribution.
+                  - generic [ref=e174]: System · Used 0x · never
+                  - generic [ref=e175]:
+                    - button "Use" [ref=e176] [cursor=pointer]
+                    - button [ref=e178] [cursor=pointer]:
+                      - img
+              - generic [ref=e179]:
+                - generic [ref=e180]:
+                  - generic [ref=e181]: BlockNote Template
+                  - button [ref=e182] [cursor=pointer]:
+                    - img [ref=e183]
+                - generic [ref=e185]:
+                  - generic [ref=e186]:
+                    - heading "Announcement" [level=3] [ref=e187]
+                    - generic [ref=e188]:
+                      - generic [ref=e189]: announce
+                      - generic [ref=e190]: Blocks
+                  - paragraph [ref=e191]: Clean announcement layout with banner image, key highlights, details, and call to action.
+                  - generic [ref=e193]: System · Used 0x · never
+                  - generic [ref=e194]:
+                    - button "Use" [ref=e195] [cursor=pointer]
+                    - button [ref=e197] [cursor=pointer]:
+                      - img
+              - generic [ref=e198]:
+                - generic [ref=e199]:
+                  - generic [ref=e204]:
+                    - paragraph [ref=e206]: Paragraph 1
+                    - generic [ref=e207]:
+                      - generic [ref=e208]:
+                        - paragraph [ref=e209]: Paragraph 2
+                        - paragraph [ref=e210]: Paragraph 3
+                      - generic [ref=e211]:
+                        - paragraph [ref=e212]: Paragraph 4
+                        - generic [ref=e213]:
+                          - paragraph [ref=e214]: Paragraph 5
+                          - generic [ref=e215]:
+                            - generic [ref=e216]:
+                              - paragraph [ref=e217]: Paragraph 6
+                              - paragraph [ref=e218]: Paragraph 7
+                            - generic [ref=e219]:
+                              - paragraph [ref=e220]: Paragraph 8
+                              - paragraph [ref=e221]: Paragraph 9
+                            - generic [ref=e222]:
+                              - paragraph [ref=e223]: Paragraph 10
+                              - paragraph [ref=e224]: Paragraph 11
+                          - paragraph [ref=e225]: Paragraph 12
+                      - generic [ref=e226]:
+                        - paragraph [ref=e227]: Paragraph 13
+                        - paragraph [ref=e228]: Paragraph 14
+                      - generic [ref=e229]:
+                        - paragraph [ref=e230]: Paragraph 15
+                        - generic [ref=e231]:
+                          - paragraph [ref=e232]: Paragraph 16
+                          - list [ref=e234]:
+                            - listitem [ref=e235]: Item 17
+                            - listitem [ref=e236]: Item 18
+                            - listitem [ref=e237]: Item 19
+                          - paragraph [ref=e238]: Paragraph 20
+                      - generic [ref=e239]:
+                        - paragraph [ref=e240]: Paragraph 21
+                        - paragraph [ref=e241]: Paragraph 22
+                      - generic [ref=e242]:
+                        - paragraph [ref=e243]: Paragraph 23
+                        - generic [ref=e244]:
+                          - paragraph [ref=e245]: Paragraph 24
+                          - paragraph [ref=e246]: Paragraph 25
+                          - generic [ref=e247]:
+                            - generic [ref=e248]:
+                              - paragraph [ref=e249]: Paragraph 26
+                              - paragraph [ref=e250]: Paragraph 27
+                            - generic [ref=e251]:
+                              - paragraph [ref=e252]: Paragraph 28
+                              - paragraph [ref=e253]: Paragraph 29
+                          - generic [ref=e254]:
+                            - paragraph [ref=e255]: Paragraph 30
+                            - paragraph [ref=e256]: Paragraph 31
+                      - generic [ref=e257]:
+                        - paragraph [ref=e258]: Paragraph 32
+                        - paragraph [ref=e259]: Paragraph 33
+                      - generic [ref=e260]:
+                        - paragraph [ref=e261]: Paragraph 34
+                        - generic [ref=e262]:
+                          - paragraph [ref=e263]: Paragraph 35
+                          - list [ref=e264]:
+                            - listitem [ref=e265]: Item 36
+                            - listitem [ref=e266]: Item 37
+                            - listitem [ref=e267]: Item 38
+                          - paragraph [ref=e268]: Paragraph 39
+                      - generic [ref=e269]:
+                        - paragraph [ref=e270]: Paragraph 40
+                        - paragraph [ref=e271]: Paragraph 41
+                      - generic [ref=e272]:
+                        - paragraph [ref=e273]: Paragraph 42
+                        - generic [ref=e274]:
+                          - paragraph [ref=e275]: Paragraph 43
+                          - generic [ref=e276]:
+                            - paragraph [ref=e277]: Paragraph 44
+                            - paragraph [ref=e278]: Paragraph 45
+                          - generic [ref=e279]:
+                            - paragraph [ref=e280]: Paragraph 46
+                            - paragraph [ref=e281]: Paragraph 47
+                      - generic [ref=e282]:
+                        - paragraph [ref=e283]: Paragraph 48
+                        - paragraph [ref=e284]: Paragraph 49
+                      - generic [ref=e285]:
+                        - paragraph [ref=e286]: Paragraph 50
+                        - generic [ref=e287]:
+                          - paragraph [ref=e288]: Paragraph 51
+                          - list [ref=e289]:
+                            - listitem [ref=e290]: Item 52
+                            - listitem [ref=e291]: Item 53
+                            - listitem [ref=e292]: Item 54
+                          - paragraph [ref=e293]: Paragraph 55
+                      - generic [ref=e294]:
+                        - paragraph [ref=e295]: Paragraph 56
+                        - paragraph [ref=e296]: Paragraph 57
+                      - generic [ref=e297]:
+                        - paragraph [ref=e298]: Paragraph 58
+                        - generic [ref=e299]:
+                          - paragraph [ref=e300]: Paragraph 59
+                          - generic [ref=e301]:
+                            - paragraph [ref=e302]: Paragraph 60
+                            - paragraph [ref=e303]: Paragraph 61
+                          - generic [ref=e304]:
+                            - paragraph [ref=e305]: Paragraph 62
+                            - paragraph [ref=e306]: Paragraph 63
+                      - generic [ref=e307]:
+                        - paragraph [ref=e308]: Paragraph 64
+                        - paragraph [ref=e309]: Paragraph 65
+                      - generic [ref=e310]:
+                        - paragraph [ref=e311]: Paragraph 66
+                        - generic [ref=e312]:
+                          - paragraph [ref=e313]: Paragraph 67
+                          - list [ref=e314]:
+                            - listitem [ref=e315]: Item 68
+                            - listitem [ref=e316]: Item 69
+                          - generic [ref=e317]:
+                            - paragraph [ref=e318]: Paragraph 70
+                            - paragraph [ref=e319]: Paragraph 71
+                      - generic [ref=e320]:
+                        - paragraph [ref=e321]: Paragraph 72
+                        - paragraph [ref=e322]: Paragraph 73
+                      - generic [ref=e323]:
+                        - paragraph [ref=e324]: Paragraph 74
+                        - generic [ref=e325]:
+                          - paragraph [ref=e326]: Paragraph 75
+                          - generic [ref=e327]:
+                            - paragraph [ref=e328]: Paragraph 76
+                            - paragraph [ref=e329]: Paragraph 77
+                          - generic [ref=e330]:
+                            - paragraph [ref=e331]: Paragraph 78
+                            - paragraph [ref=e332]: Paragraph 79
+                          - paragraph [ref=e333]: Paragraph 80
+                      - generic [ref=e334]:
+                        - paragraph [ref=e335]: Paragraph 81
+                        - paragraph [ref=e336]: Paragraph 82
+                      - generic [ref=e337]:
+                        - paragraph [ref=e338]: Paragraph 83
+                        - generic [ref=e339]:
+                          - paragraph [ref=e340]: Paragraph 84
+                          - list [ref=e341]:
+                            - listitem [ref=e342]: Item 85
+                            - listitem [ref=e343]: Item 86
+                            - listitem [ref=e344]: Item 87
+                      - generic [ref=e345]:
+                        - paragraph [ref=e346]: Paragraph 88
+                        - paragraph [ref=e347]: Paragraph 89
+                      - generic [ref=e348]:
+                        - paragraph [ref=e349]: Paragraph 90
+                        - generic [ref=e350]:
+                          - paragraph [ref=e351]: Paragraph 91
+                          - generic [ref=e352]:
+                            - paragraph [ref=e353]: Paragraph 92
+                            - paragraph [ref=e354]: Paragraph 93
+                          - generic [ref=e355]:
+                            - paragraph [ref=e356]: Paragraph 94
+                            - paragraph [ref=e357]: Paragraph 95
+                          - paragraph [ref=e358]: Paragraph 96
+                      - generic [ref=e359]:
+                        - paragraph [ref=e360]: Paragraph 97
+                        - paragraph [ref=e361]: Paragraph 98
+                      - generic [ref=e362]:
+                        - paragraph [ref=e363]: Paragraph 99
+                        - generic [ref=e364]:
+                          - paragraph [ref=e365]: Paragraph 100
+                          - generic [ref=e366]:
+                            - paragraph [ref=e367]: Paragraph 101
+                            - list [ref=e368]:
+                              - listitem [ref=e369]: Item 102
+                              - listitem [ref=e370]: Item 103
+                          - paragraph [ref=e371]: Paragraph 104
+                          - paragraph [ref=e372]: Paragraph 105
+                      - generic [ref=e373]:
+                        - paragraph [ref=e374]: Paragraph 106
+                        - paragraph [ref=e375]: Paragraph 107
+                      - generic [ref=e376]:
+                        - paragraph [ref=e377]: Paragraph 108
+                        - paragraph [ref=e378]: Paragraph 109
+                  - button [ref=e379] [cursor=pointer]:
+                    - img [ref=e380]
+                - generic [ref=e382]:
+                  - generic [ref=e383]:
+                    - heading "Đối Thoại Thế Cuộc, Nhân Quả & Tâm Thức – TONY NGUYEN" [level=3] [ref=e384]
+                    - generic [ref=e385]:
+                      - generic [ref=e386]: article
+                      - generic [ref=e387]: HTML
+                  - paragraph [ref=e388]: Dialogue style from tonynguyen.top - keeps CSS classes and structure
+                  - generic [ref=e390]: Custom · Used 0x · never
+                  - generic [ref=e391]:
+                    - button "Use" [ref=e392] [cursor=pointer]
+                    - button "Edit" [ref=e393] [cursor=pointer]
+                    - button [ref=e395] [cursor=pointer]:
+                      - img
+  - alert [ref=e104]

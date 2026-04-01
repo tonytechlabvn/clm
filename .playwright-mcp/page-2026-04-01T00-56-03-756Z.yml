@@ -1,0 +1,12 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e2]
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e8]
+      - generic [ref=e11]:
+        - heading "CLM" [level=3] [ref=e12]
+        - paragraph [ref=e13]: Core Learning Management
+    - generic [ref=e14]:
+      - button "Sign in with TonyTechLab" [ref=e15] [cursor=pointer]
+      - generic [ref=e20]: or
+      - button "Sign in with Google" [ref=e21] [cursor=pointer]

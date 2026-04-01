@@ -45,15 +45,26 @@ export function ContentReviewStep({
   // When template is loaded, wrap AI content inside template structure for preview
   const previewHtml = useMemo(() => {
     if (!templateHtml) return blogContent;
-    // Inject AI content into the template's body area
-    const contentStart = templateHtml.indexOf('<div style="display: flex; flex-direction: column; gap: 35px;">');
-    const contentEnd = templateHtml.indexOf('</div>\n  <footer');
-    if (contentStart !== -1 && contentEnd !== -1) {
-      return templateHtml.slice(0, contentStart) +
-        '<div style="padding: 20px;">' + blogContent + '</div>' +
-        templateHtml.slice(contentEnd + 6);
+    // Replace title placeholders for preview
+    let html = templateHtml
+      .replace(/\[Tiêu đề bài viết\]/g, "Generated Content")
+      .replace(/\[Phụ đề\]/g, "")
+      .replace(/\[Mô tả ngắn gọn[^\]]*\]/g, "");
+    // Replace content area with AI-generated blog content
+    const contentAreaRegex = /(<div[^>]*display:\s*flex;\s*flex-direction:\s*column;\s*gap:\s*35px[^>]*>)([\s\S]*?)(<\/div>\s*<footer)/;
+    const match = html.match(contentAreaRegex);
+    if (match) {
+      html = html.replace(contentAreaRegex,
+        '<div style="padding: 20px;">' + blogContent + '</div>$3');
+    } else {
+      const footerIdx = html.indexOf('<footer');
+      if (footerIdx !== -1) {
+        html = html.slice(0, footerIdx) +
+          '<div style="padding: 20px;">' + blogContent + '</div>' +
+          html.slice(footerIdx);
+      }
     }
-    return blogContent;
+    return html;
   }, [blogContent, templateHtml]);
 
   const previewCssAll = useMemo(

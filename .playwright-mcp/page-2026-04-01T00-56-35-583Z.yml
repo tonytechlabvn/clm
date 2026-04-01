@@ -1,0 +1,77 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "CLM Admin" [ref=e6] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e8]
+          - generic [ref=e11]: CLM
+          - generic [ref=e12]: Admin
+        - button "Tony Nguyen - Sign out" [ref=e14] [cursor=pointer]:
+          - img [ref=e15]
+    - generic [ref=e18]:
+      - complementary [ref=e19]:
+        - navigation [ref=e20]:
+          - link "Dashboard" [ref=e21] [cursor=pointer]:
+            - /url: /admin
+            - img [ref=e22]
+            - text: Dashboard
+          - link "Composer" [ref=e27] [cursor=pointer]:
+            - /url: /admin/cma/composer
+            - img [ref=e28]
+            - text: Composer
+          - link "Posts" [ref=e31] [cursor=pointer]:
+            - /url: /admin/cma/posts
+            - img [ref=e32]
+            - text: Posts
+          - link "Templates" [ref=e35] [cursor=pointer]:
+            - /url: /admin/cma/templates
+            - img [ref=e36]
+            - text: Templates
+          - link "Calendar" [ref=e42] [cursor=pointer]:
+            - /url: /admin/cma/calendar
+            - img [ref=e43]
+            - text: Calendar
+          - link "Connections" [ref=e45] [cursor=pointer]:
+            - /url: /admin/cma/settings
+            - img [ref=e46]
+            - text: Connections
+          - link "Approval" [ref=e48] [cursor=pointer]:
+            - /url: /admin/cma/approval
+            - img [ref=e49]
+            - text: Approval
+          - link "Analytics" [ref=e52] [cursor=pointer]:
+            - /url: /admin/cma/analytics
+            - img [ref=e53]
+            - text: Analytics
+        - generic [ref=e55]:
+          - generic [ref=e56]:
+            - generic [ref=e57]:
+              - img [ref=e58]
+              - text: Settings
+            - link "A.I Settings" [ref=e61] [cursor=pointer]:
+              - /url: /admin/settings/ai
+              - img [ref=e62]
+              - text: A.I Settings
+            - link "Settings" [ref=e65] [cursor=pointer]:
+              - /url: /admin/settings
+              - img [ref=e66]
+              - text: Settings
+          - generic [ref=e70]:
+            - img [ref=e72]
+            - generic [ref=e75]:
+              - paragraph [ref=e76]: Tony Nguyen
+              - paragraph [ref=e77]: admin
+      - main [ref=e78]:
+        - generic [ref=e79]:
+          - generic [ref=e80]:
+            - heading "Welcome, Tony Nguyen" [level=1] [ref=e81]
+            - paragraph [ref=e82]: Core Learning Management — Admin Dashboard
+          - generic [ref=e83]:
+            - generic [ref=e85]:
+              - img [ref=e87]
+              - generic [ref=e90]:
+                - heading "CLM Foundation" [level=3] [ref=e91]
+                - paragraph [ref=e92]: Scaffold ready for module development
+            - paragraph [ref=e94]: The CLM foundation is set up. Modules like CMA (Content Marketing Automation) can now be built on top of this scaffold.
+  - alert [ref=e95]

@@ -1,0 +1,153 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - link "CLM Admin" [ref=e6] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e8]
+          - generic [ref=e11]: CLM
+          - generic [ref=e12]: Admin
+        - button "Tony Nguyen - Sign out" [ref=e149] [cursor=pointer]:
+          - img [ref=e150]
+    - generic [ref=e15]:
+      - complementary [ref=e16]:
+        - navigation [ref=e17]:
+          - link "Dashboard" [ref=e18] [cursor=pointer]:
+            - /url: /admin
+            - img [ref=e19]
+            - text: Dashboard
+          - link "Composer" [ref=e24] [cursor=pointer]:
+            - /url: /admin/cma/composer
+            - img [ref=e25]
+            - text: Composer
+          - link "Posts" [ref=e28] [cursor=pointer]:
+            - /url: /admin/cma/posts
+            - img [ref=e29]
+            - text: Posts
+          - link "Templates" [ref=e32] [cursor=pointer]:
+            - /url: /admin/cma/templates
+            - img [ref=e33]
+            - text: Templates
+          - link "Calendar" [ref=e39] [cursor=pointer]:
+            - /url: /admin/cma/calendar
+            - img [ref=e40]
+            - text: Calendar
+          - link "Connections" [ref=e42] [cursor=pointer]:
+            - /url: /admin/cma/settings
+            - img [ref=e43]
+            - text: Connections
+          - link "Approval" [ref=e45] [cursor=pointer]:
+            - /url: /admin/cma/approval
+            - img [ref=e46]
+            - text: Approval
+          - link "Analytics" [ref=e49] [cursor=pointer]:
+            - /url: /admin/cma/analytics
+            - img [ref=e50]
+            - text: Analytics
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - generic [ref=e54]:
+              - img [ref=e55]
+              - text: Settings
+            - link "A.I Settings" [ref=e58] [cursor=pointer]:
+              - /url: /admin/settings/ai
+              - img [ref=e59]
+              - text: A.I Settings
+            - link "Settings" [ref=e62] [cursor=pointer]:
+              - /url: /admin/settings
+              - img [ref=e63]
+              - text: Settings
+          - generic [ref=e154]:
+            - img [ref=e156]
+            - generic [ref=e159]:
+              - paragraph [ref=e160]: Tony Nguyen
+              - paragraph [ref=e161]: admin
+      - main [ref=e66]:
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - heading "Compose Post" [level=1] [ref=e69]
+            - generic [ref=e70]:
+              - button "Save Draft" [ref=e71] [cursor=pointer]:
+                - img
+                - text: Save Draft
+              - button "Publish" [disabled]:
+                - img
+                - text: Publish
+          - generic [ref=e73]:
+            - img [ref=e74]
+            - textbox "Paste URL to curate with AI..." [ref=e77]
+            - button "Curate" [disabled]
+            - button "Generate with AI" [ref=e79] [cursor=pointer]:
+              - img
+              - text: Generate with AI
+          - generic [ref=e80]:
+            - generic [ref=e81]:
+              - textbox "Post title..." [ref=e82]: 5 Bài Học Từ Việc Xây Dựng Hệ Thống EdTech Đầu Tiên
+              - generic [ref=e83]:
+                - button "Visual" [ref=e84] [cursor=pointer]:
+                  - img [ref=e85]
+                  - text: Visual
+                - button "Markdown" [ref=e88] [cursor=pointer]:
+                  - img [ref=e89]
+                  - text: Markdown
+                - button "HTML/CSS/JS" [ref=e92] [cursor=pointer]:
+                  - img [ref=e93]
+                  - text: HTML/CSS/JS
+              - generic [ref=e243]:
+                - generic [ref=e244]:
+                  - generic [ref=e245]:
+                    - heading "Content Slots" [level=3] [ref=e246]
+                    - button "AI Fill All" [ref=e247] [cursor=pointer]:
+                      - img
+                      - text: AI Fill All
+                  - generic [ref=e248]:
+                    - generic [ref=e249]:
+                      - text: Body Content
+                      - generic [ref=e250]: richtext
+                    - textbox "Paste or write your content here..." [active] [ref=e251]: "<h2>Khởi đầu từ con số 0</h2><p>Khi tôi bắt đầu xây dựng nền tảng EdTech đầu tiên, mọi thứ đều mới mẻ. Từ việc chọn tech stack đến thiết kế database schema, mỗi quyết định đều ảnh hưởng lâu dài.</p><h2>Bài học 1: Đừng over-engineer</h2><p>Ban đầu tôi muốn xây dựng một hệ thống microservices hoàn chỉnh. Nhưng thực tế cho thấy, một monolith đơn giản với Next.js + Prisma là đủ cho giai đoạn đầu. YAGNI là nguyên tắc vàng.</p><h2>Bài học 2: User feedback là vua</h2><p>Tính năng mà tôi nghĩ sẽ là killer feature lại không ai dùng. Ngược lại, một tính năng nhỏ — ghi chú inline khi xem bài giảng — lại được yêu thích nhất.</p><h2>Bài học 3: CI/CD từ ngày đầu</h2><p>Docker + GitHub Actions đã cứu tôi vô số lần. Deploy tự động giúp tập trung vào code thay vì lo lắng về server.</p><h2>Bài học 4: Bảo mật không phải thứ để thêm sau</h2><p>Auth, RBAC, input validation — tất cả phải có từ đầu. Một lần suýt bị SQL injection đã dạy tôi bài học nhớ đời.</p><h2>Bài học 5: Cộng đồng quan trọng hơn công nghệ</h2><p>Cuối cùng, điều làm nên thành công không phải tech stack xịn, mà là cộng đồng học viên tích cực. Xây dựng forum, Discord, và các buổi live Q&A đã tạo nên sự khác biệt.</p>"
+                    - paragraph [ref=e252]: 1179 / 50000
+                - generic [ref=e253]:
+                  - generic [ref=e254]: Live Preview
+                  - generic [ref=e258]: "<h2>Khởi đầu từ con số 0</h2><p>Khi tôi bắt đầu xây dựng nền tảng EdTech đầu tiên, mọi thứ đều mới mẻ. Từ việc chọn tech stack đến thiết kế database schema, mỗi quyết định đều ảnh hưởng lâu dài.</p><h2>Bài học 1: Đừng over-engineer</h2><p>Ban đầu tôi muốn xây dựng một hệ thống microservices hoàn chỉnh. Nhưng thực tế cho thấy, một monolith đơn giản với Next.js + Prisma là đủ cho giai đoạn đầu. YAGNI là nguyên tắc vàng.</p><h2>Bài học 2: User feedback là vua</h2><p>Tính năng mà tôi nghĩ sẽ là killer feature lại không ai dùng. Ngược lại, một tính năng nhỏ — ghi chú inline khi xem bài giảng — lại được yêu thích nhất.</p><h2>Bài học 3: CI/CD từ ngày đầu</h2><p>Docker + GitHub Actions đã cứu tôi vô số lần. Deploy tự động giúp tập trung vào code thay vì lo lắng về server.</p><h2>Bài học 4: Bảo mật không phải thứ để thêm sau</h2><p>Auth, RBAC, input validation — tất cả phải có từ đầu. Một lần suýt bị SQL injection đã dạy tôi bài học nhớ đời.</p><h2>Bài học 5: Cộng đồng quan trọng hơn công nghệ</h2><p>Cuối cùng, điều làm nên thành công không phải tech stack xịn, mà là cộng đồng học viên tích cực. Xây dựng forum, Discord, và các buổi live Q&A đã tạo nên sự khác biệt.</p>"
+            - generic [ref=e100]:
+              - generic [ref=e101]:
+                - button "Featured Image" [ref=e102] [cursor=pointer]:
+                  - img [ref=e103]
+                  - img [ref=e105]
+                  - text: Featured Image
+                - button "+ Add Featured Image" [ref=e110] [cursor=pointer]
+              - generic [ref=e111]:
+                - button "Style Theme" [ref=e112] [cursor=pointer]:
+                  - img [ref=e113]
+                  - img [ref=e115]
+                  - text: Style Theme
+                - generic [ref=e121]:
+                  - combobox [ref=e122]:
+                    - option "Clean Default" [selected]
+                    - option "TonyTechLab"
+                    - option "Editorial"
+                  - paragraph [ref=e123]: Clean, minimal sans-serif layout
+              - generic [ref=e124]:
+                - button "Details" [ref=e125] [cursor=pointer]:
+                  - img [ref=e126]
+                  - img [ref=e128]
+                  - text: Details
+                - generic [ref=e131]:
+                  - generic [ref=e132]:
+                    - text: Excerpt
+                    - textbox "Brief summary..." [ref=e133]
+                  - generic [ref=e134]:
+                    - text: Categories
+                    - textbox "Tech, Education" [ref=e135]
+                  - generic [ref=e136]:
+                    - text: Tags
+                    - textbox "nextjs, react, tutorial" [ref=e137]
+              - generic [ref=e138]:
+                - button "Publish To" [ref=e139] [cursor=pointer]:
+                  - img [ref=e140]
+                  - img [ref=e142]
+                  - text: Publish To
+                - combobox [ref=e146]:
+                  - option "Select account..." [selected]
+                  - option "TonyTechLab (wordpress)"
+  - alert [ref=e148]
