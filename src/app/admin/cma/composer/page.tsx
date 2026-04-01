@@ -75,12 +75,28 @@ export default function CmaComposerPage() {
       setStyleTheme(selection.styleTheme);
 
       if (selection.templateType === "html-slots") {
-        // Switch to HTML-slot mode
-        setHtmlSlotMode(true);
-        setHtmlTemplate(selection.htmlTemplate || "");
-        setCssScoped(selection.cssScoped || "");
-        setSlotDefinitions(selection.slotDefinitions || []);
-        setSlotValues({});
+        const slots = selection.slotDefinitions || [];
+        const hasSingleBodySlot = slots.length === 1 && slots[0].type === "richtext";
+
+        if (hasSingleBodySlot && selection.htmlTemplate && selection.cssScoped) {
+          // Style-only template: load HTML skeleton + CSS into the HTML editor directly
+          // User edits the placeholder text in the HTML while CSS classes stay intact
+          setHtmlSlotMode(false);
+          setContentFormat("html");
+          const htmlJson = JSON.stringify({
+            html: selection.htmlTemplate,
+            css: selection.cssScoped,
+            js: "",
+          });
+          setContent(htmlJson);
+        } else {
+          // Multi-slot template: use slot form + live preview
+          setHtmlSlotMode(true);
+          setHtmlTemplate(selection.htmlTemplate || "");
+          setCssScoped(selection.cssScoped || "");
+          setSlotDefinitions(slots);
+          setSlotValues({});
+        }
       } else {
         // BlockNote mode
         setHtmlSlotMode(false);

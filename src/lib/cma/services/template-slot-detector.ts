@@ -180,9 +180,9 @@ export function injectSlotPlaceholders(
         `$1{{${slot.name}}}$3`
       );
     } else if (slot.type === "richtext" || slot.type === "list") {
-      // For richtext/list slots: strip all inner content, replace with slot placeholder
-      // This ensures the template only keeps style, not original text
-      result = stripContentKeepStructure(result, slot.name);
+      // Strip text from leaf elements (p, li, h2-h6, blockquote, figcaption, span)
+      // but keep structural wrappers (div, section, article) with their class names
+      result = replaceLeafTextWithPlaceholders(result);
     }
   }
 
@@ -190,19 +190,33 @@ export function injectSlotPlaceholders(
 }
 
 /**
- * Strip text content from HTML while keeping the outermost wrapper structure.
- * Replaces all inner content (paragraphs, lists, headings, text) with a single {{slot}} placeholder.
- * Preserves CSS class names and structural divs so the styling still applies.
+ * Replace text content inside leaf HTML elements with short placeholder text.
+ * Keeps structural wrappers (div, section, article, figure) and their CSS classes intact.
+ * Only clears text inside content elements: p, h1-h6, li, blockquote, figcaption, span, code, pre, td, th.
  */
-function stripContentKeepStructure(html: string, slotName: string): string {
-  // Find the main content container — first major wrapper div or article
-  const wrapperMatch = html.match(/^(\s*<(?:div|article|section|main)[^>]*>)([\s\S]*?)(<\/(?:div|article|section|main)>\s*)$/i);
-  if (wrapperMatch) {
-    // Keep wrapper open/close tags, replace inner content with slot placeholder
-    return `${wrapperMatch[1]}\n{{${slotName}}}\n${wrapperMatch[3]}`;
-  }
-  // Fallback: replace entire html with slot in a wrapper div
-  return `<div>{{${slotName}}}</div>`;
+function replaceLeafTextWithPlaceholders(html: string): string {
+  // Leaf tags whose inner text should be replaced with placeholder
+  const leafTags = "p|h[1-6]|li|blockquote|figcaption|td|th";
+  const leafRegex = new RegExp(
+    `(<(?:${leafTags})(\\s[^>]*)?>)([\\s\\S]*?)(<\\/(?:${leafTags})>)`,
+    "gi"
+  );
+
+  let counter = 0;
+  return html.replace(leafRegex, (_, open: string, _attrs: string, _content: string, close: string) => {
+    counter++;
+    // Determine placeholder based on tag type
+    const tagMatch = open.match(/<(\w+)/);
+    const tag = tagMatch ? tagMatch[1].toLowerCase() : "p";
+    let placeholder = "...";
+    if (tag.match(/^h\d$/)) placeholder = `Heading ${counter}`;
+    else if (tag === "li") placeholder = `Item ${counter}`;
+    else if (tag === "p") placeholder = `Paragraph ${counter}`;
+    else if (tag === "blockquote") placeholder = "Quote text here";
+    else if (tag === "figcaption") placeholder = "Caption";
+    else if (tag === "td" || tag === "th") placeholder = "...";
+    return `${open}${placeholder}${close}`;
+  });
 }
 
 function escapeRegex(str: string): string {
