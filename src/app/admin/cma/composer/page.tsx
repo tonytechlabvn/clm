@@ -103,7 +103,7 @@ export default function CmaComposerPage() {
     }
     // For html-slots mode, generate content from slot values
     const finalContent = htmlSlotMode && templateId
-      ? renderSlotTemplate(htmlTemplate, cssScoped, slotValues, templateId)
+      ? renderSlotTemplate(htmlTemplate, cssScoped, slotValues, templateId, slotDefinitions)
       : content;
     const finalFormat = htmlSlotMode ? "html" : contentFormat;
 
@@ -142,7 +142,7 @@ export default function CmaComposerPage() {
     if (!org?.id) { setError("No organization found. Go to Connections to set up your account first."); return; }
     if (!accountId) { setError("Select a platform account first"); return; }
     const pubContent = htmlSlotMode && templateId
-      ? renderSlotTemplate(htmlTemplate, cssScoped, slotValues, templateId)
+      ? renderSlotTemplate(htmlTemplate, cssScoped, slotValues, templateId, slotDefinitions)
       : content;
     const pubFormat = htmlSlotMode ? "html" : contentFormat;
     if (!title.trim() || (!htmlSlotMode && !content.trim())) { setError("Title and content are required"); return; }
@@ -311,6 +311,7 @@ export default function CmaComposerPage() {
                   cssScoped={cssScoped}
                   slotValues={slotValues}
                   templateId={templateId}
+                  slotDefinitions={slotDefinitions}
                 />
               )}
             </div>

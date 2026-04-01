@@ -4,13 +4,14 @@
 
 import { useMemo } from "react";
 import { injectSlotValues } from "@/lib/cma/utils/template-slot-renderer";
-import type { SlotValues } from "@/types/cma-template-types";
+import type { SlotValues, SlotDefinition } from "@/types/cma-template-types";
 
 interface CmaHtmlLivePreviewProps {
   htmlTemplate: string;
   cssScoped: string;
   slotValues: SlotValues;
   templateId: string;
+  slotDefinitions?: SlotDefinition[];
 }
 
 export function CmaHtmlLivePreview({
@@ -18,12 +19,13 @@ export function CmaHtmlLivePreview({
   cssScoped,
   slotValues,
   templateId,
+  slotDefinitions,
 }: CmaHtmlLivePreviewProps) {
   const scopeClass = `tpl-${templateId.slice(0, 8)}`;
 
   const renderedHtml = useMemo(
-    () => injectSlotValues(htmlTemplate, slotValues),
-    [htmlTemplate, slotValues]
+    () => injectSlotValues(htmlTemplate, slotValues, slotDefinitions),
+    [htmlTemplate, slotValues, slotDefinitions]
   );
 
   return (

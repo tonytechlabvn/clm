@@ -1,7 +1,7 @@
 // Inject slot values into HTML template and wrap with scoped CSS container
 // Used by both live preview and publishing pipeline
 
-import type { SlotValues } from "@/types/cma-template-types";
+import type { SlotValues, SlotDefinition } from "@/types/cma-template-types";
 
 /** Escape HTML entities to prevent XSS from user-provided slot values */
 function escapeHtml(str: string): string {
@@ -23,19 +23,41 @@ function sanitizeUrl(url: string): string {
   return trimmed.replace(/"/g, "%22").replace(/'/g, "%27");
 }
 
+/** Basic HTML sanitization for richtext — strip script/event handlers but keep formatting tags */
+function sanitizeRichtext(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, "")
+    .replace(/\son\w+="[^"]*"/gi, "")
+    .replace(/\son\w+='[^']*'/gi, "");
+}
+
 /**
  * Replace {{slot_name}} placeholders in HTML template with slot values.
- * Text slots are HTML-escaped; image slots have URL sanitization.
+ * Text slots are HTML-escaped; richtext slots are sanitized but keep HTML;
+ * image slots have URL sanitization. Pass slotDefinitions to enable richtext rendering.
  */
 export function injectSlotValues(
   htmlTemplate: string,
-  slotValues: SlotValues
+  slotValues: SlotValues,
+  slotDefinitions?: SlotDefinition[]
 ): string {
+  // Build a type lookup from slot definitions
+  const slotTypeMap = new Map<string, string>();
+  if (slotDefinitions) {
+    for (const slot of slotDefinitions) {
+      slotTypeMap.set(slot.name, slot.type);
+    }
+  }
+
   return htmlTemplate.replace(/\{\{(\w+)\}\}/g, (_match, slotName: string) => {
     const value = slotValues[slotName];
     if (value === undefined) return `{{${slotName}}}`;
     // Image URLs: sanitize for safe attribute injection
     if (htmlTemplate.includes(`src="{{${slotName}}}"`)) return sanitizeUrl(value);
+    // Richtext/list slots: render HTML content (sanitized, not escaped)
+    const slotType = slotTypeMap.get(slotName);
+    if (slotType === "richtext" || slotType === "list") return sanitizeRichtext(value);
     return escapeHtml(value);
   });
 }
@@ -48,9 +70,10 @@ export function renderSlotTemplate(
   htmlTemplate: string,
   cssScoped: string,
   slotValues: SlotValues,
-  templateId: string
+  templateId: string,
+  slotDefinitions?: SlotDefinition[]
 ): string {
   const scopeClass = `tpl-${templateId.slice(0, 8)}`;
-  const rendered = injectSlotValues(htmlTemplate, slotValues);
+  const rendered = injectSlotValues(htmlTemplate, slotValues, slotDefinitions);
   return `<style>${cssScoped}</style>\n<div class="${scopeClass}">${rendered}</div>`;
 }
