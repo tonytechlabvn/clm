@@ -1,7 +1,7 @@
 // CMA Posts — GET list, POST create draft
 
 import { NextResponse } from "next/server";
-import { withOrgAuth } from "@/lib/cma/services/org-auth";
+import { withApiKeyOrSessionAuth } from "@/lib/cma/services/org-auth";
 import { createPost, listPosts } from "@/lib/cma/services/post-service";
 
 // GET /api/cma/posts?orgId=...&status=...&page=...&search=...
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "orgId is required" }, { status: 400 });
   }
 
-  const auth = await withOrgAuth(orgId);
+  const auth = await withApiKeyOrSessionAuth(orgId, request);
   if (auth instanceof NextResponse) return auth;
 
   const result = await listPosts({
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const auth = await withOrgAuth(orgId);
+    const auth = await withApiKeyOrSessionAuth(orgId, request);
     if (auth instanceof NextResponse) return auth;
 
     const post = await createPost({

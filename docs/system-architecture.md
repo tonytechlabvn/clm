@@ -8,36 +8,49 @@ The **Core Learning Management (CLM)** platform is a Next.js-based integrated sy
 - **AI Integration:** Auto-generate quizzes, summarize content, review code submissions
 - **Cross-system Integration:** Link courses to classroom assignments
 
-### Current Architecture (Phase 7 In Progress)
+### Current Architecture (Phase 8: MCP Server Integration)
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                     Next.js Frontend (React)                           │
-│  CMA:       /admin/cma/dashboard, /admin/cma/calendar, /admin/cma/posts
+┌──────────────────────────────────────────────────────────────────────────┐
+│                     Next.js Frontend (React)                             │
+│  CMA:       /admin/cma/dashboard, /admin/cma/calendar, /admin/cma/posts │
 │  Classroom: /classroom (list) → /classroom/[id] → /classroom/[id]/assignments
 │  LMS:       /lms (catalog) → /lms/courses/[slug] → /lms/courses/[slug]/learn
-└──────────────────────┬─────────────────────────────────────────────────┘
-                       │
-        ┌──────────────┼──────────────┬──────────────┐
-        │              │              │              │
-        ▼              ▼              ▼              ▼
+└────────────────────────┬──────────────────────────────────────────────────┘
+                         │
+              ┌──────────┴──────────┐
+              │                     │
+              ▼                     ▼
+┌─────────────────────────────┐   ┌──────────────────────────┐
+│   Session Auth (NextAuth)   │   │  API Key Auth (Bearer)   │
+│   - WordPress OAuth         │   │  - Format: clm_...       │
+│   - Google OAuth            │   │  - HMAC-SHA256 hash      │
+│   - Cookie-based sessions   │   │  - 60 req/min rate limit │
+└────────────┬────────────────┘   └──────────────┬───────────┘
+             │                                    │
+             └────────────────┬───────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┬──────────────┐
+        │                     │                     │              │
+        ▼                     ▼                     ▼              ▼
 ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│ /api/cma/*   │ │ /api/classroom/*  │ /api/lms/*  │ /api/integration/*
-│ (12 routes)  │ │ (12 routes)  │ (12 routes)  │ (1 route)    │
-│              │ │              │ /api/lms/ai/* │              │
+│ /api/cma/*   │ │/api/classroom/*  │ /api/lms/*  │ /api/integration/*
+│ (13 routes)  │ │ (12 routes)  │ (12 routes)  │ (1 route)    │
+│ +api-keys    │ │              │ /api/lms/ai/* │              │
 │              │ │              │ (3 routes)   │              │
 └────────┬─────┘ └────────┬─────┘ └────────┬─────┘ └────────┬─────┘
          │                 │                │                │
          └─────────────────┼────────────────┼────────────────┘
                            │
                            ▼
-                ┌──────────────────────────┐
-                │  Prisma ORM (22 models)  │
-                │  - CMA (3 models)        │
-                │  - Classroom (4 models)  │
-                │  - LMS (10 models)       │
-                │  - Auth (5 models)       │
-                └────────┬─────────────────┘
+                ┌──────────────────────────────┐
+                │  Prisma ORM (23 models)      │
+                │  - CMA (3 models)            │
+                │  - Classroom (4 models)      │
+                │  - LMS (10 models)           │
+                │  - Auth (5 models)           │
+                │  - ApiKey (1 model) [NEW]    │
+                └────────┬──────────────────────┘
                          │
          ┌───────────────┼───────────────┐
          │               │               │
@@ -46,6 +59,18 @@ The **Core Learning Management (CLM)** platform is a Next.js-based integrated sy
     │PostgreSQL  │  pg-boss Job  │ │   AI APIs    │
     │   (DB)    │    Queue      │ │(OpenAI,etc)  │
     └────────┘   └──────────────┘ └──────────────┘
+         │
+         │ (Separate process)
+         │
+         ▼
+┌──────────────────────────────────────────────────┐
+│        CLM MCP Server (clm-mcp-server/)         │
+│   Markdown → Post → WordPress Auto-Publish      │
+│   - 5 tools (publish, draft, status, etc.)      │
+│   - YAML frontmatter parsing                    │
+│   - API key auth to CLM backend                 │
+│   - Claude Desktop & VS Code integration        │
+└──────────────────────────────────────────────────┘
 ```
 
 ---
@@ -541,7 +566,186 @@ NEXT_RUNTIME=nodejs            # Enables instrumentation
 
 ---
 
-## Phase 8: CMA Template Studio (URL Extraction & Advanced Features)
+## Phase 8: MCP Server & API Key Authentication
+
+### 1. API Key Authentication (Backend)
+
+**Service:** `src/lib/cma/services/api-key-service.ts`
+
+**Key Generation & Storage:**
+- Format: `clm_` prefix + 32 random base62 chars (256-bit entropy per key)
+- Stored as HMAC-SHA256 hash (never plaintext)
+- Lookup via indexed prefix (first 8 chars: `clm_xxxx`)
+- Requires `CMA_ENCRYPTION_KEY` environment variable (HMAC secret)
+
+**Key Features:**
+- **Rate Limiting:** 60 requests/minute per key (in-memory, per-instance)
+- **Expiry Support:** Optional `expiresAt` field for time-bound keys
+- **Soft Delete:** `isActive` flag (revocation without deleting record)
+- **Multi-Key:** Users can create multiple keys per organization
+- **Audit Trail:** `lastUsedAt` timestamp tracked on each request
+
+**Database Model (ApiKey):**
+```prisma
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String    // "MCP Server", "CI/CD", etc.
+  keyHash    String    // HMAC-SHA256 (never plaintext)
+  keyPrefix  String    // "clm_xxxx" for fast lookup
+  userId     String    // Who created the key
+  orgId      String    // Organization scope
+  lastUsedAt DateTime? // Audit trail
+  expiresAt  DateTime? // Optional expiry
+  isActive   Boolean   @default(true)
+  createdAt  DateTime
+  updatedAt  DateTime
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  
+  @@index([keyPrefix])
+  @@index([userId, orgId])
+}
+```
+
+**Validation Flow:**
+```
+Bearer Token (clm_...)
+  ↓
+validateApiKey() in api-key-service.ts
+  ├─ Check prefix matches
+  ├─ Hash token, lookup by prefix
+  ├─ Verify hash match
+  ├─ Check expiry (if set)
+  ├─ Check user.isActive && org.isActive
+  ├─ Check user role (admin or root)
+  ├─ Rate limit check (throw RateLimitError if exceeded)
+  ├─ Update lastUsedAt (fire-and-forget)
+  ├─ Resolve org role (owner for root, lookup for others)
+  └─ Return OrgAuthContext + apiKeyId
+```
+
+**API Routes:**
+- `POST /api/cma/api-keys` — Create new key
+  - Request: `{ name: string, expiresAt?: Date }`
+  - Response: `{ key: string, keyId: string, keyPrefix: string }` (key shown once)
+  - Auth: Session-based only (not API key auth)
+- `GET /api/cma/api-keys` — List user's keys
+  - Response: Array of keys (never exposes keyHash)
+  - Auth: Session-based or API key
+- `DELETE /api/cma/api-keys/[id]` — Revoke a key
+  - Auth: Session-based or API key
+
+**Middleware Integration:**
+```typescript
+// src/middleware.ts
+if (process.env.ENABLE_API_KEY_AUTH === "true" &&
+    isCmaApi &&
+    request.headers.get("authorization")?.startsWith("Bearer clm_")) {
+  // Set x-auth-method: api-key header
+  // Downstream routes can distinguish API key auth from session auth
+}
+```
+
+### 2. MCP Server Integration
+
+**Location:** `clm-mcp-server/` (sibling directory to main CLM app)
+
+**Purpose:** Standalone server for Claude Desktop & VS Code integration. Allows markdown-based post publishing with auto-publish to WordPress.
+
+**Architecture:**
+```
+Claude Desktop / VS Code
+  ↓
+MCP Server (clm-mcp-server/)
+  ├─ Parse markdown + YAML frontmatter
+  ├─ Call CLM API (with API key auth)
+  ├─ Create/update post
+  └─ Auto-publish to WordPress
+  ↓
+CLM Backend (src/)
+  ├─ Validate API key
+  ├─ Create CmaPost record
+  ├─ Enqueue publish job
+  └─ Return status
+  ↓
+WordPress (via platform adapter)
+```
+
+**5 MCP Tools:**
+
+| Tool | Input | Output | Purpose |
+|------|-------|--------|---------|
+| `clm_post_publish` | Markdown + frontmatter | Post ID, URL | Create post, auto-publish |
+| `clm_post_draft` | Markdown + frontmatter | Post ID | Create post as draft |
+| `clm_post_status` | Post ID | Status, URL | Check publish status |
+| `clm_templates_list` | (none) | Templates array | List available templates |
+| `clm_accounts_list` | (none) | Accounts array | List connected WordPress accounts |
+
+**Markdown Frontmatter:**
+```yaml
+---
+title: "My Blog Post"
+template: "tech-blog"        # Optional: template slug
+account: "account_id"        # Optional: WordPress account ID
+tags: ["javascript", "web"]  # Optional: tag array
+category: "Development"      # Optional: category name
+featured_image: "https://..."# Optional: image URL
+excerpt: "Short summary"     # Optional: excerpt/description
+---
+
+Your markdown content here...
+```
+
+**Configuration (Environment Variables):**
+- `CLM_API_URL` — Base URL (e.g., `http://localhost:3000`)
+- `CLM_API_KEY` — API key (format: `clm_...`)
+- `CLM_DEFAULT_ORG_ID` — Default organization ID
+
+**Claude Desktop Setup:**
+```json
+{
+  "mcpServers": {
+    "clm": {
+      "command": "node",
+      "args": ["/absolute/path/to/clm-mcp-server/dist/index.js"],
+      "env": {
+        "CLM_API_URL": "http://localhost:3000",
+        "CLM_API_KEY": "clm_your_key_here",
+        "CLM_DEFAULT_ORG_ID": "your_org_id"
+      }
+    }
+  }
+}
+```
+
+**VS Code Setup:**
+- Create `.vscode/mcp.json` with server config
+- Warning: Settings Sync may leak API key — use env vars or `.gitignore`
+
+**Dependencies:**
+- `@modelcontextprotocol/sdk` — MCP protocol & types
+- `axios` — HTTP requests to CLM API
+- `gray-matter` — YAML frontmatter parsing
+- Build: `typescript`, `esbuild`, `tsx`
+
+**Usage Flow (Claude Example):**
+```
+User: "Publish a blog post about React hooks"
+  ↓
+Claude (via clm_post_publish tool):
+  1. Generate markdown content + frontmatter
+  2. Call clm_post_publish with markdown
+  3. MCP server parses frontmatter, calls CLM API
+  4. CLM creates post & queues publish job
+  5. WordPress adapter publishes immediately
+  ↓
+Result: "Blog post published at [URL]"
+```
+
+---
+
+## Phase 9: CMA Template Studio (URL Extraction & Advanced Features)
 
 ### 1. Template Extraction Engine
 

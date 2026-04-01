@@ -1,9 +1,11 @@
 // Org-scoped auth middleware for CMA API routes — validates session + role + org membership
+// Supports both session auth (browser) and API key auth (external services like MCP)
 
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma-client";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth-options";
+import { validateApiKey, RateLimitError } from "./api-key-service";
 
 export interface OrgAuthContext {
   userId: string;
@@ -75,4 +77,57 @@ export async function withAdminAuth(): Promise<
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return { userId: session.dbUserId, userRole: session.role };
+}
+
+/**
+ * Dual auth — checks API key first (via x-auth-method header set by middleware),
+ * then falls back to session auth. Use this on CMA routes that external services need.
+ */
+export async function withApiKeyOrSessionAuth(
+  orgId: string,
+  request: Request
+): Promise<OrgAuthContext | NextResponse> {
+  const authMethod = request.headers.get("x-auth-method");
+
+  if (authMethod === "api-key") {
+    const authHeader = request.headers.get("authorization");
+    const bearerToken = authHeader?.replace("Bearer ", "");
+    if (!bearerToken) {
+      return NextResponse.json({ error: "Missing Bearer token" }, { status: 401 });
+    }
+
+    let apiKeyAuth;
+    try {
+      apiKeyAuth = await validateApiKey(bearerToken);
+    } catch (err) {
+      if (err instanceof RateLimitError) {
+        return NextResponse.json(
+          { error: "Rate limit exceeded" },
+          { status: 429, headers: { "Retry-After": "60" } }
+        );
+      }
+      throw err;
+    }
+    if (!apiKeyAuth) {
+      return NextResponse.json({ error: "Invalid or expired API key" }, { status: 401 });
+    }
+
+    // Ensure the API key's org matches the requested org
+    if (apiKeyAuth.orgId !== orgId) {
+      return NextResponse.json(
+        { error: "API key not authorized for this organization" },
+        { status: 403 }
+      );
+    }
+
+    return {
+      userId: apiKeyAuth.userId,
+      orgId: apiKeyAuth.orgId,
+      orgRole: apiKeyAuth.orgRole,
+      userRole: apiKeyAuth.userRole,
+    };
+  }
+
+  // Fall back to session auth
+  return withOrgAuth(orgId);
 }

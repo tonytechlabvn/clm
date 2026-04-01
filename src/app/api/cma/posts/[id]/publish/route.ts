@@ -1,7 +1,7 @@
 // CMA Publish endpoint — POST triggers publish to platform
 
 import { NextResponse } from "next/server";
-import { withOrgAuth } from "@/lib/cma/services/org-auth";
+import { withApiKeyOrSessionAuth } from "@/lib/cma/services/org-auth";
 import { publishPost } from "@/lib/cma/services/publishing-service";
 
 interface RouteParams {
@@ -22,7 +22,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    const auth = await withOrgAuth(orgId);
+    const auth = await withApiKeyOrSessionAuth(orgId, request);
     if (auth instanceof NextResponse) return auth;
 
     const result = await publishPost({ postId: id, accountId, orgId: auth.orgId });

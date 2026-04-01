@@ -2,7 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma-client";
-import { withAdminAuth, withOrgAuth } from "@/lib/cma/services/org-auth";
+import { withAdminAuth, withApiKeyOrSessionAuth } from "@/lib/cma/services/org-auth";
 import { getAdapter } from "@/lib/cma/adapters/adapter-registry";
 import { encryptToken } from "@/lib/cma/crypto-utils";
 
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     }
 
     // C2 fix: verify org membership before creating account
-    const auth = await withOrgAuth(orgId);
+    const auth = await withApiKeyOrSessionAuth(orgId, request);
     if (auth instanceof NextResponse) return auth;
 
     // Validate connection via adapter

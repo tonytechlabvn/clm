@@ -4,6 +4,113 @@ All notable changes to Tony Tech Lab CLM are documented here. Format: [ISO 8601 
 
 ---
 
+## [2026-04-02] — v0.1.0-mcp-phase1 — MCP Server & API Key Authentication Added
+
+### Added (MCP Integration Phase 1: API Key Auth + Server)
+
+**API Key Authentication (CLM Backend)**
+- `src/lib/cma/services/api-key-service.ts` — Generate, validate, revoke API keys for external access
+  - Key format: `clm_` prefix + 32 random base62 chars (256-bit entropy)
+  - HMAC-SHA256 hashing (never stored plaintext)
+  - Rate limiting: 60 requests/min per key (in-memory, resets on restart)
+  - Expiry support, soft-delete via `isActive` flag
+  - Functions: `generateApiKey()`, `validateApiKey()`, `revokeApiKey()`, `listApiKeys()`
+
+**Database Model (1 new)**
+- `ApiKey` — User API key records (id, name, keyHash, keyPrefix, userId, orgId, lastUsedAt, expiresAt, isActive, timestamps)
+  - Indexes: `[keyPrefix]` (for fast lookup), `[userId, orgId]`
+  - Foreign keys: User (onDelete: Cascade), Organization (onDelete: Cascade)
+  - Requires `CMA_ENCRYPTION_KEY` env var for HMAC secret
+
+**Middleware Update**
+- `src/middleware.ts` — Bearer token auth for CMA routes (feature-gated)
+  - Supports `Authorization: Bearer clm_...` header when `ENABLE_API_KEY_AUTH=true`
+  - Sets `x-auth-method: api-key` header for downstream routes
+  - Anti-spoofing: strips client-supplied auth-method headers before re-setting
+  - No breaking changes to session-based auth
+
+**API Routes (1 new)**
+- `POST/GET /api/cma/api-keys` — Create + list API keys for authenticated user
+  - POST: `{ name: string, expiresAt?: Date }` → `{ key, keyId, keyPrefix }` (key shown once)
+  - GET: List user's keys (never exposes keyHash)
+- `DELETE /api/cma/api-keys/[id]` — Revoke an API key (soft-delete)
+
+**MCP Server (New Directory: `clm-mcp-server/`)**
+- Standalone Node.js/TypeScript server for Claude Desktop & VS Code
+- Publishes markdown with YAML frontmatter to CLM → auto-publishes to WordPress
+- **5 tools:**
+  1. `clm_post_publish` — Parse markdown, create post, auto-publish
+  2. `clm_post_draft` — Save post as draft for review
+  3. `clm_post_status` — Check publish status of existing post
+  4. `clm_templates_list` — List available CLM templates
+  5. `clm_accounts_list` — List connected WordPress accounts
+- **Config:**
+  - Environment: `CLM_API_URL`, `CLM_API_KEY`, `CLM_DEFAULT_ORG_ID`
+  - Claude Desktop: `%APPDATA%\Claude\claude_desktop_config.json`
+  - VS Code: `.vscode/mcp.json`
+- **Markdown Frontmatter Support:**
+  - `title` (required), `template`, `account`, `tags`, `category`, `featured_image`, `excerpt`
+- **Package Dependencies:**
+  - `@modelcontextprotocol/sdk` — MCP protocol
+  - `axios` — HTTP requests to CLM API
+  - `gray-matter` — YAML frontmatter parsing
+  - `typescript`, `esbuild` — Build tools
+
+### Changed
+
+**Environment Variables**
+- New: `ENABLE_API_KEY_AUTH` (boolean, default: false) — Feature flag for API key auth
+- New: `CMA_ENCRYPTION_KEY` (required if API key auth enabled) — HMAC secret for key hashing
+
+**Package.json**
+- Added: `@modelcontextprotocol/sdk`, `gray-matter` (main app)
+- Separate `clm-mcp-server/package.json` for MCP server dependencies
+
+### Testing
+
+**New API Tests**
+- [x] API key generation and validation
+- [x] Rate limiting (60 req/min)
+- [x] Key expiry check
+- [x] Bearer token auth on CMA routes
+- [x] API key revocation (soft-delete)
+- [x] Multi-key management per user
+
+**MCP Server Tests**
+- [x] Markdown parsing with frontmatter
+- [x] Post creation via API key
+- [x] Template & account listing
+- [x] Post status retrieval
+- [x] Error handling (invalid key, rate limit)
+
+### Documentation
+
+- [x] `clm-mcp-server/README.md` — MCP server setup, configuration, usage
+- [x] `docs/system-architecture.md` — API key auth flow, MCP server integration
+- [x] `docs/codebase-summary.md` — New files, services, API routes
+- [x] `docs/project-changelog.md` — This file
+
+### Migration Notes
+
+**Database Migration**
+```bash
+# Assumes migration file for ApiKey model
+npx prisma migrate deploy  # Production
+npx prisma migrate dev --name 0003_add_api_key_auth  # Dev
+```
+
+**Startup Sequence (Updated)**
+- No changes to existing startup sequence
+- API key auth optional (feature-gated by `ENABLE_API_KEY_AUTH`)
+- MCP server runs independently (separate Node process)
+
+**Backward Compatibility**
+- Session-based auth unchanged
+- API key auth disabled by default
+- No breaking changes to existing APIs
+
+---
+
 ## [2026-03-29] — v0.1.0-phase7-testing — CMA Template Studio Phase 7 Testing Complete
 
 ### Testing

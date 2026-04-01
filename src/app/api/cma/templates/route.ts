@@ -1,7 +1,7 @@
 // CMA Templates API — GET list (with favorites), POST create org template (blocks + html-slots)
 
 import { NextResponse } from "next/server";
-import { withOrgAuth } from "@/lib/cma/services/org-auth";
+import { withApiKeyOrSessionAuth } from "@/lib/cma/services/org-auth";
 import {
   listTemplates,
   listTemplatesWithMeta,
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "orgId is required" }, { status: 400 });
   }
 
-  const auth = await withOrgAuth(orgId);
+  const auth = await withApiKeyOrSessionAuth(orgId, request);
   if (auth instanceof NextResponse) return auth;
 
   try {
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const auth = await withOrgAuth(orgId);
+    const auth = await withApiKeyOrSessionAuth(orgId, request);
     if (auth instanceof NextResponse) return auth;
 
     const template = await createTemplate(

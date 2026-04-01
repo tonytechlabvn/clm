@@ -1,7 +1,7 @@
 // CMA Post detail — GET, PUT, DELETE
 
 import { NextResponse } from "next/server";
-import { withOrgAuth } from "@/lib/cma/services/org-auth";
+import { withApiKeyOrSessionAuth } from "@/lib/cma/services/org-auth";
 import { getPost, updatePost, deletePost } from "@/lib/cma/services/post-service";
 
 interface RouteParams {
@@ -17,7 +17,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "orgId is required" }, { status: 400 });
   }
 
-  const auth = await withOrgAuth(orgId);
+  const auth = await withApiKeyOrSessionAuth(orgId, request);
   if (auth instanceof NextResponse) return auth;
 
   const post = await getPost(id, auth.orgId);
@@ -37,7 +37,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "orgId is required" }, { status: 400 });
     }
 
-    const auth = await withOrgAuth(orgId);
+    const auth = await withApiKeyOrSessionAuth(orgId, request);
     if (auth instanceof NextResponse) return auth;
 
     const post = await updatePost(id, auth.orgId, input);
@@ -58,7 +58,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "orgId is required" }, { status: 400 });
   }
 
-  const auth = await withOrgAuth(orgId);
+  const auth = await withApiKeyOrSessionAuth(orgId, request);
   if (auth instanceof NextResponse) return auth;
 
   try {

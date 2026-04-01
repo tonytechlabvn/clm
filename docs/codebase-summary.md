@@ -1,9 +1,9 @@
 # Codebase Summary — CLM Phase 7
 
 **Project:** Tony Tech Lab Core Learning Management (CLM)
-**Modules:** Content Management (CMA) + Classroom System + Learning Management System (LMS)
-**Phase:** 7 (CMA Post Template System & UI Overhaul)
-**Last Updated:** 2026-03-28
+**Modules:** Content Management (CMA) + Classroom System + Learning Management System (LMS) + MCP Server
+**Phase:** 8 (MCP Server & API Key Authentication) + Phase 7 (CMA Post Template System)
+**Last Updated:** 2026-04-02
 **Status:** In Progress
 
 ---
@@ -23,11 +23,26 @@
 ## Codebase Structure
 
 ```
+clm-mcp-server/                    # [NEW] MCP Server (sibling directory)
+├── src/
+│   ├── index.ts                    # MCP server entry point
+│   ├── types.ts                    # Tool input/output types
+│   └── markdown-parser.ts          # Frontmatter parsing (gray-matter)
+├── dist/
+│   ├── index.js                    # Compiled server (esbuild output)
+│   └── ...
+├── package.json
+├── tsconfig.json
+├── README.md
+└── .gitignore
+
 src/
 ├── app/
 │   ├── api/
-│   │   ├── cma/                    # Content Management API (12 routes)
+│   │   ├── cma/                    # Content Management API (13 routes)
 │   │   │   ├── accounts/
+│   │   │   ├── api-keys/          # [NEW] API key management
+│   │   │   │   └── route.ts       # POST/GET/DELETE api-keys
 │   │   │   ├── calendar/
 │   │   │   ├── media/
 │   │   │   ├── org/
@@ -136,6 +151,17 @@ src/
 
 ## Key Files by Feature
 
+### API Key Authentication (Phase 8)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `src/lib/cma/services/api-key-service.ts` | 193 | Generate, validate, revoke keys; rate limiting |
+| `src/app/api/cma/api-keys/route.ts` | ~80 | POST/GET/DELETE API key CRUD |
+| `src/middleware.ts` | 86 | Bearer token auth, x-auth-method header |
+| `clm-mcp-server/src/index.ts` | ~150 | MCP server entry, tool handlers |
+| `clm-mcp-server/src/markdown-parser.ts` | ~80 | YAML frontmatter parsing (gray-matter) |
+| `prisma/schema.prisma` | 112-112 | ApiKey model definition |
+
 ### Scheduled Publishing (Phase 3)
 
 | File | Lines | Purpose |
@@ -196,6 +222,14 @@ src/
 
 ### Authentication
 - **NextAuth.js** 4.24.13 (session-based auth)
+- **Crypto (Node.js built-in)** — HMAC-SHA256 for API key hashing
+
+### MCP Server (External)
+- **@modelcontextprotocol/sdk** (MCP protocol)
+- **axios** (HTTP client for API calls)
+- **gray-matter** (YAML frontmatter parsing)
+- **esbuild** (TypeScript compilation)
+- **tsx** (TypeScript runner for development)
 
 ### Content Processing
 - **unified** 11.0.5 (markdown AST)
@@ -216,7 +250,15 @@ src/
 
 ---
 
-## Data Model (Prisma) — 26 Models (Phase 3-7)
+## Data Model (Prisma) — 27 Models (Phase 3-8)
+
+### Phase 8: API Key Authentication (1 model)
+
+**ApiKey** — User-created API keys for external access
+- id, name, keyHash (HMAC-SHA256), keyPrefix (first 8 chars), userId, orgId
+- lastUsedAt (audit trail), expiresAt (optional), isActive (soft-delete)
+- Indexes: `[keyPrefix]`, `[userId, orgId]`
+- Relations: User (cascade), Organization (cascade)
 
 ### Phase 3: Content Management (3 models)
 
@@ -691,13 +733,34 @@ npx prisma migrate deploy
 - `input` / `textarea` — Form controls
 - `tooltip` — Feature hints
 
+### Phase 8: API Key Authentication
+
+| Component | Location | Purpose | Status |
+|-----------|----------|---------|--------|
+| `api-key-service.ts` | `lib/cma/services/` | Key generation, validation, rate limiting | Complete |
+| `middleware.ts` | `src/` | Bearer token auth, x-auth-method header | Complete |
+| `/api/cma/api-keys` | `app/api/cma/` | POST/GET/DELETE API key CRUD | Complete |
+| `ApiKey` | `prisma/schema.prisma` | API key data model + indexes | Complete |
+
+### MCP Server (Phase 8)
+
+| Component | Location | Purpose | Status |
+|-----------|----------|---------|--------|
+| `index.ts` | `clm-mcp-server/src/` | MCP server entry, tool handlers | Complete |
+| `markdown-parser.ts` | `clm-mcp-server/src/` | Frontmatter parsing (gray-matter) | Complete |
+| `types.ts` | `clm-mcp-server/src/` | MCP tool types (input/output) | Complete |
+| `README.md` | `clm-mcp-server/` | Setup & usage guide | Complete |
+| `package.json` | `clm-mcp-server/` | Dependencies (@modelcontextprotocol/sdk, axios, gray-matter) | Complete |
+| `tsconfig.json` | `clm-mcp-server/` | TypeScript config (esbuild target) | Complete |
+
 ---
 
 ## Version History
 
 | Version | Date | Status | Phase |
 |---------|------|--------|-------|
-| 0.1.0-phase7 | 2026-03-28 | In Progress | Block Editor, Templates, Image System |
+| 0.1.0-mcp-phase1 | 2026-04-02 | Complete | MCP Server & API Key Authentication |
+| 0.1.0-phase7 | 2026-03-28 | Complete | Block Editor, Templates, Image System |
 | 0.1.0-phase4 | 2026-03-28 | Complete | Classroom + LMS + AI |
 | 0.1.0-phase3 | 2026-03-28 | Complete | Scheduled Publishing |
 | 0.1.0-phase2 | [TBD] | Complete | Platform Publishing |

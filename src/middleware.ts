@@ -17,9 +17,26 @@ export async function middleware(request: NextRequest) {
   const isAuthApi = pathname.startsWith("/api/auth");
   const isPublicApi = pathname === "/api/health" || pathname === "/api/ready";
   const isApiRoute = pathname.startsWith("/api/");
+  const isCmaApi = pathname.startsWith("/api/cma/");
 
   // Allow auth API and public endpoints through
   if (isAuthApi || isPublicApi) return withRequestId(request, NextResponse.next());
+
+  // API key auth bypass — gated behind feature flag
+  if (
+    process.env.ENABLE_API_KEY_AUTH === "true" &&
+    isCmaApi &&
+    request.headers.get("authorization")?.startsWith("Bearer clm_")
+  ) {
+    const headers = new Headers(request.headers);
+    // Anti-spoofing: strip any client-supplied x-auth-method before setting our own
+    headers.delete("x-auth-method");
+    headers.set("x-auth-method", "api-key");
+    return withRequestId(
+      request,
+      NextResponse.next({ request: { headers } })
+    );
+  }
 
   // Not logged in via WordPress
   if (!token?.wpUser) {

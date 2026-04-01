@@ -110,3 +110,6 @@ claudekit-engineer/
 # Test screenshots and playwright logs
 *.png
 .playwright-mcp/
+
+# VS Code MCP config (contains API keys — do NOT commit)
+.vscode/mcp.json
