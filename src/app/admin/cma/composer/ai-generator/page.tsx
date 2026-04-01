@@ -156,19 +156,28 @@ export default function CmaAiGeneratorPage() {
     if (!org?.id || !blogContent) return;
     setLoading(true); setError(null);
     try {
-      // If template is loaded, merge AI content into the template HTML structure
+      // If template is loaded, wrap AI content inside the template structure
       let finalHtml = blogContent;
       let finalCss = blogCss;
       if (templateHtml) {
-        // Replace placeholder text in template with AI-generated content
-        // The template has [bracketed placeholder] text that we replace
+        // Replace ALL bracketed placeholders with AI-generated content
+        // First replace title/subtitle, then inject full content into the body area
         finalHtml = templateHtml
           .replace(/\[Tiêu đề bài viết\]/g, title)
           .replace(/\[Phụ đề\]/g, "")
-          .replace(/\[Mô tả ngắn gọn[^\]]*\]/g, metaDesc || fbExcerpt)
-          .replace(/\[Câu hỏi[^\]]*\]/g, blogContent.slice(0, 200))
-          .replace(/\[Nội dung phân tích[^\]]*\]/g, blogContent)
-          .replace(/\[Trích dẫn[^\]]*\]/g, "");
+          .replace(/\[Mô tả ngắn gọn[^\]]*\]/g, metaDesc || fbExcerpt || "")
+          .replace(/\[Trích dẫn[^\]]*\]/g, title);
+        // Replace all remaining [placeholder] content with AI blog content
+        // Remove all message pair divs and replace with the AI-generated HTML
+        const contentStart = finalHtml.indexOf('<div style="display: flex; flex-direction: column; gap: 35px;">');
+        const contentEnd = finalHtml.indexOf('</div>\n  <footer');
+        if (contentStart !== -1 && contentEnd !== -1) {
+          finalHtml = finalHtml.slice(0, contentStart) +
+            '<div style="display: flex; flex-direction: column; gap: 20px;">' +
+            blogContent +
+            '</div>' +
+            finalHtml.slice(contentEnd + 6);
+        }
       }
       if (templateCss) {
         finalCss = `${templateCss}\n${blogCss}`;
@@ -241,7 +250,8 @@ export default function CmaAiGeneratorPage() {
           onBlogContentChange={setBlogContent} onBlogCssChange={setBlogCss}
           fbExcerpt={fbExcerpt} onFbExcerptChange={setFbExcerpt}
           linkedinExcerpt={linkedinExcerpt} onLinkedinExcerptChange={setLinkedinExcerpt}
-          imagePrompts={imagePrompts} onBack={() => setStep(2)} onSave={handleSaveAsDraft} loading={loading} />
+          imagePrompts={imagePrompts} onBack={() => setStep(2)} onSave={handleSaveAsDraft} loading={loading}
+          templateHtml={templateHtml} templateCss={templateCss} />
       )}
     </div>
   );

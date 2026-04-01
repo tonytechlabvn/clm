@@ -19,6 +19,10 @@ interface ContentReviewStepProps {
   onBack: () => void;
   onSave: () => void;
   loading: boolean;
+  /** Template HTML skeleton — if provided, AI content is wrapped inside it */
+  templateHtml?: string | null;
+  /** Template CSS — merged with blog CSS when template is active */
+  templateCss?: string | null;
 }
 
 // Build a full preview document with TonyTechLab template CSS + any custom CSS
@@ -34,14 +38,33 @@ ${css}</style>
 export function ContentReviewStep({
   blogContent, blogCss, onBlogContentChange, onBlogCssChange,
   fbExcerpt, onFbExcerptChange, linkedinExcerpt, onLinkedinExcerptChange,
-  imagePrompts, onBack, onSave, loading,
+  imagePrompts, onBack, onSave, loading, templateHtml, templateCss,
 }: ContentReviewStepProps) {
   const [viewMode, setViewMode] = useState<"preview" | "html" | "css">("preview");
 
+  // When template is loaded, wrap AI content inside template structure for preview
+  const previewHtml = useMemo(() => {
+    if (!templateHtml) return blogContent;
+    // Inject AI content into the template's body area
+    const contentStart = templateHtml.indexOf('<div style="display: flex; flex-direction: column; gap: 35px;">');
+    const contentEnd = templateHtml.indexOf('</div>\n  <footer');
+    if (contentStart !== -1 && contentEnd !== -1) {
+      return templateHtml.slice(0, contentStart) +
+        '<div style="padding: 20px;">' + blogContent + '</div>' +
+        templateHtml.slice(contentEnd + 6);
+    }
+    return blogContent;
+  }, [blogContent, templateHtml]);
+
+  const previewCssAll = useMemo(
+    () => templateCss ? `${templateCss}\n${blogCss}` : blogCss,
+    [blogCss, templateCss]
+  );
+
   // Use srcdoc for reliable cross-origin iframe rendering
   const previewSrcdoc = useMemo(
-    () => buildPreviewDoc(blogContent, blogCss),
-    [blogContent, blogCss]
+    () => buildPreviewDoc(previewHtml, previewCssAll),
+    [previewHtml, previewCssAll]
   );
 
   return (
