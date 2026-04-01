@@ -10,8 +10,6 @@ import { markdownToThemedHtml } from "../themes/apply-theme-to-markdown-html";
 import { resolveImagePlaceholders, fetchAndUploadFeaturedImage } from "./image-resolution-service";
 import { TONYTECHLAB_CUSTOM_CSS } from "../themes/tonytechlab-custom-css";
 import { inlineCssIntoHtml } from "../css-inliner";
-import { renderSlotTemplate } from "../utils/template-slot-renderer";
-import type { SlotDefinition } from "@/types/cma-template-types";
 
 export interface PublishRequest {
   postId: string;
@@ -95,27 +93,30 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
       // Markdown content — convert to HTML, then optionally wrap in HTML-slots template
       htmlContent = await markdownToThemedHtml(post.content, post.styleTheme || "default");
 
-      // If post has an HTML-slots template, inject markdown HTML into its body_content slot
+      // If post has an HTML-slots template, wrap markdown HTML in template's design
       if (post.templateId) {
         const template = await prisma.cmaTemplate.findUnique({ where: { id: post.templateId } });
         if (template?.templateType === "html-slots" && template.htmlTemplate && template.cssScoped) {
-          const slotDefs = (template.slotDefinitions || []) as unknown as SlotDefinition[];
-          const slotValues: Record<string, string> = { body_content: htmlContent };
+          // Replace the template's <main> inner content with the markdown HTML
+          const templateHtml = template.htmlTemplate;
+          const mainOpen = templateHtml.indexOf("<main");
+          const mainInnerStart = mainOpen > -1 ? templateHtml.indexOf(">", mainOpen) + 1 : -1;
+          const mainClose = templateHtml.indexOf("</main>");
 
-          // Also inject title if the template has a title slot
-          const hasTitleSlot = slotDefs.some((s) => s.name === "title" || s.name === "hero_title");
-          if (hasTitleSlot) {
-            const titleSlotName = slotDefs.find((s) => s.name === "title" || s.name === "hero_title")!.name;
-            slotValues[titleSlotName] = post.title;
+          if (mainInnerStart > 0 && mainClose > mainInnerStart) {
+            // Splice: keep template wrapper, replace <main> inner with actual content
+            const wrapped =
+              templateHtml.substring(0, mainInnerStart) +
+              `\n<h1>${post.title}</h1>\n` +
+              htmlContent +
+              "\n" +
+              templateHtml.substring(mainClose);
+
+            const scopeClass = `tpl-${template.id.slice(0, 8)}`;
+            const rendered = `<style>${template.cssScoped}</style>\n<div class="${scopeClass}">${wrapped}</div>`;
+            const allCss = TONYTECHLAB_CUSTOM_CSS + `\n${template.cssScoped}`;
+            htmlContent = inlineCssIntoHtml(rendered, allCss);
           }
-
-          const rendered = renderSlotTemplate(
-            template.htmlTemplate, template.cssScoped,
-            slotValues, template.id, slotDefs
-          );
-          // Inline CSS for WordPress compatibility
-          const allCss = TONYTECHLAB_CUSTOM_CSS + `\n${template.cssScoped}`;
-          htmlContent = inlineCssIntoHtml(rendered, allCss);
         }
       }
     }
