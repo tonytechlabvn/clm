@@ -143,6 +143,39 @@ export const TONYTECHLAB_CUSTOM_CSS = `
   background: transparent !important;
 }
 
+/* Generic pre/code fallback — ensures code blocks are always readable */
+.tn-cf-post pre {
+  background: #0d1117 !important;
+  color: #e6edf3 !important;
+  border-radius: 10px !important;
+  padding: 1.2em 1.5em !important;
+  overflow-x: auto !important;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace !important;
+  font-size: 0.88em !important;
+  line-height: 1.7 !important;
+  margin: 1.5em 0 !important;
+  border: 1px solid #30363d !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4) !important;
+}
+.tn-cf-post pre code {
+  background: transparent !important;
+  color: inherit !important;
+  padding: 0 !important;
+  font-size: inherit !important;
+}
+.tn-cf-post code {
+  background: #f1f5f9 !important;
+  color: #e11d48 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 0.88em !important;
+}
+.tn-cf-post pre code {
+  background: transparent !important;
+  color: #e6edf3 !important;
+}
+
 /* Comparison Table */
 .tn-cf-post .tn-comparison-table-wrapper {
   overflow-x: auto !important;
