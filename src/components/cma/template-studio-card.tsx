@@ -45,7 +45,7 @@ export function TemplateStudioCard({
 
   const lastUsed = template.lastUsedAt
     ? new Date(template.lastUsedAt).toLocaleDateString()
-    : "never";
+    : null;
 
   return (
     <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow group">
@@ -68,6 +68,7 @@ export function TemplateStudioCard({
         {/* Favorite star */}
         <button
           onClick={() => onToggleFavorite(template.id)}
+          aria-label={template.isFavorite ? "Remove from favorites" : "Add to favorites"}
           className="absolute top-2 right-2 p-1 rounded-full bg-background/80 hover:bg-background transition-colors cursor-pointer"
         >
           <Star
@@ -96,7 +97,7 @@ export function TemplateStudioCard({
 
         <div className="flex items-center justify-between text-[10px] text-muted-foreground">
           <span>
-            {isSystem ? "System" : "Custom"} · Used {template.usageCount}x · {lastUsed}
+            {isSystem ? "System" : "Custom"} · Used {template.usageCount}x{lastUsed ? ` · ${lastUsed}` : ""}
           </span>
         </div>
 
@@ -115,6 +116,7 @@ export function TemplateStudioCard({
               size="sm"
               variant="ghost"
               className="h-7 w-7 p-0"
+              aria-label="More options"
               onClick={() => setShowMenu(!showMenu)}
             >
               <MoreHorizontal className="h-3 w-3" />

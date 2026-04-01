@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, FileText, Plus } from "lucide-react";
+import { Search, FileText, Plus, X } from "lucide-react";
 import { useCmaOrg } from "@/lib/cma/hooks/use-cma-org";
 import { TemplateStudioCard, type TemplateCardData } from "./template-studio-card";
 
@@ -127,8 +127,17 @@ export function TemplateStudioGallery({
             placeholder="Search templates..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
+            className="pl-8 pr-8"
           />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              aria-label="Clear search"
+              className="absolute right-2 top-2 p-0.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Category pills */}
@@ -181,7 +190,7 @@ export function TemplateStudioGallery({
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
-        <span className="ml-auto text-muted-foreground">{filtered.length} templates</span>
+        <span className="ml-auto text-muted-foreground">{filtered.length} {filtered.length === 1 ? "template" : "templates"}</span>
       </div>
 
       {/* Grid */}

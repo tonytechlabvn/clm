@@ -37,7 +37,7 @@ export default function CmaTemplateStudioPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link href="/admin/cma">
-          <button className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted cursor-pointer">
+          <button aria-label="Go back" className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted cursor-pointer">
             <ArrowLeft className="h-4 w-4" />
           </button>
         </Link>
@@ -60,7 +60,7 @@ export default function CmaTemplateStudioPage() {
             size="sm"
             onClick={() => setView("extract")}
           >
-            <Globe className="h-4 w-4 mr-1" /> Extract from URL
+            <Globe className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline"> Extract from URL</span>
           </Button>
         </div>
       </div>
