@@ -1,3 +1,0 @@
-[     987ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://clm.tonytechlab.com/admin/cma/%7B%7Bauthor_avatar%7D%7D:0
-[     988ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://clm.tonytechlab.com/admin/cma/%7B%7Bhero_image%7D%7D:0
-[  669464ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://clm.tonytechlab.com/api/cma/templates?orgId=cm9n8jwm40000m03gcbaqifpz:0

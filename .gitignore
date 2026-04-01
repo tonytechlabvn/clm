@@ -106,3 +106,7 @@ claudekit-engineer/
 
 # Repomix
 .repomixignore
+
+# Test screenshots and playwright logs
+*.png
+.playwright-mcp/
