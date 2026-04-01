@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cmaFetch } from "@/lib/cma/use-cma-api";
 import { useCmaOrg } from "@/lib/cma/hooks/use-cma-org";
@@ -26,7 +26,6 @@ interface SourceExtractionResult {
 
 export default function CmaAiGeneratorPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { org } = useCmaOrg();
   const [step, setStep] = useState(1);
 
@@ -35,10 +34,12 @@ export default function CmaAiGeneratorPage() {
   const [templateHtml, setTemplateHtml] = useState<string | null>(null);
   const [templateCss, setTemplateCss] = useState<string | null>(null);
 
-  // Load template data if templateId is provided
+  // Load template data if templateId is provided via URL query param
   useEffect(() => {
-    const tplId = searchParams.get("templateId");
-    if (!tplId || !org?.id) return;
+    if (typeof window === "undefined" || !org?.id) return;
+    const params = new URLSearchParams(window.location.search);
+    const tplId = params.get("templateId");
+    if (!tplId) return;
     setTemplateId(tplId);
     fetch(`/api/cma/templates/${tplId}?orgId=${org.id}`)
       .then((r) => r.ok ? r.json() : null)
@@ -47,7 +48,7 @@ export default function CmaAiGeneratorPage() {
         if (data?.cssScoped) setTemplateCss(data.cssScoped);
       })
       .catch(() => {}); // silently fail — will use default if template load fails
-  }, [searchParams, org?.id]);
+  }, [org?.id]);
 
   // Step 1 state
   const [topic, setTopic] = useState("");
