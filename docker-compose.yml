@@ -59,6 +59,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CMA_ENCRYPTION_KEY=${CMA_ENCRYPTION_KEY}
+      - ENABLE_API_KEY_AUTH=${ENABLE_API_KEY_AUTH:-true}
       # Cap Node.js heap to 512MB — prevents runaway AI responses from consuming all server RAM
       - NODE_OPTIONS=--max-old-space-size=512
     ports:
