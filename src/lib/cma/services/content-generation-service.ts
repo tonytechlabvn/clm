@@ -132,8 +132,58 @@ CRITICAL: Return valid JSON only (no markdown fences, no extra text).
 }`;
   }
 
-  // Non-dialogue template: return empty to signal using default prompt
-  return "";
+  // Non-dialogue template: describe the structure for AI to follow
+  // Extract structural hints from template HTML without sending raw HTML (which breaks JSON output)
+  const hasHeader = templateHtml.includes('<header');
+  const hasCodeBlock = templateHtml.includes('<pre') || templateHtml.includes('<code');
+  const hasList = templateHtml.includes('<ul') || templateHtml.includes('<ol');
+  const hasTable = templateHtml.includes('<table');
+  const hasBlockquote = templateHtml.includes('<blockquote');
+  const hasStyledWrapper = templateHtml.includes('style=');
+
+  // Count approximate content sections
+  const h2Count = (templateHtml.match(/<h2/g) || []).length;
+  const h3Count = (templateHtml.match(/<h3/g) || []).length;
+  const pCount = (templateHtml.match(/<p/g) || []).length;
+
+  return `You are a senior content writer for TonyTechLab, an EdTech company.
+Style: ${tone}. SEO: Use keywords naturally. Length: ~${targetWordCount} words. Language: ${language}.
+
+Generate a beautifully structured blog post using TonyTechLab's HTML template.
+CSS is provided externally — you ONLY output HTML using these exact class names.
+
+TEMPLATE STRUCTURE (follow this order):
+1. Wrap everything in: <div class="tn-cf-post">
+2. Intro box: <div class="tn-cf-intro"><em>Intro text with <strong>key topic</strong> highlighted...</em></div>
+3. Table of contents: <div class="tn-cf-toc"><h3>📑 Mục Lục</h3><ul><li>👉 <a href="#section-id">Section Title</a></li>...</ul></div>
+4. Regular sections: <h2 id="section-id">Section Title</h2> (use relevant emojis)
+5. Sub-sections: <h3>Sub-heading</h3>
+${hasCodeBlock ? '6. Code blocks: <div class="tn-code-block"><span class="tn-code-label">Label</span><pre><code>code here</code></pre></div>' : ""}
+7. Conclusion: <div class="tn-conclusion"><h2>Title</h2><p>Summary...</p><ul><li><span class="tn-check-icon">✔</span> Key point</li>...</ul></div>
+8. Tags: <div class="tn-tags"><span class="tn-tag">#Tag1</span>...</div>
+
+AVAILABLE COMPONENTS:
+- Info callout: <div class="tn-callout tn-highlight-box"><strong>💡 Title:</strong> Content...</div>
+- Warning callout: <div class="tn-callout tn-warning-box"><strong>⚠️ Title:</strong> Content...</div>
+- Success callout: <div class="tn-callout tn-success-box"><strong>✅ Title:</strong> Content...</div>
+${hasCodeBlock ? '- Code block: <div class="tn-code-block"><span class="tn-code-label">Label</span><pre><code>code</code></pre></div>' : ""}
+${hasTable ? '- Table: <div class="tn-comparison-table-wrapper"><table class="tn-comparison-table"><thead><tr><th>Col</th></tr></thead><tbody><tr><td>Data</td></tr></tbody></table></div>' : ""}
+
+RULES:
+- Do NOT use inline style= attributes (CSS is external)
+- Use emojis in headings for visual appeal
+- Include a TOC linking to section IDs
+- Aim for ${h2Count > 0 ? h2Count : 6} main sections
+
+Return valid JSON only (no markdown fences):
+{
+  "blogContent": "<div class='tn-cf-post'>...HTML content...</div>",
+  "blogCss": "",
+  "metaDescription": "SEO meta description (150-160 chars)",
+  "fbExcerpt": "Facebook excerpt (max 200 chars, engaging)",
+  "linkedinExcerpt": "LinkedIn excerpt (max 300 chars, professional)",
+  "suggestedImagePrompts": ["image description 1", "..."]
+}`;
 }
 
 /** Generate full blog content from an approved outline, optionally enriched by source context */
