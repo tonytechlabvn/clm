@@ -10,6 +10,8 @@ import { markdownToThemedHtml } from "../themes/apply-theme-to-markdown-html";
 import { resolveImagePlaceholders, fetchAndUploadFeaturedImage } from "./image-resolution-service";
 import { TONYTECHLAB_CUSTOM_CSS } from "../themes/tonytechlab-custom-css";
 import { inlineCssIntoHtml } from "../css-inliner";
+import { renderSlotTemplate } from "../utils/template-slot-renderer";
+import type { SlotDefinition } from "@/types/cma-template-types";
 
 export interface PublishRequest {
   postId: string;
@@ -90,7 +92,32 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
         htmlContent = post.content;
       }
     } else {
+      // Markdown content — convert to HTML, then optionally wrap in HTML-slots template
       htmlContent = await markdownToThemedHtml(post.content, post.styleTheme || "default");
+
+      // If post has an HTML-slots template, inject markdown HTML into its body_content slot
+      if (post.templateId) {
+        const template = await prisma.cmaTemplate.findUnique({ where: { id: post.templateId } });
+        if (template?.templateType === "html-slots" && template.htmlTemplate && template.cssScoped) {
+          const slotDefs = (template.slotDefinitions || []) as unknown as SlotDefinition[];
+          const slotValues: Record<string, string> = { body_content: htmlContent };
+
+          // Also inject title if the template has a title slot
+          const hasTitleSlot = slotDefs.some((s) => s.name === "title" || s.name === "hero_title");
+          if (hasTitleSlot) {
+            const titleSlotName = slotDefs.find((s) => s.name === "title" || s.name === "hero_title")!.name;
+            slotValues[titleSlotName] = post.title;
+          }
+
+          const rendered = renderSlotTemplate(
+            template.htmlTemplate, template.cssScoped,
+            slotValues, template.id, slotDefs
+          );
+          // Inline CSS for WordPress compatibility
+          const allCss = TONYTECHLAB_CUSTOM_CSS + `\n${template.cssScoped}`;
+          htmlContent = inlineCssIntoHtml(rendered, allCss);
+        }
+      }
     }
 
     // 7b. Resolve [IMAGE] placeholders with real Unsplash images
