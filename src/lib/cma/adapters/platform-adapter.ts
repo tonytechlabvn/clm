@@ -20,7 +20,7 @@ export interface PublishPayload {
   excerpt?: string;
   categories?: string[];
   tags?: string[];
-  featuredMediaId?: number; // platform media ID
+  featuredMediaId?: string; // platform media ID (string: FB IDs exceed MAX_SAFE_INTEGER)
   status?: "draft" | "publish";
 }
 
@@ -43,7 +43,7 @@ export interface PlatformMetrics {
 }
 
 export interface MediaUploadResult {
-  platformMediaId: number;
+  platformMediaId: string; // string: FB IDs exceed MAX_SAFE_INTEGER
   url: string;
 }
 
@@ -52,6 +52,7 @@ export interface PlatformAdapter {
   readonly name: string;
   readonly maxContentLength: number;
   readonly supportedMedia: string[]; // MIME types
+  readonly usesHtmlPipeline: boolean; // true = needs HTML conversion; false = adapter handles content itself
 
   // Auth
   connect(credentials: ConnectPayload): Promise<{ valid: boolean; displayName: string }>;
@@ -62,6 +63,9 @@ export interface PlatformAdapter {
   publish(siteUrl: string, username: string, token: string, post: PublishPayload): Promise<PlatformPostResult>;
   updatePost(siteUrl: string, username: string, token: string, platformPostId: string, post: PublishPayload): Promise<PlatformPostResult>;
   deletePost(siteUrl: string, username: string, token: string, platformPostId: string): Promise<void>;
+
+  // Content preparation — adapter decides how to transform content for its platform
+  prepareContent(content: string, format: string): string;
 
   // Content validation
   validateContent(title: string, content: string): ContentValidation;

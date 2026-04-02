@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { orgId, title, content, contentFormat, templateId, styleTheme, excerpt, categories, tags, featuredImage } = body;
+    const { orgId, title, content, contentFormat, templateId, styleTheme, excerpt, categories, tags, featuredImage, source } = body;
 
     if (!orgId || !title || !content) {
       return NextResponse.json(
@@ -54,6 +54,7 @@ export async function POST(request: Request) {
       categories,
       tags,
       featuredImage,
+      source,
     });
 
     return NextResponse.json(post, { status: 201 });

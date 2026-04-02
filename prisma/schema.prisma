@@ -71,9 +71,23 @@ model Organization {
   cmaPosts            CmaPost[]
   cmaTemplates        CmaTemplate[]
   apiKeys             ApiKey[]
+  cmaOrgSettings      CmaOrgSettings?
 
   // LMS relations
   courses Course[]
+}
+
+// Per-org CMA publishing configuration
+model CmaOrgSettings {
+  id                     String   @id @default(cuid())
+  orgId                  String   @unique
+  publishingMode         String   @default("human_in_loop") // "auto" | "human_in_loop"
+  autoPublishSources     String[] @default(["scheduler"])   // sources that auto-publish in auto mode
+  requireApprovalSources String[] @default(["zalo_bot"])    // sources that always require approval
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 }
 
 model OrgMember {
@@ -183,6 +197,7 @@ model CmaPost {
   featuredImage       String? // local path or URL
   categories          String[] // synced with WP taxonomy
   tags                String[] // synced with WP taxonomy
+  source              String    @default("web") // "web" | "zalo_bot" | "mcp" | "scheduler"
   status              String    @default("draft") // "draft" | "pending_review" | "approved" | "scheduled" | "publishing" | "published" | "failed"
   publishError        String?   @db.Text
   scheduledAt         DateTime?
@@ -498,4 +513,44 @@ model CourseEnrollment {
 
   @@unique([courseId, userId])
   @@index([userId])
+}
+
+// Zalo OA/Personal bot configuration per org
+model CmaZaloBotConfig {
+  id           String    @id @default(cuid())
+  orgId        String    @unique
+  botType      String    @default("oa") // "oa" | "personal"
+  oaId         String? // Zalo OA ID
+  accessToken  String?   @db.Text // encrypted OA access token
+  refreshToken String?   @db.Text // encrypted OA refresh token
+  tokenExpiry  DateTime?
+  // Personal fields (Phase 4b)
+  cookies      String?   @db.Text // encrypted zca-js cookies JSON
+  cookieExpiry DateTime?
+  selfId       String?
+  imei         String?
+  userAgent    String?
+  allowedSenderIds String[] @default([])
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([orgId])
+}
+
+// Maps Zalo user IDs to CLM users for bot authorship
+model CmaZaloUserMapping {
+  id         String   @id @default(cuid())
+  orgId      String
+  userId     String
+  zaloUserId String
+  zaloName   String?
+  linkCode   String? // admin-generated code for secure linking
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([orgId, zaloUserId])
+  @@index([orgId])
+  @@index([zaloUserId])
 }

@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { useCmaGet, cmaFetch } from "@/lib/cma/use-cma-api";
 import { Plug, Trash2, RefreshCw, Plus, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { ConnectWordPressForm } from "@/components/cma/connect-wordpress-form";
+import { ConnectFacebookFlow } from "@/components/cma/connect-facebook-flow";
+import { PublishingModeSettings } from "@/components/cma/publishing-mode-settings";
+import { ZaloSetupGuide } from "@/components/cma/zalo-setup-guide";
 import { useCmaOrg } from "@/lib/cma/hooks/use-cma-org";
 
 interface PlatformAccount {
@@ -65,11 +68,17 @@ export default function CmaSettingsPage() {
       </div>
 
       {showForm && (
-        <ConnectWordPressForm
-          orgId={org?.id || ""}
-          onSuccess={() => { setShowForm(false); refetch(); }}
-          onCancel={() => setShowForm(false)}
-        />
+        <div className="space-y-3">
+          <ConnectWordPressForm
+            orgId={org?.id || ""}
+            onSuccess={() => { setShowForm(false); refetch(); }}
+            onCancel={() => setShowForm(false)}
+          />
+          <div className="flex items-center gap-3 px-1">
+            <span className="text-sm text-muted-foreground">or</span>
+            <ConnectFacebookFlow orgId={org?.id || ""} />
+          </div>
+        </div>
       )}
 
       {loading && (
@@ -82,7 +91,7 @@ export default function CmaSettingsPage() {
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
             <Plug className="h-8 w-8 mx-auto mb-3 opacity-50" />
-            <p>No platforms connected yet. Connect WordPress to start publishing.</p>
+            <p>No platforms connected yet. Connect WordPress or Facebook to start publishing.</p>
           </CardContent>
         </Card>
       )}
@@ -137,6 +146,9 @@ export default function CmaSettingsPage() {
           </Card>
         ))}
       </div>
+
+      {org?.id && <PublishingModeSettings orgId={org.id} />}
+      {org?.id && <ZaloSetupGuide orgId={org.id} />}
     </div>
   );
 }

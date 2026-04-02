@@ -145,8 +145,8 @@ export async function registerMetricsSyncWorker(
 /** Schedule a daily metrics sync job (call once at startup). */
 export async function scheduleMetricsSync(): Promise<void> {
   const pgBoss = await getPgBoss();
-  await pgBoss.schedule(QUEUE_METRICS_SYNC, "0 3 * * *", {}); // daily at 03:00 UTC
-  console.log(`[pg-boss] Metrics sync scheduled daily at 03:00 UTC`);
+  await pgBoss.schedule(QUEUE_METRICS_SYNC, "0 */6 * * *", {}); // every 6h for FB insights freshness
+  console.log(`[pg-boss] Metrics sync scheduled every 6 hours`);
 }
 
 export { QUEUE_SCHEDULED_PUBLISH, QUEUE_RSS_CRAWL, QUEUE_CURATE, QUEUE_METRICS_SYNC };

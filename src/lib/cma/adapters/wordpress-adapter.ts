@@ -75,6 +75,7 @@ export class WordPressAdapter implements PlatformAdapter {
   readonly name = "WordPress";
   readonly maxContentLength = 500_000; // WP has no hard limit, but practical
   readonly supportedMedia = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+  readonly usesHtmlPipeline = true;
 
   async connect(credentials: ConnectPayload) {
     const { siteUrl, username, accessToken } = credentials;
@@ -123,7 +124,7 @@ export class WordPressAdapter implements PlatformAdapter {
       body.tags = await this.resolveTermIds(siteUrl, username, token, "tags", post.tags);
     }
     if (post.featuredMediaId) {
-      body.featured_media = post.featuredMediaId;
+      body.featured_media = Number(post.featuredMediaId);
     }
 
     const res = await wpFetch(wpApiUrl(siteUrl, "/posts"), username, token, {
@@ -154,7 +155,7 @@ export class WordPressAdapter implements PlatformAdapter {
       body.tags = await this.resolveTermIds(siteUrl, username, token, "tags", post.tags);
     }
     if (post.featuredMediaId) {
-      body.featured_media = post.featuredMediaId;
+      body.featured_media = Number(post.featuredMediaId);
     }
 
     validatePlatformPostId(platformPostId);
@@ -178,6 +179,11 @@ export class WordPressAdapter implements PlatformAdapter {
     await wpFetch(wpApiUrl(siteUrl, `/posts/${platformPostId}?force=true`), username, token, {
       method: "DELETE",
     });
+  }
+
+  // WordPress uses HTML pipeline — content passed through as-is
+  prepareContent(content: string, _format: string): string {
+    return content;
   }
 
   validateContent(title: string, content: string): ContentValidation {
@@ -207,7 +213,7 @@ export class WordPressAdapter implements PlatformAdapter {
       body: new Uint8Array(file),
     });
     const media = await res.json();
-    return { platformMediaId: media.id, url: media.source_url };
+    return { platformMediaId: String(media.id), url: media.source_url };
   }
 
   async getMetrics(

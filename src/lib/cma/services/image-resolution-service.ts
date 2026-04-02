@@ -17,7 +17,7 @@ export interface ImageResolutionContext {
 
 export interface ImageResolutionResult {
   html: string;
-  uploadedMediaIds: number[]; // WP media IDs for featured image selection
+  uploadedMediaIds: string[]; // platform media IDs for featured image selection
 }
 
 const MAX_IMAGES_PER_POST = 5;
@@ -58,7 +58,7 @@ export async function resolveImagePlaceholders(
   const totalPlaceholders = (html.match(/\[IMAGE\]/gi) || []).length;
   if (totalPlaceholders === 0) return { html, uploadedMediaIds: [] };
 
-  const uploadedMediaIds: number[] = [];
+  const uploadedMediaIds: string[] = [];
   let processedCount = 0;
 
   // Replace each [IMAGE] placeholder sequentially (one at a time)
@@ -138,7 +138,7 @@ export async function fetchAndUploadFeaturedImage(
   query: string,
   ctx: { siteUrl: string; username: string; token: string; orgId: string; postId: string },
   adapter: PlatformAdapter
-): Promise<{ mediaId: number; url: string } | undefined> {
+): Promise<{ mediaId: string; url: string } | undefined> {
   try {
     if (!adapter.uploadMedia) return undefined;
 

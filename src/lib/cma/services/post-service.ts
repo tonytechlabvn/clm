@@ -16,6 +16,7 @@ export interface CreatePostInput {
   categories?: string[];
   tags?: string[];
   featuredImage?: string;
+  source?: "web" | "zalo_bot" | "mcp" | "scheduler";
 }
 
 export interface UpdatePostInput {
@@ -59,6 +60,7 @@ export async function createPost(input: CreatePostInput) {
       categories: input.categories || [],
       tags: input.tags || [],
       featuredImage: input.featuredImage || null,
+      source: input.source || "web",
       status: "draft",
     },
     include: { author: { select: { id: true, name: true, email: true } } },

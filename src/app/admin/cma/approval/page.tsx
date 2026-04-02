@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { cmaFetch, useCmaGet } from "@/lib/cma/use-cma-api";
 import { useCmaOrg } from "@/lib/cma/hooks/use-cma-org";
 import { Loader2, Check, X, ExternalLink, Bot } from "lucide-react";
+import { SourceBadge } from "@/components/cma/source-badge";
 
 interface ApprovalPost {
   id: string;
@@ -15,6 +16,7 @@ interface ApprovalPost {
   excerpt: string | null;
   sourceUrl: string | null;
   aiGenerated: boolean;
+  source?: string;
   tags: string[];
   createdAt: string;
   author: { name: string | null; email: string | null };
@@ -121,6 +123,7 @@ export default function CmaApprovalPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium">{post.title}</span>
+                      <SourceBadge source={post.source} />
                       {post.aiGenerated && (
                         <Badge variant="secondary"><Bot className="h-3 w-3 mr-1" /> AI</Badge>
                       )}

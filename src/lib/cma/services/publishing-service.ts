@@ -11,6 +11,7 @@ import { resolveImagePlaceholders, fetchAndUploadFeaturedImage } from "./image-r
 import { TONYTECHLAB_CUSTOM_CSS } from "../themes/tonytechlab-custom-css";
 import { inlineCssIntoHtml } from "../css-inliner";
 import { wrapHtmlInTemplate } from "./template-html-wrapper";
+import { notifyPublished } from "./notification-service";
 
 export interface PublishRequest {
   postId: string;
@@ -70,9 +71,14 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
       throw new Error(`Content validation failed: ${validation.errors.join(", ")}`);
     }
 
-    // 7. Convert content → HTML (blocks / html / markdown pipelines)
+    // 7. Prepare content for platform — adapter decides format
+    //    usesHtmlPipeline=true (WordPress): runs HTML conversion pipeline below
+    //    usesHtmlPipeline=false (Facebook): adapter.prepareContent() strips to plain text
     let htmlContent: string;
-    if (post.contentFormat === "blocks") {
+    if (!adapter.usesHtmlPipeline) {
+      // Adapter handles its own content format (e.g. Facebook → plain text)
+      htmlContent = adapter.prepareContent(post.content, post.contentFormat);
+    } else if (post.contentFormat === "blocks") {
       const blocks = JSON.parse(post.content);
       // Apply theme inline styles for WordPress compatibility
       htmlContent = blocksToStyledHtml(blocks, post.styleTheme || "default");
@@ -107,65 +113,69 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
         htmlContent = post.content;
       }
     } else {
-      // Markdown content — convert to HTML, then optionally wrap in HTML-slots template
-      htmlContent = await markdownToThemedHtml(post.content, post.styleTheme || "default");
+      // Markdown content — convert to HTML, wrap in .tn-cf-post for consistent styling,
+      // then optionally wrap in HTML-slots template. This matches the HTML path output
+      // so posts created via MCP (markdown) look identical to direct CLM (HTML) posts.
+      const themedHtml = await markdownToThemedHtml(post.content, post.styleTheme || "default");
 
-      // If post has an HTML-slots template, wrap markdown HTML in template's design
+      // Wrap in .tn-cf-post so TONYTECHLAB_CUSTOM_CSS rules match (same as AI HTML generator)
+      const wrappedHtml = `<div class="tn-cf-post">${themedHtml}</div>`;
+
       if (post.templateId) {
         const template = await prisma.cmaTemplate.findUnique({ where: { id: post.templateId } });
         if (template?.templateType === "html-slots" && template.htmlTemplate && template.cssScoped) {
-          const wrapped = wrapHtmlInTemplate(htmlContent, template.htmlTemplate, post.title);
+          // Template wrapping: inject content into template's card structure
+          const wrapped = wrapHtmlInTemplate(wrappedHtml, template.htmlTemplate, post.title);
           const scopeClass = `tpl-${template.id.slice(0, 8)}`;
-
-          // Detect dark background — force text color on markdown elements for WP compatibility
-          const bgColorMatch = template.cssScoped.match(/--[\w-]*bg\s*:\s*(#[0-9a-fA-F]{3,8})/);
-          const textColorMatch = template.cssScoped.match(/--[\w-]*text\s*:\s*(#[0-9a-fA-F]{3,8})/);
-          const isDark = bgColorMatch && parseInt(bgColorMatch[1].slice(1, 3), 16) < 80;
-          const fallbackColor = isDark ? (textColorMatch?.[1] || "#e2e8f0") : "inherit";
-          const contentColorFix = fallbackColor !== "inherit"
-            ? `\n.${scopeClass} main p, .${scopeClass} main li, .${scopeClass} main ul, .${scopeClass} main ol, .${scopeClass} main blockquote, .${scopeClass} main span, .${scopeClass} main strong, .${scopeClass} main em { color: ${fallbackColor}; }`
-            : "";
-
-          const rendered = `<style>${template.cssScoped}${contentColorFix}</style>\n<div class="${scopeClass}">${wrapped}</div>`;
-          const allCss = TONYTECHLAB_CUSTOM_CSS + `\n${template.cssScoped}${contentColorFix}`;
-          htmlContent = inlineCssIntoHtml(rendered, allCss);
+          const scopedHtml = `<div class="${scopeClass}">${wrapped}</div>`;
+          // Prepend template CSS before TONYTECHLAB_CUSTOM_CSS
+          const customCss = template.cssScoped;
+          const allCss = TONYTECHLAB_CUSTOM_CSS + (customCss ? `\n${customCss}` : "");
+          htmlContent = inlineCssIntoHtml(scopedHtml, allCss);
+        } else {
+          // Template exists but not html-slots — just apply standard CSS inlining
+          htmlContent = inlineCssIntoHtml(wrappedHtml, TONYTECHLAB_CUSTOM_CSS);
         }
+      } else {
+        // No template — apply standard CSS inlining with tn-cf-post styles
+        htmlContent = inlineCssIntoHtml(wrappedHtml, TONYTECHLAB_CUSTOM_CSS);
       }
     }
 
-    // 7b. Resolve [IMAGE] placeholders with real Unsplash images
-    const suggestedPrompts: string[] = (() => {
-      try {
-        const data = post.outlineData as { suggestedImagePrompts?: string[] } | null;
-        return data?.suggestedImagePrompts || [];
-      } catch { return []; }
-    })();
+    // 7b–7c: Image resolution — only for HTML-based platforms (skip for plain text adapters)
+    let featuredMediaId: string | undefined;
+    if (adapter.usesHtmlPipeline) {
+      const suggestedPrompts: string[] = (() => {
+        try {
+          const data = post.outlineData as { suggestedImagePrompts?: string[] } | null;
+          return data?.suggestedImagePrompts || [];
+        } catch { return []; }
+      })();
 
-    const imageResult = await resolveImagePlaceholders(htmlContent, {
-      siteUrl, username, token,
-      orgId: req.orgId, postId: req.postId,
-      suggestedImagePrompts: suggestedPrompts,
-      postTitle: post.title,
-    }, adapter);
-    htmlContent = imageResult.html;
+      const imageResult = await resolveImagePlaceholders(htmlContent, {
+        siteUrl, username, token,
+        orgId: req.orgId, postId: req.postId,
+        suggestedImagePrompts: suggestedPrompts,
+        postTitle: post.title,
+      }, adapter);
+      htmlContent = imageResult.html;
 
-    // 7c. Determine featured image — use first inline image, or fetch dedicated one
-    let featuredMediaId: number | undefined;
-    if (imageResult.uploadedMediaIds.length > 0) {
-      featuredMediaId = imageResult.uploadedMediaIds[0];
-    } else if (adapter.uploadMedia) {
-      const featured = await fetchAndUploadFeaturedImage(
-        post.title,
-        { siteUrl, username, token, orgId: req.orgId, postId: req.postId },
-        adapter
-      );
-      if (featured) {
-        featuredMediaId = featured.mediaId;
-        // Store URL for dashboard display
-        await prisma.cmaPost.update({
-          where: { id: req.postId },
-          data: { featuredImage: featured.url },
-        });
+      // Determine featured image — use first inline image, or fetch dedicated one
+      if (imageResult.uploadedMediaIds.length > 0) {
+        featuredMediaId = imageResult.uploadedMediaIds[0];
+      } else if (adapter.uploadMedia) {
+        const featured = await fetchAndUploadFeaturedImage(
+          post.title,
+          { siteUrl, username, token, orgId: req.orgId, postId: req.postId },
+          adapter
+        );
+        if (featured) {
+          featuredMediaId = featured.mediaId;
+          await prisma.cmaPost.update({
+            where: { id: req.postId },
+            data: { featuredImage: featured.url },
+          });
+        }
       }
     }
 
@@ -213,6 +223,11 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
         },
       }),
     ]);
+
+    // Fire-and-forget post-publish notification
+    notifyPublished(req.postId, req.orgId).catch((err) =>
+      console.error("[notifications] Failed post-publish notification:", err)
+    );
 
     return { success: true, platformPostId: result.platformPostId, platformUrl: result.platformUrl };
   } catch (err) {
