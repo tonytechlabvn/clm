@@ -7,6 +7,7 @@ import { useCmaGet, cmaFetch } from "@/lib/cma/use-cma-api";
 import { Plug, Trash2, RefreshCw, Plus, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { ConnectWordPressForm } from "@/components/cma/connect-wordpress-form";
 import { ConnectFacebookFlow } from "@/components/cma/connect-facebook-flow";
+import { FacebookSetupForm } from "@/components/cma/facebook-setup-form";
 import { PublishingModeSettings } from "@/components/cma/publishing-mode-settings";
 import { ZaloSetupGuide } from "@/components/cma/zalo-setup-guide";
 import { useCmaOrg } from "@/lib/cma/hooks/use-cma-org";
@@ -147,8 +148,9 @@ export default function CmaSettingsPage() {
         ))}
       </div>
 
-      {org?.id && <PublishingModeSettings orgId={org.id} />}
+      {org?.id && <FacebookSetupForm orgId={org.id} />}
       {org?.id && <ZaloSetupGuide orgId={org.id} />}
+      {org?.id && <PublishingModeSettings orgId={org.id} />}
     </div>
   );
 }

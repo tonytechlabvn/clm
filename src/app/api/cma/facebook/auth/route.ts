@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Missing orgId parameter" }, { status: 400 });
     }
 
-    const loginUrl = buildFbLoginUrl(orgId, auth.userId);
+    const loginUrl = await buildFbLoginUrl(orgId, auth.userId);
     return NextResponse.redirect(loginUrl);
   } catch (error) {
     const message = error instanceof Error ? error.message : "OAuth init failed";

@@ -84,6 +84,10 @@ model CmaOrgSettings {
   publishingMode         String   @default("human_in_loop") // "auto" | "human_in_loop"
   autoPublishSources     String[] @default(["scheduler"])   // sources that auto-publish in auto mode
   requireApprovalSources String[] @default(["zalo_bot"])    // sources that always require approval
+  // Facebook App credentials (overrides env vars when set)
+  fbAppId                String?
+  fbAppSecret            String?  @db.Text // encrypted
+  fbRedirectUri          String?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 

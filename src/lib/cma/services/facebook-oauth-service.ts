@@ -1,7 +1,9 @@
 // Facebook OAuth 2.0 — token exchange, page listing, HMAC state tokens
 
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { prisma } from "@/lib/prisma-client";
 import { fbGraphFetch } from "../adapters/facebook-graph-client";
+import { decryptToken } from "../crypto-utils";
 
 const FB_OAUTH_BASE = "https://www.facebook.com/v21.0/dialog/oauth";
 const FB_GRAPH_BASE = "https://graph.facebook.com/v21.0";
@@ -15,12 +17,27 @@ const FB_SCOPES = [
   "pages_manage_metadata",
 ].join(",");
 
+// Read FB App credentials from DB (per-org) with env var fallback
+async function getAppCredentialsForOrg(orgId: string) {
+  const settings = await prisma.cmaOrgSettings.findUnique({ where: { orgId } });
+  const appId = settings?.fbAppId || process.env.FB_APP_ID;
+  const appSecret = settings?.fbAppSecret
+    ? decryptToken(settings.fbAppSecret)
+    : process.env.FB_APP_SECRET;
+  const redirectUri = settings?.fbRedirectUri || process.env.FB_REDIRECT_URI;
+  if (!appId || !appSecret || !redirectUri) {
+    throw new Error("Facebook App not configured — set App ID, App Secret, and Redirect URI in settings");
+  }
+  return { appId, appSecret, redirectUri };
+}
+
+// Synchronous fallback for non-org-scoped calls (token exchange uses env vars)
 function getAppCredentials() {
   const appId = process.env.FB_APP_ID;
   const appSecret = process.env.FB_APP_SECRET;
   const redirectUri = process.env.FB_REDIRECT_URI;
   if (!appId || !appSecret || !redirectUri) {
-    throw new Error("Missing FB_APP_ID, FB_APP_SECRET, or FB_REDIRECT_URI env vars");
+    throw new Error("Facebook App not configured — set env vars or configure in settings");
   }
   return { appId, appSecret, redirectUri };
 }
@@ -56,8 +73,8 @@ export function verifyStateToken(state: string): { orgId: string; userId: string
 }
 
 // Build FB Login Dialog redirect URL
-export function buildFbLoginUrl(orgId: string, userId: string): string {
-  const { appId, redirectUri } = getAppCredentials();
+export async function buildFbLoginUrl(orgId: string, userId: string): Promise<string> {
+  const { appId, redirectUri } = await getAppCredentialsForOrg(orgId);
   const state = buildStateToken(orgId, userId);
   const params = new URLSearchParams({
     client_id: appId,
