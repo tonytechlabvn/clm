@@ -16,11 +16,13 @@ export async function middleware(request: NextRequest) {
   const isLoginPage = pathname === "/login";
   const isAuthApi = pathname.startsWith("/api/auth");
   const isPublicApi = pathname === "/api/health" || pathname === "/api/ready";
+  const isPublicPage = pathname === "/privacy-policy";
+  const isWebhook = pathname.startsWith("/api/webhooks/");
   const isApiRoute = pathname.startsWith("/api/");
   const isCmaApi = pathname.startsWith("/api/cma/");
 
-  // Allow auth API and public endpoints through
-  if (isAuthApi || isPublicApi) return withRequestId(request, NextResponse.next());
+  // Allow auth API, public endpoints, public pages, and webhooks through
+  if (isAuthApi || isPublicApi || isPublicPage || isWebhook) return withRequestId(request, NextResponse.next());
 
   // API key auth bypass — gated behind feature flag
   if (
