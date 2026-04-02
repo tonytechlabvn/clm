@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useCmaGet } from "@/lib/cma/use-cma-api";
 import { Loader2, X, FileText, LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TemplateHtmlPreview } from "./template-html-preview";
 import type { SlotDefinition } from "@/types/cma-template-types";
 
 interface CmaTemplate {
@@ -14,6 +15,7 @@ interface CmaTemplate {
   slug: string;
   description: string | null;
   category: string;
+  thumbnail: string | null;
   blocks: unknown[];
   styleTheme: string;
   orgId: string | null;
@@ -145,50 +147,81 @@ export function CmaTemplatePicker({ open, onClose, onSelect, orgId }: CmaTemplat
           {!loading && !error && (
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
               {/* Blank option — always first */}
-              <div className="group rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-3 p-6 min-h-[140px]">
-                <FileText className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors" />
-                <div className="text-center">
-                  <p className="font-medium text-sm">Blank Post</p>
-                  <p className="text-xs text-muted-foreground mt-1">Start from scratch</p>
+              <div className="group rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors flex flex-col overflow-hidden">
+                <div className="h-32 flex items-center justify-center bg-muted/20">
+                  <FileText className="h-10 w-10 text-muted-foreground/40 group-hover:text-primary/50 transition-colors" />
                 </div>
-                <Button size="sm" variant="outline" onClick={() => onSelect(null)}>
-                  Use
-                </Button>
+                <div className="flex flex-col gap-2 p-4 flex-1 items-center justify-center">
+                  <p className="font-medium text-sm">Blank Post</p>
+                  <p className="text-xs text-muted-foreground">Start from scratch</p>
+                  <Button size="sm" variant="outline" onClick={() => onSelect(null)}>
+                    Use
+                  </Button>
+                </div>
               </div>
 
               {/* Template cards */}
-              {filtered.map((template) => (
-                <div
-                  key={template.id}
-                  className="group rounded-lg border hover:border-primary/50 hover:shadow-md transition-all flex flex-col gap-3 p-5"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-medium text-sm leading-tight">{template.name}</p>
-                    <div className="flex gap-1 shrink-0">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          CATEGORY_COLORS[template.category] ?? "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {CATEGORY_LABELS[template.category] ?? template.category}
-                      </span>
-                      {template.templateType === "html-slots" && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-                          HTML
-                        </span>
+              {filtered.map((template) => {
+                const isHtmlSlots = template.templateType === "html-slots";
+                return (
+                  <div
+                    key={template.id}
+                    className="group rounded-lg border hover:border-primary/50 hover:shadow-md transition-all flex flex-col overflow-hidden"
+                  >
+                    {/* Thumbnail preview area */}
+                    <div className="h-32 bg-muted/30 overflow-hidden relative">
+                      {isHtmlSlots && template.htmlTemplate ? (
+                        <TemplateHtmlPreview
+                          htmlTemplate={template.htmlTemplate}
+                          cssScoped={template.cssScoped || ""}
+                          scopeClass={`tpl-${template.id.slice(0, 8)}`}
+                          scale={0.25}
+                          className="h-full"
+                        />
+                      ) : template.thumbnail ? (
+                        <img
+                          src={template.thumbnail}
+                          alt={template.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          <FileText className="h-8 w-8" />
+                        </div>
                       )}
                     </div>
+
+                    {/* Card info */}
+                    <div className="flex flex-col gap-2 p-4 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium text-sm leading-tight">{template.name}</p>
+                        <div className="flex gap-1 shrink-0">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              CATEGORY_COLORS[template.category] ?? "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {CATEGORY_LABELS[template.category] ?? template.category}
+                          </span>
+                          {isHtmlSlots && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                              HTML
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {template.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 flex-1">
+                          {template.description}
+                        </p>
+                      )}
+                      <Button size="sm" variant="outline" className="w-full mt-auto" onClick={() => handleSelect(template)}>
+                        Use Template
+                      </Button>
+                    </div>
                   </div>
-                  {template.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-3 flex-1">
-                      {template.description}
-                    </p>
-                  )}
-                  <Button size="sm" variant="outline" className="w-full mt-auto" onClick={() => handleSelect(template)}>
-                    Use Template
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
