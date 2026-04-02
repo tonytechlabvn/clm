@@ -1,8 +1,8 @@
 # Codebase Summary — CLM Phase 7
 
 **Project:** Tony Tech Lab Core Learning Management (CLM)
-**Modules:** Content Management (CMA) + Classroom System + Learning Management System (LMS) + MCP Server
-**Phase:** 8 (MCP Server & API Key Authentication) + Phase 7 (CMA Post Template System)
+**Modules:** Content Management (CMA) + Classroom System + Learning Management System (LMS) + MCP Server + Social Platforms (Facebook, Zalo)
+**Phase:** 10 (Facebook Auto-Post + Zalo OA Bot) + Phase 8 (MCP Server & API Key) + Phase 7 (Templates)
 **Last Updated:** 2026-04-02
 **Status:** In Progress
 
@@ -151,6 +151,26 @@ src/
 
 ## Key Files by Feature
 
+### Facebook & Zalo Integration (Phase 10)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `src/lib/cma/adapters/facebook-adapter.ts` | ~200 | Graph API v21.0 publishing + metrics sync |
+| `src/lib/cma/adapters/facebook-graph-client.ts` | ~120 | HTTP wrapper for Facebook Graph API |
+| `src/lib/cma/services/facebook-oauth-service.ts` | ~180 | OAuth 2.0 flow, token refresh, page selection |
+| `src/lib/cma/services/publish-mode-router.ts` | ~100 | Route posts to auto-publish or approval queue |
+| `src/lib/zalo/zalo-bot-provider.ts` | ~80 | Bot provider interface |
+| `src/lib/zalo/zalo-oa-provider.ts` | ~150 | Zalo OA implementation |
+| `src/lib/zalo/zalo-user-mapping.ts` | ~60 | User ID resolution |
+| `src/lib/zalo/zalo-message-router.ts` | ~120 | Webhook handler, message parsing |
+| `src/lib/cma/services/approval-token-service.ts` | ~80 | Generate/verify HMAC approval tokens |
+| `src/components/cma/connect-facebook-flow.tsx` | ~150 | OAuth flow UI + page selector |
+| `src/components/cma/facebook-content-preview.tsx` | ~120 | Facebook post preview |
+| `src/components/cma/zalo-setup-guide.tsx` | ~180 | Zalo OA bot setup instructions |
+| `src/components/cma/source-badge.tsx` | ~40 | Post source origin badge |
+| `src/components/cma/platform-target-selector.tsx` | ~100 | Multi-platform publishing targets |
+| `src/components/cma/publishing-mode-settings.tsx` | ~140 | Org admin publishing mode panel |
+
 ### API Key Authentication (Phase 8)
 
 | File | Lines | Purpose |
@@ -250,7 +270,18 @@ src/
 
 ---
 
-## Data Model (Prisma) — 27 Models (Phase 3-8)
+## Data Model (Prisma) — 29 Models (Phase 3-10)
+
+### Phase 10: Facebook Auto-Post & Zalo OA Bot (2 models)
+
+**CmaZaloBotConfig** — Zalo bot configuration per org
+- id, orgId (unique), botType ("oa" | "personal"), oaId, accessToken, refreshToken, tokenExpiry
+- Personal mode fields: cookies, selfId, imei, userAgent, allowedSenderIds[], isActive
+- Used by zalo-message-router to route incoming messages
+
+**CmaZaloUserMapping** — Map Zalo user IDs to CLM users
+- id, orgId, userId, zaloUserId (unique per org), zaloName, linkCode, isActive
+- Resolves post authorship when Zalo message arrives
 
 ### Phase 8: API Key Authentication (1 model)
 
@@ -753,12 +784,39 @@ npx prisma migrate deploy
 | `package.json` | `clm-mcp-server/` | Dependencies (@modelcontextprotocol/sdk, axios, gray-matter) | Complete |
 | `tsconfig.json` | `clm-mcp-server/` | TypeScript config (esbuild target) | Complete |
 
+### Phase 10: Facebook & Zalo Integration
+
+| Component | Location | Purpose | Status |
+|-----------|----------|---------|--------|
+| `facebook-adapter.ts` | `lib/cma/adapters/` | Graph API v21.0 publishing + metrics sync | Complete |
+| `facebook-graph-client.ts` | `lib/cma/adapters/` | HTTP wrapper for Facebook Graph API | Complete |
+| `facebook-oauth-service.ts` | `lib/cma/services/` | OAuth 2.0 flow, token management | Complete |
+| `publish-mode-router.ts` | `lib/cma/services/` | Route to auto-publish or approval queue | Complete |
+| `approval-token-service.ts` | `lib/cma/services/` | HMAC-signed approval token generation | Complete |
+| `zalo-bot-provider.ts` | `lib/zalo/` | Bot provider interface | Complete |
+| `zalo-oa-provider.ts` | `lib/zalo/` | Zalo OA implementation | Complete |
+| `zalo-user-mapping.ts` | `lib/zalo/` | User ID → CLM user resolution | Complete |
+| `zalo-message-router.ts` | `lib/zalo/` | Webhook handler, message parsing | Complete |
+| `/api/cma/facebook/authorize` | `app/api/cma/` | OAuth flow initiation | Complete |
+| `/api/cma/facebook/callback` | `app/api/cma/` | OAuth redirect handler | Complete |
+| `/api/cma/facebook/pages` | `app/api/cma/` | List connected FB pages | Complete |
+| `/api/webhooks/zalo` | `app/api/webhooks/` | Zalo message webhook | Complete |
+| `/api/cma/posts/[id]/approve` | `app/api/cma/` | One-click post approval | Complete |
+| `/api/cma/org/settings` | `app/api/cma/` | Org publishing mode management | Complete |
+| `connect-facebook-flow.tsx` | `components/cma/` | OAuth flow UI + page selector | Complete |
+| `facebook-content-preview.tsx` | `components/cma/` | Facebook post preview | Complete |
+| `zalo-setup-guide.tsx` | `components/cma/` | Zalo OA setup instructions | Complete |
+| `source-badge.tsx` | `components/cma/` | Post source origin badge | Complete |
+| `platform-target-selector.tsx` | `components/cma/` | Multi-platform target selection | Complete |
+| `publishing-mode-settings.tsx` | `components/cma/` | Org publishing mode admin panel | Complete |
+
 ---
 
 ## Version History
 
 | Version | Date | Status | Phase |
 |---------|------|--------|-------|
+| 0.2.0-phase10 | 2026-04-02 | Complete | Facebook Auto-Post + Zalo OA Bot |
 | 0.1.0-mcp-phase1 | 2026-04-02 | Complete | MCP Server & API Key Authentication |
 | 0.1.0-phase7 | 2026-03-28 | Complete | Block Editor, Templates, Image System |
 | 0.1.0-phase4 | 2026-03-28 | Complete | Classroom + LMS + AI |

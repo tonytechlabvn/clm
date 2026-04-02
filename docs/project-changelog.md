@@ -4,6 +4,134 @@ All notable changes to Tony Tech Lab CLM are documented here. Format: [ISO 8601 
 
 ---
 
+## [2026-04-02] — v0.2.0-phase10 — Facebook Auto-Post System with Zalo OA Bot
+
+### Added (Phase 10: Social Platform Publishing + Zalo Bot Integration)
+
+**Facebook Platform Adapter**
+- `src/lib/cma/adapters/facebook-adapter.ts` — Graph API v21.0 publishing (plain text + images)
+- `src/lib/cma/adapters/facebook-graph-client.ts` — HTTP wrapper for Facebook Graph API with token refresh
+- Real metrics sync: reach, impressions, engagement (6-hour intervals via metrics sync job)
+
+**Facebook OAuth Integration**
+- `src/lib/cma/services/facebook-oauth-service.ts` — Full OAuth 2.0 flow (authorize → callback → token storage)
+- Encrypted token storage in `CmaPlatformAccount` (accessToken, refreshToken fields)
+- Token refresh on expiry (automatic)
+- Page selection UI (users choose FB page to publish to)
+
+**OAuth API Routes (3 new)**
+- `GET /api/cma/facebook/authorize` — Initiate OAuth flow
+- `GET /api/cma/facebook/callback` — Handle OAuth redirect
+- `GET /api/cma/facebook/pages` — List connected Facebook pages
+
+**Publishing Mode System**
+- `src/lib/cma/services/publish-mode-router.ts` — Per-org auto/human-in-loop routing
+- `CmaOrgSettings` model — publishingMode ("auto"|"human_in_loop"), autoPublishSources[], requireApprovalSources[]
+- Routes posts by source → auto-publish or approval queue
+- API: `PATCH /api/cma/org/settings` — Update org publishing mode
+
+**Zalo OA Bot (Webhook-based)**
+- `src/lib/zalo/zalo-bot-provider.ts` — Bot provider interface (OA or personal)
+- `src/lib/zalo/zalo-oa-provider.ts` — Zalo OA implementation
+- `src/lib/zalo/zalo-user-mapping.ts` — Map Zalo user IDs → CLM users
+- `src/lib/zalo/zalo-message-router.ts` — Webhook handler, message parsing
+- Simple mode: Text message → draft post (auto-tagged "zalo_bot")
+- Always routed to approval queue per `requireApprovalSources`
+
+**Webhook API Route (1 new)**
+- `POST /api/webhooks/zalo` — Receive Zalo messages
+  - HMAC signature validation via `ZALO_WEBHOOK_SECRET`
+  - Parse text → draft CmaPost (source="zalo_bot")
+  - Returns 200 OK immediately (async)
+
+**Notifications & Approval**
+- `src/lib/cma/services/notification-service.ts` — Send Zalo approval request messages
+- `src/lib/cma/services/approval-token-service.ts` — Generate HMAC-signed approval tokens (JWT)
+- One-click approval: `POST /api/cma/posts/[id]/approve?token=...`
+- Token includes: postId, userId, expiresAt
+
+**New Database Models (2)**
+- `CmaZaloBotConfig` — Bot config per org (botType, oaId, accessToken, refreshToken, active status)
+- `CmaZaloUserMapping` — Map Zalo userId → CLM userId for authorship
+
+**Post Source Field**
+- `CmaPost.source: String` — New field: "web" | "zalo_bot" | "mcp" | "scheduler"
+- Replaces implicit origin detection; used in publish-mode-router
+
+**Updated PlatformAdapter Interface**
+- New method: `prepareContent(content, format: "html"|"plaintext")` — Platform-specific content transformation
+- New field: `usesHtmlPipeline: boolean` — Flag for HTML processing requirement
+
+**MediaUploadResult Type Update**
+- `platformMediaId: String` (was number) — Support string IDs (e.g., Facebook)
+
+**UI Components (New)**
+- `connect-facebook-flow.tsx` — OAuth flow UI + page selector
+- `facebook-content-preview.tsx` — Facebook post preview
+- `source-badge.tsx` — Badge showing post origin
+- `platform-target-selector.tsx` — Multi-platform publishing target selector
+- `zalo-setup-guide.tsx` — Zalo OA bot setup instructions
+- `publishing-mode-settings.tsx` — Org admin panel for publishing modes
+
+### Environment Variables (New)
+
+```
+FB_APP_ID=...                    # Facebook app ID
+FB_APP_SECRET=...                # Facebook app secret
+FB_REDIRECT_URI=...              # OAuth callback URL (e.g., https://app.com/api/cma/facebook/callback)
+ZALO_OA_ID=...                   # Zalo OA app ID
+ZALO_OA_SECRET=...               # Zalo OA app secret
+ZALO_WEBHOOK_SECRET=...          # Webhook HMAC signing secret
+JWT_APPROVAL_SECRET=...          # JWT signing key for approval tokens
+```
+
+### Changed
+
+**CmaPost Schema**
+- New field: `source: String` (default: "web") — Discriminate post origin
+- Used in publish-mode-router for auto/approval routing
+
+**CmaPlatformAccount Schema**
+- Now supports: "wordpress" | "facebook" | "linkedin" (future)
+- `platform: String` field expanded
+
+### Database Migration
+
+```bash
+npx prisma migrate deploy  # Production
+npx prisma migrate dev --name 0004_facebook_zalo_phase10  # Dev
+```
+
+Includes:
+- Add `CmaOrgSettings`, `CmaZaloBotConfig`, `CmaZaloUserMapping` models
+- Add `source` field to `CmaPost`
+- Add indexes on new fields
+
+### Testing
+
+- [x] Facebook OAuth flow (authorize → callback → token storage)
+- [x] Facebook publishing (text + images to Graph API)
+- [x] Facebook metrics sync (real metrics retrieval)
+- [x] Zalo webhook parsing + draft creation
+- [x] Publishing mode routing (auto vs approval)
+- [x] Approval token generation/validation
+- [x] One-click approval link
+- [x] Multi-platform target selection
+
+### Documentation
+
+- [x] `docs/system-architecture.md` — Phase 10 Facebook adapter, Zalo bot, publishing mode system
+- [x] `docs/codebase-summary.md` — Phase 10 new files/modules
+- [x] `docs/project-changelog.md` — This file
+
+### No Breaking Changes
+
+- Existing CMA APIs unchanged (new routes additive only)
+- Posts continue to work without specifying `source` (defaults to "web")
+- Org settings optional (defaults to "human_in_loop")
+
+---
+
 ## [2026-04-02] — v0.1.0-mcp-phase1 — MCP Server & API Key Authentication Added
 
 ### Added (MCP Integration Phase 1: API Key Auth + Server)

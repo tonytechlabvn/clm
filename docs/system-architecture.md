@@ -264,148 +264,33 @@ NEXT_RUNTIME=nodejs            # Enables instrumentation
 
 ---
 
-## Phase 4 Architecture: Classroom + LMS + AI
+## Phase 4 Architecture: Classroom + LMS + AI (Summary)
 
-### 1. Classroom System (4 new models, 12 API routes)
+**Classroom System (4 models):** Org learning spaces, member roles, assignments, submissions, feedback
+- API: 12 routes (CRUD classrooms, assignments, submissions, feedback; dashboard; CSV export)
+- Features: Join by code, role-based access, instructor analytics
 
-**Models:**
-- `Classroom` — Org's learning space (orgId, instructorId, name, joinCode unique 6-char, isActive)
-- `ClassroomMember` — Student/instructor role (userId, classroomId, role: "student"|"instructor")
-- `Assignment` — Classroom task (title, description, jobDescription, dueDate, type, status, linkedCourseId)
-- `Submission` — Student work (assignmentId, studentId, content, score, status, submittedAt)
-- `Feedback` — Instructor/AI feedback (submissionId, instructorId, comment, aiFeedback)
+**LMS (10 models):** Courses, sections, lessons, enrollments, progress tracking
+- API: 12 routes (course CRUD, section/lesson CRUD, enrollment, progress)
+- Features: Course builder, student progress tracking, lesson types (text/video/quiz)
 
-**API Routes (12):**
-- POST/GET `/api/classroom` — Create classroom + list instructor's classrooms
-- GET/PATCH/DELETE `/api/classroom/[id]` — Classroom detail, update, archive
-- POST `/api/classroom/join` — Join classroom by code
-- DELETE `/api/classroom/[id]/members/[uid]` — Remove member
-- POST/GET `/api/classroom/[id]/assignments` — Create assignment + list
-- GET `/api/classroom/[id]/assignments/[aid]` — Assignment detail (role-filtered view)
-- POST `/api/classroom/[id]/assignments/[aid]/submit` — Student submission
-- POST `/api/classroom/[id]/assignments/[aid]/submissions/[sid]/feedback` — Give feedback
-- POST `/api/classroom/[id]/assignments/[aid]/ai-feedback` — Trigger AI feedback
-- GET `/api/classroom/[id]/dashboard` — Instructor analytics
-- GET `/api/classroom/[id]/export` — CSV export (submissions + scores)
+**AI Integration (3 API routes):** Quiz generation, content summarization, code review
+- pg-boss queues: `lms-quiz-generate`, `classroom-batch-feedback`
+- Prompts: Quiz generator, content summarizer, code reviewer, submission feedback
 
-### 2. LMS (Course + Lesson Management) (10 new models, 12 API routes)
-
-**Models:**
-- `Course` — Published course (orgId, instructorId, title, slug unique, description, thumbnailUrl, level, status, estimatedHours, tags[])
-- `Section` — Course grouping (courseId, title, order, isPublished)
-- `Lesson` — Learning unit (sectionId, title, type: "video"|"article"|"quiz", content, videoUrl, order, estimatedMinutes, isPublished)
-- `LessonProgress` — Student completion (lessonId, userId, status: "not_started"|"in_progress"|"completed", completedAt, timeSpent)
-- `CourseEnrollment` — Student enrollment (courseId, userId, progress 0-100, enrolledAt, completedAt)
-- Plus 5 core auth models (User, Organization, Account, Session, VerificationToken)
-
-**API Routes (12):**
-- GET/POST `/api/lms/courses` — Course catalog + create
-- GET/PATCH/DELETE `/api/lms/courses/[slug]` — Course detail, update, archive
-- POST `/api/lms/courses/[slug]/sections` — Create section
-- PATCH/DELETE `/api/lms/courses/[slug]/sections/[id]` — Section update/delete
-- POST `/api/lms/courses/[slug]/lessons` — Create lesson
-- GET/PATCH/DELETE `/api/lms/courses/[slug]/lessons/[id]` — Lesson content, update, delete
-- POST `/api/lms/courses/[slug]/enroll` — Student enrollment
-- GET `/api/lms/courses/[slug]/progress` — Progress tracking
-- POST `/api/lms/lessons/[id]/progress` — Mark lesson complete
-
-### 3. AI Integration (3 API routes, 2 pg-boss queues)
-
-**AI Routes:**
-- POST `/api/lms/ai/generate-quiz` — Generate quiz from lesson content
-- POST `/api/lms/ai/summarize` — Summarize lesson content
-- POST `/api/lms/ai/review-code` — Score code submission with feedback
-
-**pg-boss Queues:**
-- `lms-quiz-generate` — Async quiz generation (prevents UI blocking)
-- `classroom-batch-feedback` — Batch AI feedback on ungraded submissions
-
-**Prompts** (src/lib/prompts/):
-- `clm-quiz-generator-prompt.ts` — MCQ generation from lesson text
-- `clm-content-summarizer-prompt.ts` — Multi-paragraph summary
-- `clm-code-reviewer-prompt.ts` — Scoring + improvement suggestions
-- `clm-submission-feedback-prompt.ts` — Personalized feedback for assignments
-
-### 4. Cross-System Integration (1 API route)
-
-- POST `/api/integration/classroom-courses` — Link LMS course to classroom assignment
-  - Allows students to complete course as assignment submission
-  - Tracks completion and automatically scores based on course progress
-
-### Database Enhancements
-
-**New pg-boss Queues:**
-```
-- Job: 'lms-quiz-generate'
-  Data: { lessonId, aiProvider, contentText, lessonTitle }
-  Timeout: 30s, Retries: 2
-
-- Job: 'classroom-batch-feedback'
-  Data: { classroomId, assignmentId, llmModel }
-  Timeout: 60s, Retries: 2
-```
-
-**Indexes Added:**
-- `Classroom` — `@@index([orgId])`, `@@index([instructorId])`
-- `Assignment` — `@@index([classroomId])`, `@@index([dueDate])`
-- `Course` — `@@index([orgId])`, `@@index([slug])`
-- `Lesson` — `@@index([courseId])`, `@@index([sectionId])`
-- `CourseEnrollment` — `@@index([courseId])`, `@@index([userId])`
+**Cross-System:** Link LMS courses to classroom assignments via `/api/integration/classroom-courses`
 
 ---
 
-## Phase 5-6: CMA AI Curation, Generation & Analytics
+## Phase 5-6: CMA AI Curation, Generation & Analytics (Summary)
 
-### CMA AI Content Pipeline (Phase 4-5)
+RSS feed integration with AI curation, content generation, and metrics syncing. Key additions:
+- Services: `crawler-service`, `content-ai-service`, `content-generation-service`, `analytics-service`
+- Models: `CmaRssFeed`, `CmaAiUsage`, `CmaPostMetrics`, `CmaMetricsSnapshot`
+- API routes: RSS CRUD, AI curate/generate, analytics, approval queue
+- Security: SSRF prevention, AI prompt injection prevention, rate limiting, token budgets
 
-**New Services:**
-- `crawler-service.ts` — RSS feed parsing, content extraction via @mozilla/readability, URL normalization, dedup
-- `content-ai-service.ts` — AI curation bridge (Gemini Flash), structured prompt with system/user separation
-- `content-generation-service.ts` — Two-step outline→content generation (Gemini 2.5 Flash)
-- `url-safety.ts` — SSRF prevention (DNS resolution, IP blocklist, scheme allowlist)
-- `analytics-service.ts` — Metrics aggregation (overview, timeseries, best-times, top posts)
-
-**New pg-boss Queues:**
-```
-- Job: 'cma:rss-crawl'     — RSS feed crawling (per-feed, configurable frequency)
-- Job: 'cma:curate'        — AI curation per article (3 retries, 120s timeout)
-- Job: 'cma:metrics-sync'  — Daily metrics sync at 03:00 UTC (2 retries, 600s timeout)
-```
-
-**New API Routes (Phase 4-6):**
-- `GET/POST /api/cma/feeds` — RSS feed CRUD
-- `PUT/DELETE /api/cma/feeds/[id]` — Feed update/delete
-- `POST /api/cma/ai/curate` — Curate content from URL
-- `GET/POST /api/cma/approval` — Approval queue (pending_review posts)
-- `POST /api/cma/ai/generate-outline` — AI outline generation
-- `POST /api/cma/ai/generate-content` — AI full content generation
-- `GET /api/cma/analytics/overview` — Dashboard summary
-- `GET /api/cma/analytics/timeseries` — Time-series chart data
-- `GET /api/cma/analytics/best-times` — Posting heatmap
-- `GET /api/cma/analytics/export` — CSV export
-
-**New UI Pages:**
-- `/admin/cma/settings/feeds` — RSS feed management
-- `/admin/cma/approval` — AI content approval queue
-- `/admin/cma/composer/ai-generator` — 4-step AI content wizard
-- `/admin/cma/analytics` — Analytics dashboard (Recharts)
-
-**New Schema Models:**
-- `CmaRssFeed` — RSS feed config (orgId, url, keywords, frequency, errorCount)
-- `CmaAiUsage` — Org AI token budget tracking (orgId, month, tokensUsed, tokenLimit)
-- `CmaPostMetrics` — Latest post metrics (reach, clicks, likes, shares, comments)
-- `CmaMetricsSnapshot` — Daily time-series snapshots (append-only)
-
-**CmaPost New Fields:**
-- `aiGenerated`, `sourceUrl`, `normalizedSourceUrl`, `parentPostId` (Phase 4)
-- `outlineData`, `originalAiDraft`, `generationStatus` (Phase 5)
-
-### Security Measures
-- SSRF prevention on RSS feeds and URL curation (DNS blocklist, scheme allowlist)
-- AI prompt injection prevention (system/user message separation, input sanitization)
-- Self-approval logic (single-admin: explicit ack, multi-admin: different userId)
-- Rate limiting on AI endpoints (5-10 req/hour/user)
-- Org-level AI token budget with 80% warn / 100% hard-stop
+See full documentation in project roadmap for detailed phase notes.
 
 ---
 
@@ -745,172 +630,16 @@ Result: "Blog post published at [URL]"
 
 ---
 
-## Phase 9: CMA Template Studio (URL Extraction & Advanced Features)
+## Phase 9: CMA Template Studio (Summary)
 
-### 1. Template Extraction Engine
+Advanced template extraction, generation, and slot-based editing via URL extraction. See separate template studio documentation for full details.
 
-**New Services:**
-- `template-extraction-service.ts` — Main orchestrator for URL → HTML extraction → CSS scoping → AI slot detection → template creation
-- `template-css-scoper.ts` — CSS extraction + scoping logic (handles Tailwind, external stylesheets, computed styles)
-- `template-slot-detector.ts` — AI-powered slot detection + placeholder injection
-- `template-ai-service.ts` — AI template generation + content filling
-
-**Key Features:**
-- Extract content HTML from any public URL (strip nav/footer/ads/scripts)
-- Extract and scope relevant CSS under unique container class (`.tpl-{id}`)
-- Inline computed styles to capture Tailwind/utility CSS
-- AI-assisted detection of content slots (title, hero image, body sections, etc.)
-- Convert detected slots to `{{slot_name}}` placeholders in HTML
-- Sanitize HTML via DOMPurify (prevent XSS)
-
-**Architecture:**
-```
-URL → validateUrlSafety() → extract HTML + CSS
-  → inline computed styles → simplify for AI
-  → AI slot detection → placeholder injection
-  → return ExtractedTemplate (ready for preview/save)
-```
-
-### 2. Database Enhancements (CmaTemplate)
-
-**Extended CmaTemplate Model:**
-- `templateType: String` — "blocks" (BlockNote) | "html-slots" (extracted HTML)
-- `htmlTemplate: String?` — Raw HTML with `{{slot_name}}` placeholders
-- `cssScoped: String?` — Scoped CSS string
-- `slotDefinitions: JSON?` — `[{ name, type, label, placeholder, maxLength, required }]`
-- `sourceUrl: String?` — Original URL (for extracted templates)
-- `tags: String[]` — Categorization
-- `usageCount: Int` — Tracking
-- `lastUsedAt: DateTime?` — Recently used timestamp
-
-**New CmaTemplateFavorite Model:**
-- Per-user favorite marking (userId + templateId unique)
-- Enables filtering/sorting by user favorites in gallery
-
-**CmaPost Updates:**
-- `slotValues: JSON?` — Store slot values for re-editing HTML-slot templates
-
-### 3. API Routes (New)
-
-**Extraction & Management:**
-- `POST /api/cma/templates/extract` — Extract template from URL (preview)
-- `POST /api/cma/templates/ai-generate` — Generate template from natural language description
-- `POST /api/cma/templates/ai-fill` — Generate content for template slots
-- `POST /api/cma/templates/from-post` — Save existing post as template
-- `POST /api/cma/templates/[id]/favorite` — Toggle favorite (per-user)
-- `PATCH /api/cma/templates/[id]/usage` — Increment usage count
-
-**Enhanced Existing Routes:**
-- `GET /api/cma/templates` — Add favorites, usageCount, tags, templateType fields
-- `POST/PUT /api/cma/templates` — Support html-slots template fields
-
-### 4. Template Studio Page (Full Rewrite)
-
-**Page Structure:** `/admin/cma/templates`
-
-**New Components:**
-- `template-studio-gallery.tsx` — Grid gallery with search, filter (type/category/tags), sort (recent/popular/newest), favorites
-- `template-studio-card.tsx` — Template card: thumbnail preview, metadata, usage stats, action menu
-- `template-extract-wizard.tsx` — Multi-step URL extraction flow (URL input → review extraction → edit slots → save)
-- `template-ai-generator.tsx` — Natural language template generation UI
-- `template-slot-editor.tsx` — Table interface for reviewing/editing detected slots
-- `template-metadata-form.tsx` — Name, description, category, tags (reused in create/edit)
-- `template-html-preview.tsx` — Scoped HTML preview (isolated CSS, scaled thumbnail view)
-- `template-save-from-post-dialog.tsx` — Modal dialog for saving post as template
-
-**Views (via URL query params):**
-- `?view=gallery` — Browse all templates
-- `?view=extract` — URL extraction wizard
-- `?view=edit&id=xxx` — Edit template metadata
-
-### 5. Composer Integration (Phase 8)
-
-**Dual-Mode Editing:**
-- After template selection, detect `templateType` from API
-- If `blocks` → show existing BlockNote editor
-- If `html-slots` → show slot form + live preview (side-by-side)
-
-**New Components:**
-- `cma-slot-form.tsx` — Dynamic form (text, richtext, image, list inputs per slot)
-- `cma-html-live-preview.tsx` — Real-time preview with slot values injected
-- `template-slot-renderer.ts` — Utility function: inject slot values into HTML template string
-
-**Enhanced Picker:**
-- Visual thumbnails (HTML preview or block icons)
-- Type badges ("Blocks" / "HTML Slots")
-- Favorite star toggle
-- Search + filter
-- "Browse Studio" link
-
-**Publishing Flow (HTML-Slots):**
-```
-Slot form values + htmlTemplate + cssScoped
-  → renderSlotTemplate() (inject slot values)
-  → store post.slotValues for re-editing
-  → store post.contentHtml for publishing
-  → existing platform adapters handle final output
-```
-
-### 6. AI Features (Phase 8)
-
-**Template Generation:**
-- User provides natural language description
-- AI generates semantic HTML + CSS + slot definitions
-- User reviews in same extraction wizard UI
-
-**Content Filling:**
-- User clicks "AI Fill" in slot form
-- AI generates contextual content for all slots
-- Respects slot constraints (maxLength, type)
-- User can edit before publishing
-
-**Template Suggestions:**
-- Client-side keyword matching (no AI call)
-- Suggest templates based on post title/topic
-- Show in template picker suggestions section
-
-**Prompts:**
-- `cma-template-generation-prompt.ts` — System prompt for HTML/CSS generation
-- `cma-content-fill-prompt.ts` — System prompt for slot content generation
-- `cma-slot-detection-prompt.ts` — System prompt for AI slot detection from HTML
-
-### 7. Security & Validation
-
-**URL Extraction:**
-- SSRF prevention via `validateUrlSafety()` (DNS, IP blocklist)
-- HTML sanitization via DOMPurify before storage
-- AI injection prevention (sanitize HTML before passing to AI)
-- 5MB page size limit
-
-**HTML Preview:**
-- Server sanitization before storage
-- Client-side `dangerouslySetInnerHTML` safe (server-sanitized HTML)
-- CSS scoping prevents style bleed (`.tpl-{id}` prefix)
-
-**Slot Content:**
-- Sanitize slot values before HTML injection
-- Escape HTML entities for text slots
-- Validate image URLs (no `javascript:` URIs)
-
-**Rate Limiting:**
-- 10 extractions/hour per org (prevent abuse)
-- Budget checks before AI calls (token usage tracking)
-
-### 8. Performance Considerations
-
-**Token Efficiency:**
-- Simplify HTML before AI input (strip attributes, truncate text)
-- Target <2000 tokens for typical article
-- ~4000 token budget for template generation
-- ~2000 token budget for content filling
-
-**Extraction Timeline:**
-- Full pipeline target: <15s
-- 30s timeout via AbortSignal on API endpoint
-
-**Gallery Performance:**
-- Client-side filtering for <1s load (50+ templates)
-- Pagination if needed (100+ templates)
+**Key Additions:**
+- `template-extraction-service.ts` — URL → HTML extraction + CSS scoping
+- `CmaTemplate.templateType` — "blocks" | "html-slots"
+- `CmaTemplate.htmlTemplate`, `slotDefinitions` — HTML-slot support
+- API routes: `/api/cma/templates/{extract,ai-generate,ai-fill,from-post}`
+- UI: Template studio page with extraction wizard, slot editor, favorites
 
 ---
 
@@ -923,6 +652,135 @@ Slot form values + htmlTemplate + cssScoped
 - **Template Marketplace:** Share/discover community templates
 - **Advanced CSS Isolation:** Iframe-based preview for full CSS isolation
 - **Headless Browser Extraction:** Puppeteer/Playwright for dynamic sites (instead of JSDOM)
+
+---
+
+## Phase 10: Facebook Auto-Post System with Zalo OA Bot
+
+### 1. Facebook Adapter (Graph API v21.0)
+
+**New Services:**
+- `src/lib/cma/adapters/facebook-adapter.ts` — Implements PlatformAdapter for Facebook Pages
+  - Publishing: Text + images to Facebook (v21.0 API)
+  - Metrics: Real-time reach/engagement via Graph API
+  - Syncs every 6 hours via metrics sync job
+- `src/lib/cma/adapters/facebook-graph-client.ts` — HTTP wrapper for Facebook Graph API
+  - Typed API calls, token refresh handling, error mapping
+
+**OAuth Service:**
+- `src/lib/cma/services/facebook-oauth-service.ts` — Full OAuth 2.0 flow
+  - Authorize → callback → token storage (encrypted in DB)
+  - Token refresh on expiry (automatic)
+  - Page selection UI (users choose which FB page to publish to)
+
+**API Routes (3 new):**
+- `GET /api/cma/facebook/authorize` — OAuth flow initiation
+- `GET /api/cma/facebook/callback` — OAuth redirect handler
+- `GET /api/cma/facebook/pages` — List connected FB pages
+
+**UI Components:**
+- `connect-facebook-flow.tsx` — OAuth flow UI + page selector
+- `facebook-content-preview.tsx` — Post preview as it appears on Facebook
+
+**Environment Variables:**
+- `FB_APP_ID`, `FB_APP_SECRET` — Facebook app credentials
+- `FB_REDIRECT_URI` — OAuth callback URL
+
+### 2. Publishing Mode System (Per-Org Auto/Human-in-Loop)
+
+**Database Model:**
+- `CmaOrgSettings` (new) — Per-org publishing control
+  - `publishingMode`: "auto" | "human_in_loop"
+  - `autoPublishSources`: sources auto-publish (e.g., ["scheduler", "mcp"])
+  - `requireApprovalSources`: always need approval (e.g., ["zalo_bot"])
+
+**Service:**
+- `src/lib/cma/services/publish-mode-router.ts` — Route posts to auto-publish or approval queue
+  - Checks source + mode → decide publish immediately or queue for approval
+  - Integrates with approval workflow
+
+**API Route:**
+- `PATCH /api/cma/org/settings` — Update org publishing mode
+
+### 3. Zalo OA Bot (Webhook-based)
+
+**Models:**
+- `CmaZaloBotConfig` — Bot setup per org (botType, oaId, tokens, active status)
+- `CmaZaloUserMapping` — Map Zalo user IDs → CLM users for authorship
+
+**Bot Provider Interface:**
+- `src/lib/zalo/zalo-bot-provider.ts` — Abstract bot interface (OA or personal)
+- `src/lib/zalo/zalo-oa-provider.ts` — Zalo OA implementation
+- `src/lib/zalo/zalo-user-mapping.ts` — User ID resolution
+
+**Message Router:**
+- `src/lib/zalo/zalo-message-router.ts` — Webhook handler, message parsing
+
+**Webhook Route:**
+- `POST /api/webhooks/zalo` — Webhook endpoint for Zalo messages
+  - Validates HMAC signature (`ZALO_WEBHOOK_SECRET`)
+  - Parses incoming text messages → draft posts
+  - Returns 200 OK immediately (async processing)
+
+**Environment Variables:**
+- `ZALO_OA_ID`, `ZALO_OA_SECRET` — OA app credentials
+- `ZALO_WEBHOOK_SECRET` — HMAC signature validation
+
+**Features:**
+- Simple mode: Text message → draft post (auto-tagged "zalo_bot")
+- Optional: Image attachment support (via CmaMedia)
+- Always routed to approval queue (per `CmaOrgSettings.requireApprovalSources`)
+
+### 4. Notifications & Approval Flow
+
+**Notification Service Updates:**
+- `src/lib/cma/services/notification-service.ts` — Send Zalo message notifications
+  - Approval request: "New post pending review: [link to post]"
+  - Approval token: HMAC-signed JWT in URL query (`approvalToken`)
+
+**Approval Token Service (new):**
+- `src/lib/cma/services/approval-token-service.ts` — Generate/verify approval tokens
+  - Signed with `JWT_APPROVAL_SECRET`
+  - Includes: postId, userId, expiresAt
+  - One-click approval: `POST /api/cma/posts/[id]/approve?token=...`
+
+**New Environment Variable:**
+- `JWT_APPROVAL_SECRET` — JWT signing key for approval tokens
+
+### 5. New CmaPost Field
+
+**Source Field:**
+- `CmaPost.source: String` — Discriminate origin
+  - "web" (default) | "zalo_bot" | "mcp" | "scheduler"
+  - Used in publish-mode-router to determine auto-publish vs approval
+
+### 6. Type System Updates
+
+**PlatformAdapter Interface Additions:**
+- `prepareContent(content: string, format: "html"|"plaintext"): Promise<string>`
+  - Transform content for platform specifics (strip HTML for FB plain-text, etc.)
+- `usesHtmlPipeline: boolean` — Flag if adapter requires HTML processing
+
+**MediaUploadResult Type Change:**
+- `platformMediaId`: String (was number) — Some platforms use string IDs (Facebook)
+
+### 7. UI Components (New)
+
+- `source-badge.tsx` — Badge showing post origin ("Web" | "Zalo Bot" | "MCP" | "Scheduler")
+- `platform-target-selector.tsx` — Choose platforms when publishing (WordPress + Facebook)
+- `zalo-setup-guide.tsx` — Step-by-step guide for Zalo OA bot setup
+- `publishing-mode-settings.tsx` — Org admin panel for auto/human-in-loop modes
+
+### 8. API Routes Summary
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/cma/facebook/authorize` | GET | Start OAuth flow |
+| `/api/cma/facebook/callback` | GET | OAuth callback handler |
+| `/api/cma/facebook/pages` | GET | List connected FB pages |
+| `/api/webhooks/zalo` | POST | Zalo message webhook |
+| `/api/cma/posts/[id]/approve` | POST | One-click approval (with token) |
+| `/api/cma/org/settings` | PATCH | Update org publishing mode |
 
 ---
 
@@ -943,5 +801,7 @@ Slot form values + htmlTemplate + cssScoped
 | UI Components | @base-ui/react | 1.3.0 |
 | HTML Processing | rehype-* | 6.0.0+ |
 | Auth | NextAuth.js | 4.24.13 |
+| Facebook API | Graph API | v21.0 |
+| Zalo API | Zalo OA/Personal | Latest |
 | AI Models | OpenAI (DALL-E 3), Anthropic Claude | Latest |
 
