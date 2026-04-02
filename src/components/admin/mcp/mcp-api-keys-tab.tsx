@@ -62,7 +62,11 @@ export function McpApiKeysTab({ orgId, keys, loading, refetch }: McpApiKeysTabPr
   const activeCount = keys.filter(
     (k) => k.isActive && (!k.expiresAt || new Date(k.expiresAt) > new Date())
   ).length;
-  const lastActivity = keys.map((k) => k.lastUsedAt).filter(Boolean).sort().pop();
+  const lastActivity = keys
+    .map((k) => k.lastUsedAt)
+    .filter((d): d is string => !!d)
+    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+    .pop() ?? null;
 
   async function handleRevoke(keyId: string) {
     if (!confirm("Revoke this API key? This action cannot be undone.")) return;

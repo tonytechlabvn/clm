@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,7 +31,12 @@ export function McpCreateKeyDialog({ orgId, open, onClose }: McpCreateKeyDialogP
   tomorrow.setDate(tomorrow.getDate() + 1);
   const minDate = tomorrow.toISOString().split("T")[0];
 
+  // Ref guard prevents double-click race creating orphan keys
+  const creatingRef = useRef(false);
+
   async function handleCreate() {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
     setCreating(true);
     setError(null);
     try {
@@ -44,6 +49,7 @@ export function McpCreateKeyDialog({ orgId, open, onClose }: McpCreateKeyDialogP
       setError(err instanceof Error ? err.message : "Failed to create key");
     } finally {
       setCreating(false);
+      creatingRef.current = false;
     }
   }
 
@@ -82,7 +88,7 @@ export function McpCreateKeyDialog({ orgId, open, onClose }: McpCreateKeyDialogP
 
         {createdKey ? (
           <div className="space-y-4">
-            <div className="rounded-md bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800">
+            <div className="rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200">
               Save this key now — it will not be shown again.
             </div>
             <div className="relative">

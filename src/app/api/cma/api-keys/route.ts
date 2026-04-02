@@ -27,13 +27,26 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { orgId, name, expiresAt } = body;
+    const { orgId, expiresAt } = body;
+    const name = typeof body.name === "string" ? body.name.trim().slice(0, 64) : "";
 
     if (!orgId || !name) {
       return NextResponse.json(
         { error: "Missing required fields: orgId, name" },
         { status: 400 }
       );
+    }
+
+    // Validate expiresAt if provided
+    let parsedExpiry: Date | undefined;
+    if (expiresAt) {
+      parsedExpiry = new Date(expiresAt);
+      if (isNaN(parsedExpiry.getTime()) || parsedExpiry <= new Date()) {
+        return NextResponse.json(
+          { error: "expiresAt must be a valid future date" },
+          { status: 400 }
+        );
+      }
     }
 
     const auth = await withOrgAuth(orgId);
@@ -43,7 +56,7 @@ export async function POST(request: Request) {
       auth.userId,
       auth.orgId,
       name,
-      expiresAt ? new Date(expiresAt) : undefined
+      parsedExpiry
     );
 
     return NextResponse.json(

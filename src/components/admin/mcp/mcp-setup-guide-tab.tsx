@@ -157,6 +157,9 @@ export function McpSetupGuideTab({ orgId }: McpSetupGuideTabProps) {
             <li>Add the following configuration:</li>
           </ol>
           <CodeBlock code={vscodeConfig} />
+          <div className="rounded-md bg-muted px-4 py-2 text-xs text-muted-foreground">
+            Add <code>.vscode/mcp.json</code> to your <code>.gitignore</code> — it contains your API key and org ID.
+          </div>
           <ol className="list-decimal pl-5 space-y-2" start={3}>
             <li>
               Replace <code className="bg-muted px-1 rounded">your-api-key-here</code> with your
