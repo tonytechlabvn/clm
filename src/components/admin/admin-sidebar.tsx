@@ -13,6 +13,7 @@ import {
   CalendarDays,
   Plug,
   Bot,
+  Cable,
   BarChart3,
   CheckCircle,
   Rss,
@@ -32,6 +33,7 @@ const navItems = [
 
 const settingsItems = [
   { href: "/admin/settings/ai", label: "A.I Settings", icon: Bot },
+  { href: "/admin/settings/mcp", label: "MCP Integration", icon: Cable },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

@@ -77,7 +77,7 @@ export async function DELETE(request: Request) {
   const auth = await withOrgAuth(orgId);
   if (auth instanceof NextResponse) return auth;
 
-  const revoked = await revokeApiKey(keyId, auth.userId);
+  const revoked = await revokeApiKey(keyId, auth.userId, auth.orgId);
   if (!revoked) {
     return NextResponse.json({ error: "Key not found" }, { status: 404 });
   }

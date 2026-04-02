@@ -160,10 +160,11 @@ export async function validateApiKey(
 /** Revoke an API key (soft-delete by setting isActive=false) */
 export async function revokeApiKey(
   keyId: string,
-  userId: string
+  userId: string,
+  orgId: string
 ): Promise<boolean> {
   const key = await prisma.apiKey.findFirst({
-    where: { id: keyId, userId },
+    where: { id: keyId, userId, orgId },
   });
   if (!key) return false;
 
