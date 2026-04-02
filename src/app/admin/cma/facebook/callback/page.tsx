@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,14 @@ interface FbPage {
 }
 
 export default function FacebookCallbackPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>}>
+      <FacebookCallbackContent />
+    </Suspense>
+  );
+}
+
+function FacebookCallbackContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const orgId = searchParams.get("orgId") || "";
