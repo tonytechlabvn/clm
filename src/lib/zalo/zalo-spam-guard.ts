@@ -3,8 +3,8 @@
 import { prisma } from "@/lib/prisma-client";
 
 // Configurable limits
-const MAX_DRAFTS_PER_HOUR = 5;   // max drafts a user can create per hour
-const MAX_DRAFTS_PER_DAY = 20;   // max drafts a user can create per day
+const MAX_DRAFTS_PER_HOUR = 15;  // max drafts a user can create per hour
+const MAX_DRAFTS_PER_DAY = 50;   // max drafts a user can create per day
 const MAX_PUBLISHES_PER_DAY = 10; // max FB publishes per page per day (conservative, FB allows 25)
 const MIN_PUBLISH_GAP_MINUTES = 30; // minimum minutes between FB publishes
 const DEDUP_WINDOW_MINUTES = 5;  // block identical messages within this window
