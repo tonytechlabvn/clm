@@ -4,11 +4,11 @@
 import { NextResponse } from "next/server";
 import { withAdminAuth } from "@/lib/cma/services/org-auth";
 
-// Execute command on the openzca container
+// Execute openzca command in the sidecar container (as node user for proper file permissions)
 function dockerExec(cmd: string, timeout = 30000): Promise<{ stdout: string; stderr: string; code: number }> {
   const { execSync } = require("child_process");
   try {
-    const stdout = execSync(`docker exec clm-openzca npx openzca ${cmd}`, { timeout, encoding: "utf8" });
+    const stdout = execSync(`docker exec -u node clm-openzca npx openzca ${cmd}`, { timeout, encoding: "utf8" });
     return Promise.resolve({ stdout, stderr: "", code: 0 });
   } catch (err: any) {
     return Promise.resolve({ stdout: err.stdout || "", stderr: err.stderr || "", code: err.status || 1 });

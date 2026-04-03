@@ -95,17 +95,18 @@ services:
     container_name: clm-openzca
     restart: unless-stopped
     working_dir: /home/node
-    user: node
+    user: root
     entrypoint: ["sh", "-c"]
     command:
       - |
         npm install -g openzca@latest 2>/dev/null
+        mkdir -p /home/node/.openzca
+        chown -R node:node /home/node/.openzca
         if [ -f /home/node/.openzca/credentials.json ]; then
           echo "[openzca] Credentials found, starting listener..."
-          openzca listen --webhook http://clm.tonytechlab.com:3000/api/webhooks/zalo --keep-alive --raw
+          su -s /bin/sh node -c "openzca listen --webhook http://clm.tonytechlab.com:3000/api/webhooks/zalo --keep-alive --raw"
         else
-          echo "[openzca] No credentials found. Run: docker compose exec openzca openzca auth login"
-          echo "[openzca] Waiting for login... (sleeping)"
+          echo "[openzca] No credentials found. Use CLM settings UI to login."
           sleep infinity
         fi
     volumes:
