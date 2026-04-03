@@ -15,17 +15,23 @@ function dockerExec(cmd: string, timeout = 30000): Promise<{ stdout: string; std
   }
 }
 
-// GET — check if openzca is logged in
+// GET — check if openzca is logged in, return account ID if available
 export async function GET(request: Request) {
   const auth = await withAdminAuth();
   if (auth instanceof NextResponse) return auth;
 
   const result = await dockerExec("auth status");
-  const output = (result.stdout + result.stderr).toLowerCase();
-  const loggedIn = output.includes("logged in") || output.includes("authenticated");
+  const output = result.stdout + result.stderr;
+  const outputLower = output.toLowerCase();
+  const loggedIn = outputLower.includes("logged in") || outputLower.includes("authenticated");
+
+  // Try to extract Zalo user ID from status output
+  const idMatch = output.match(/(?:id|user|uid|account)[:\s]+(\d{10,})/i);
+  const zaloId = idMatch?.[1] || "";
 
   return NextResponse.json({
     loggedIn,
+    zaloId,
     status: result.stdout.trim() || result.stderr.trim() || "Not connected",
   });
 }

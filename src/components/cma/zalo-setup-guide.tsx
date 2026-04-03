@@ -23,7 +23,7 @@ interface ZaloConfig {
 }
 
 // Sub-component: QR login + status controls for personal mode
-function ZaloPersonalLoginControls() {
+function ZaloPersonalLoginControls({ onZaloIdDetected }: { onZaloIdDetected?: (id: string) => void }) {
   const [status, setStatus] = useState<string | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,10 +32,11 @@ function ZaloPersonalLoginControls() {
   async function checkStatus() {
     setLoading(true);
     try {
-      const res = await cmaFetch<{ loggedIn: boolean; status: string }>("/api/cma/settings/zalo/login");
+      const res = await cmaFetch<{ loggedIn: boolean; zaloId?: string; status: string }>("/api/cma/settings/zalo/login");
       setLoggedIn(res.loggedIn);
       setStatus(res.loggedIn ? "Connected" : res.status);
-      if (res.loggedIn) setQrDataUrl(null); // hide QR if already logged in
+      if (res.loggedIn) setQrDataUrl(null);
+      if (res.zaloId && onZaloIdDetected) onZaloIdDetected(res.zaloId);
     } catch { setStatus("Failed to check"); }
     finally { setLoading(false); }
   }
@@ -212,7 +213,7 @@ export function ZaloSetupGuide({ orgId }: { orgId: string }) {
               </div>
 
               {/* QR Login + status controls */}
-              <ZaloPersonalLoginControls />
+              <ZaloPersonalLoginControls onZaloIdDetected={(id) => setConfig((c) => ({ ...c, selfId: id }))} />
 
               <div className="space-y-1">
                 <label className="text-sm font-medium">Zalo Account ID</label>
