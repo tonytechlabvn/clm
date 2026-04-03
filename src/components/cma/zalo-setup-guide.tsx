@@ -22,6 +22,82 @@ interface ZaloConfig {
   selfId?: string;
 }
 
+// Sub-component: login status + restart controls for personal mode
+function ZaloPersonalLoginControls() {
+  const [status, setStatus] = useState<string | null>(null);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+  const [sshCmd, setSshCmd] = useState<string | null>(null);
+
+  async function checkStatus() {
+    setChecking(true); setSshCmd(null);
+    try {
+      const res = await cmaFetch<{ loggedIn: boolean; status: string }>("/api/cma/settings/zalo/login");
+      setLoggedIn(res.loggedIn);
+      setStatus(res.status);
+    } catch { setStatus("Failed to check status"); }
+    finally { setChecking(false); }
+  }
+
+  async function handleLogin() {
+    setChecking(true); setSshCmd(null);
+    try {
+      const res = await cmaFetch<{ success: boolean; loggedIn: boolean; message: string; sshCommand?: string }>(
+        "/api/cma/settings/zalo/login", { method: "POST", body: JSON.stringify({ action: "login" }) }
+      );
+      setLoggedIn(res.loggedIn);
+      setStatus(res.message);
+      if (res.sshCommand) setSshCmd(res.sshCommand);
+    } catch { setStatus("Login check failed"); }
+    finally { setChecking(false); }
+  }
+
+  async function handleRestart() {
+    setRestarting(true);
+    try {
+      const res = await cmaFetch<{ success: boolean; message: string }>(
+        "/api/cma/settings/zalo/login", { method: "POST", body: JSON.stringify({ action: "restart" }) }
+      );
+      setStatus(res.message);
+    } catch { setStatus("Restart failed"); }
+    finally { setRestarting(false); }
+  }
+
+  return (
+    <div className="space-y-2 rounded-md border p-3 bg-muted/30">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium">Connection Status</span>
+        <div className="flex gap-1.5">
+          <Button type="button" size="sm" variant="outline" onClick={checkStatus} disabled={checking}>
+            {checking ? <Loader2 className="h-3 w-3 animate-spin" /> : "Check Status"}
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={handleLogin} disabled={checking}>
+            Start Login
+          </Button>
+          {loggedIn && (
+            <Button type="button" size="sm" onClick={handleRestart} disabled={restarting}>
+              {restarting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Restart Listener"}
+            </Button>
+          )}
+        </div>
+      </div>
+      {status && (
+        <div className={`text-xs px-2 py-1 rounded ${loggedIn ? "bg-green-50 text-green-700" : "bg-muted text-muted-foreground"}`}>
+          {loggedIn ? <><CheckCircle className="h-3 w-3 inline mr-1" />Logged in</> : status}
+        </div>
+      )}
+      {sshCmd && (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">QR login requires terminal. Run this command:</p>
+          <code className="block text-[10px] bg-background border px-2 py-1.5 rounded break-all select-all">{sshCmd}</code>
+          <p className="text-xs text-muted-foreground">After scanning QR, click &quot;Check Status&quot; → &quot;Restart Listener&quot;</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ZaloSetupGuide({ orgId }: { orgId: string }) {
   const [botType, setBotType] = useState<BotType>("oa");
   const [config, setConfig] = useState<ZaloConfig>({ oaId: "", accessToken: "", refreshToken: "", isActive: false, configured: false });
@@ -126,12 +202,14 @@ export function ZaloSetupGuide({ orgId }: { orgId: string }) {
                 </ol>
               </div>
 
+              {/* Login status + controls */}
+              <ZaloPersonalLoginControls />
+
               <div className="space-y-1">
                 <label className="text-sm font-medium">Zalo Account ID</label>
                 <input type="text" placeholder="Your personal Zalo user ID" value={config.selfId || ""}
                   onChange={(e) => setConfig({ ...config, selfId: e.target.value })}
                   className="w-full rounded-md border px-3 py-2 text-sm bg-background" />
-                <p className="text-xs text-muted-foreground">Run <code>openzca auth status</code> to find your Zalo ID</p>
               </div>
             </>
           )}
