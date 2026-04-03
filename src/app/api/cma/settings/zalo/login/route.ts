@@ -22,11 +22,10 @@ export async function GET(request: Request) {
 
   const result = await dockerExec("auth status");
   const output = result.stdout + result.stderr;
-  const outputLower = output.toLowerCase();
-  const loggedIn = outputLower.includes("logged in") || outputLower.includes("authenticated");
+  const loggedIn = output.includes("loggedIn: true") || output.includes("loggedIn:true") || output.toLowerCase().includes("logged in");
 
-  // Try to extract Zalo user ID from status output
-  const idMatch = output.match(/(?:id|user|uid|account)[:\s]+(\d{10,})/i);
+  // Extract userId from output like: userId: '6137585649103333359'
+  const idMatch = output.match(/userId[:\s]*'?(\d{10,})'?/);
   const zaloId = idMatch?.[1] || "";
 
   return NextResponse.json({
