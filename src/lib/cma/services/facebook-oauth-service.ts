@@ -87,8 +87,8 @@ export async function buildFbLoginUrl(orgId: string, userId: string): Promise<st
 }
 
 // Exchange authorization code for short-lived user token
-export async function exchangeCodeForToken(code: string): Promise<string> {
-  const { appId, appSecret, redirectUri } = getAppCredentials();
+export async function exchangeCodeForToken(code: string, orgId?: string): Promise<string> {
+  const { appId, appSecret, redirectUri } = orgId ? await getAppCredentialsForOrg(orgId) : getAppCredentials();
   const params = new URLSearchParams({
     client_id: appId,
     client_secret: appSecret,
@@ -102,8 +102,8 @@ export async function exchangeCodeForToken(code: string): Promise<string> {
 }
 
 // Exchange short-lived for long-lived user token (~60 days)
-export async function exchangeForLongLivedToken(shortToken: string): Promise<{ token: string; expiresIn: number }> {
-  const { appId, appSecret } = getAppCredentials();
+export async function exchangeForLongLivedToken(shortToken: string, orgId?: string): Promise<{ token: string; expiresIn: number }> {
+  const { appId, appSecret } = orgId ? await getAppCredentialsForOrg(orgId) : getAppCredentials();
   const params = new URLSearchParams({
     grant_type: "fb_exchange_token",
     client_id: appId,

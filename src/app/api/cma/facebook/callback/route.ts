@@ -9,6 +9,12 @@ import {
   listUserPages,
 } from "@/lib/cma/services/facebook-oauth-service";
 
+// Use NEXT_PUBLIC_APP_URL for redirects — request.url resolves to container internal address
+function appUrl(path: string): string {
+  const base = process.env.NEXT_PUBLIC_APP_URL || "https://clm.tonytechlab.com";
+  return `${base}${path}`;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -19,47 +25,33 @@ export async function GET(request: Request) {
     // User denied permissions
     if (errorParam) {
       const desc = searchParams.get("error_description") || "Permission denied";
-      return NextResponse.redirect(
-        new URL(`/admin/cma/settings?fb_error=${encodeURIComponent(desc)}`, request.url)
-      );
+      return NextResponse.redirect(appUrl(`/admin/cma/settings?fb_error=${encodeURIComponent(desc)}`));
     }
 
     if (!code || !state) {
-      return NextResponse.redirect(
-        new URL("/admin/cma/settings?fb_error=Missing+code+or+state", request.url)
-      );
+      return NextResponse.redirect(appUrl("/admin/cma/settings?fb_error=Missing+code+or+state"));
     }
 
     // Verify CSRF state token
     const { orgId } = verifyStateToken(state);
 
     // Exchange code → short-lived → long-lived user token
-    const shortToken = await exchangeCodeForToken(code);
-    const { token: longLivedToken, expiresIn } = await exchangeForLongLivedToken(shortToken);
+    const shortToken = await exchangeCodeForToken(code, orgId);
+    const { token: longLivedToken, expiresIn } = await exchangeForLongLivedToken(shortToken, orgId);
 
     // Fetch user's pages
     const pages = await listUserPages(longLivedToken);
     if (pages.length === 0) {
-      return NextResponse.redirect(
-        new URL("/admin/cma/settings?fb_error=No+Facebook+pages+found", request.url)
-      );
+      return NextResponse.redirect(appUrl("/admin/cma/settings?fb_error=No+Facebook+pages+found"));
     }
 
     // Store long-lived token temporarily in httpOnly cookie (10 min TTL)
     const cookieStore = await cookies();
     cookieStore.set("fb_temp_token", longLivedToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 600,
-      path: "/",
+      httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 600, path: "/",
     });
     cookieStore.set("fb_token_expiry", String(expiresIn), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 600,
-      path: "/",
+      httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 600, path: "/",
     });
 
     // Redirect to page picker UI with page list + orgId
@@ -67,13 +59,9 @@ export async function GET(request: Request) {
       pages.map((p) => ({ id: p.id, name: p.name, category: p.category, picture: p.picture?.data?.url }))
     ));
 
-    return NextResponse.redirect(
-      new URL(`/admin/cma/facebook/callback?orgId=${orgId}&pages=${pagesParam}`, request.url)
-    );
+    return NextResponse.redirect(appUrl(`/admin/cma/facebook/callback?orgId=${orgId}&pages=${pagesParam}`));
   } catch (error) {
     const message = error instanceof Error ? error.message : "OAuth callback failed";
-    return NextResponse.redirect(
-      new URL(`/admin/cma/settings?fb_error=${encodeURIComponent(message)}`, request.url)
-    );
+    return NextResponse.redirect(appUrl(`/admin/cma/settings?fb_error=${encodeURIComponent(message)}`));
   }
 }
