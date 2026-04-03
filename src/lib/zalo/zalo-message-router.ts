@@ -1,13 +1,14 @@
-// Zalo message router — processes incoming messages via simple mode (MVP)
+// Zalo message router — processes incoming messages, commands, and approvals
 
+import { prisma } from "@/lib/prisma-client";
 import { createPost } from "@/lib/cma/services/post-service";
 import { routePostByMode } from "@/lib/cma/services/publish-mode-router";
+import { enqueueScheduledPublish } from "@/lib/cma/services/pgboss-service";
 import { getLinkedUserId, verifyAndLink } from "./zalo-user-mapping";
 import type { ZaloBotProvider } from "./zalo-bot-provider";
 
 const MAX_TITLE_LENGTH = 100;
 
-// Route an incoming Zalo message — provider-agnostic (works with OA and future Personal)
 export async function routeMessage(
   senderId: string,
   text: string,
@@ -15,69 +16,148 @@ export async function routeMessage(
   provider: ZaloBotProvider
 ): Promise<void> {
   const trimmed = text.trim();
+  const cmd = trimmed.toLowerCase();
 
   // /help command
-  if (trimmed.toLowerCase() === "/help") {
-    await provider.sendTextMessage(senderId,
-      "Commands:\n• /link <code> — Link your Zalo to CLM\n• /help — Show this message\n\nSend any text to create a draft post."
-    );
+  if (cmd === "/help") {
+    await provider.sendTextMessage(senderId, [
+      "📌 Commands:",
+      "• /link <code> — Link Zalo to CLM",
+      "• /list — Show your pending drafts",
+      "• /approve — Approve your latest draft",
+      "• /approve <number> — Approve draft by number",
+      "• /edit <new content> — Edit your latest draft",
+      "• /help — Show this message",
+      "",
+      "Or send any text to create a new draft post.",
+    ].join("\n"));
     return;
   }
 
-  // /link <code> command — verify admin-generated code
-  if (trimmed.toLowerCase().startsWith("/link ")) {
+  // /link command
+  if (cmd.startsWith("/link ")) {
     const code = trimmed.slice(6).trim().toUpperCase();
     if (!code || code.length < 4) {
-      await provider.sendTextMessage(senderId, "Invalid code format. Use: /link <CODE>");
+      await provider.sendTextMessage(senderId, "Invalid code. Use: /link <CODE>");
       return;
     }
     const result = await verifyAndLink(orgId, senderId, undefined, code);
-    if (result.success) {
-      await provider.sendTextMessage(senderId, "Account linked successfully! You can now send messages to create drafts.");
-    } else {
-      await provider.sendTextMessage(senderId, `Link failed: ${result.error}`);
-    }
-    return;
-  }
-
-  // Simple mode: create draft from text message
-  const userId = await getLinkedUserId(orgId, senderId);
-  if (!userId) {
     await provider.sendTextMessage(senderId,
-      "Your Zalo account is not linked to CLM. Ask your admin for a link code, then send: /link <CODE>"
+      result.success ? "✅ Account linked! You can now send messages to create drafts.\n\nSend /help to see all commands." : `❌ Link failed: ${result.error}`
     );
     return;
   }
 
-  // Create draft post — title = first line (truncated), content = full text
+  // All commands below require linked account
+  const userId = await getLinkedUserId(orgId, senderId);
+  if (!userId) {
+    await provider.sendTextMessage(senderId,
+      "Your Zalo is not linked to CLM.\nAsk your admin for a link code, then send: /link <CODE>"
+    );
+    return;
+  }
+
+  // /list — show pending drafts
+  if (cmd === "/list") {
+    const posts = await prisma.cmaPost.findMany({
+      where: { orgId, authorId: userId, status: { in: ["draft", "pending_review"] } },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, title: true, status: true, createdAt: true },
+    });
+    if (posts.length === 0) {
+      await provider.sendTextMessage(senderId, "No pending drafts.");
+      return;
+    }
+    const list = posts.map((p, i) =>
+      `${i + 1}. ${p.title}\n   Status: ${p.status === "pending_review" ? "⏳ Pending review" : "📝 Draft"}`
+    ).join("\n\n");
+    await provider.sendTextMessage(senderId, `📋 Your recent drafts:\n\n${list}\n\nUse /approve or /approve <number> to approve.`);
+    return;
+  }
+
+  // /approve — approve latest or specific draft
+  if (cmd === "/approve" || cmd.startsWith("/approve ")) {
+    const num = parseInt(trimmed.slice(8).trim()) || 0;
+    const posts = await prisma.cmaPost.findMany({
+      where: { orgId, authorId: userId, status: "pending_review" },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, title: true },
+    });
+    if (posts.length === 0) {
+      await provider.sendTextMessage(senderId, "No drafts pending review.");
+      return;
+    }
+    const target = num > 0 && num <= posts.length ? posts[num - 1] : posts[0];
+    // Approve: set status to approved
+    await prisma.cmaPost.update({ where: { id: target.id }, data: { status: "approved" } });
+    // Enqueue publish if there's an active platform account
+    const account = await prisma.cmaPlatformAccount.findFirst({
+      where: { orgId, isActive: true },
+      select: { id: true, platform: true },
+    });
+    if (account) {
+      await enqueueScheduledPublish(target.id, account.id, orgId, new Date());
+      await provider.sendTextMessage(senderId,
+        `✅ Approved and queued for publishing!\n\nTitle: ${target.title}\nPlatform: ${account.platform}`
+      );
+    } else {
+      await provider.sendTextMessage(senderId,
+        `✅ Approved!\n\nTitle: ${target.title}\n\n⚠️ No platform connected — go to CLM settings to connect one.`
+      );
+    }
+    return;
+  }
+
+  // /edit — replace content of latest draft
+  if (cmd.startsWith("/edit ")) {
+    const newContent = trimmed.slice(6).trim();
+    if (!newContent) {
+      await provider.sendTextMessage(senderId, "Usage: /edit <new content>");
+      return;
+    }
+    const latest = await prisma.cmaPost.findFirst({
+      where: { orgId, authorId: userId, status: { in: ["draft", "pending_review"] } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, title: true },
+    });
+    if (!latest) {
+      await provider.sendTextMessage(senderId, "No draft to edit.");
+      return;
+    }
+    await prisma.cmaPost.update({ where: { id: latest.id }, data: { content: newContent } });
+    await provider.sendTextMessage(senderId, `📝 Updated!\n\nTitle: ${latest.title}\nNew content saved.`);
+    return;
+  }
+
+  // Default: create new draft from text
   const firstLine = trimmed.split("\n")[0] || "Untitled";
-  const title = firstLine.length > MAX_TITLE_LENGTH
-    ? firstLine.substring(0, MAX_TITLE_LENGTH) + "..."
-    : firstLine;
+  const title = firstLine.length > MAX_TITLE_LENGTH ? firstLine.substring(0, MAX_TITLE_LENGTH) + "..." : firstLine;
 
   try {
     const post = await createPost({
-      orgId,
-      authorId: userId,
-      title,
-      content: trimmed,
-      contentFormat: "markdown",
-      source: "zalo_bot",
+      orgId, authorId: userId, title, content: trimmed,
+      contentFormat: "markdown", source: "zalo_bot",
     });
-
-    // Route through publishing mode system
     const result = await routePostByMode(post.id, orgId, "zalo_bot");
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://clm.tonytechlab.com";
-    const editUrl = `${baseUrl}/admin/cma/posts/${post.id}`;
-    const approvalUrl = `${baseUrl}/admin/cma/approval`;
-
-    const statusMsg = result.action === "auto_publish"
-      ? `✅ Draft created and queued for auto-publish!\n\nTitle: ${title}\n\n📝 Edit: ${editUrl}`
-      : `📋 Draft created and sent for review.\n\nTitle: ${title}\n\n📝 Edit: ${editUrl}\n✅ Approve: ${approvalUrl}`;
-    await provider.sendTextMessage(senderId, statusMsg);
+    if (result.action === "auto_publish") {
+      await provider.sendTextMessage(senderId, `✅ Draft created and queued for auto-publish!\n\nTitle: ${title}`);
+    } else {
+      await provider.sendTextMessage(senderId, [
+        `📋 Draft created and sent for review.`,
+        ``,
+        `Title: ${title}`,
+        ``,
+        `Reply with:`,
+        `• /approve — to approve and publish`,
+        `• /edit <new text> — to change content`,
+        `• /list — to see all drafts`,
+      ].join("\n"));
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    await provider.sendTextMessage(senderId, `Failed to create draft: ${msg}`);
+    await provider.sendTextMessage(senderId, `❌ Failed to create draft: ${msg}`);
   }
 }
