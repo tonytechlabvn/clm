@@ -160,9 +160,15 @@ export async function routeMessage(
     // Approve the post
     await prisma.cmaPost.update({ where: { id: target.id }, data: { status: "approved" } });
 
-    // Enqueue publish to each target platform
+    // Create CmaPostPlatform records + enqueue publish for each target
     const published: string[] = [];
     for (const account of targetAccounts) {
+      // Upsert platform publish record (required by publishing-service)
+      await prisma.cmaPostPlatform.upsert({
+        where: { postId_accountId: { postId: target.id, accountId: account.id } },
+        create: { postId: target.id, accountId: account.id, status: "pending" },
+        update: { status: "pending", publishError: null },
+      });
       await enqueueScheduledPublish(target.id, account.id, orgId, new Date());
       published.push(`${account.label} (${account.platform})`);
     }
