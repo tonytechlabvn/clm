@@ -8,10 +8,11 @@ import { useCmaOrg } from "@/lib/cma/hooks/use-cma-org";
 import { TopicInputStep } from "@/components/cma/ai-generator/ai-generator-step-topic-input";
 import { OutlineReviewStep } from "@/components/cma/ai-generator/ai-generator-step-outline-review";
 import { ContentReviewStep } from "@/components/cma/ai-generator/ai-generator-step-content-review";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles, Globe, Facebook } from "lucide-react";
 
 type Tone = "professional" | "casual" | "technical" | "educational";
 type SourceType = "url" | "text" | "image" | "video";
+type TargetPlatform = "blog" | "facebook" | "both";
 interface OutlineSection { heading: string; keyPoints: string[] }
 
 interface SourceExtractionResult {
@@ -28,6 +29,7 @@ export default function CmaAiGeneratorPage() {
   const router = useRouter();
   const { org } = useCmaOrg();
   const [step, setStep] = useState(1);
+  const [targetPlatform, setTargetPlatform] = useState<TargetPlatform>("blog");
 
   // Template context — loaded when templateId is in URL params
   const [templateId, setTemplateId] = useState<string | null>(null);
@@ -120,6 +122,7 @@ export default function CmaAiGeneratorPage() {
           orgId: org.id, topic, tone, language, targetWordCount: wordCount,
           keywords: keywords ? keywords.split(",").map((k) => k.trim()) : [],
           sourceContext: sourceContext || undefined,
+          targetPlatform,
         }),
       });
       setTitle(result.title); setMetaDesc(result.metaDescription);
@@ -142,6 +145,7 @@ export default function CmaAiGeneratorPage() {
           orgId: org.id, outline: { title, sections }, tone, language, targetWordCount: wordCount,
           sourceContext: sourceContext || undefined,
           templateId: templateId || undefined,
+          targetPlatform,
         }),
       });
       setBlogContent(result.blogContent); setBlogCss(result.blogCss || "");
@@ -154,30 +158,48 @@ export default function CmaAiGeneratorPage() {
   }
 
   async function handleSaveAsDraft() {
-    if (!org?.id || !blogContent) return;
+    if (!org?.id) return;
     setLoading(true); setError(null);
     try {
-      // If template is loaded, wrap AI content inside the template structure
-      let finalHtml = blogContent;
-      let finalCss = blogCss;
-      // When templateId is set, the AI already generated content in the template format
-      // (the API passes templateHtml to the AI prompt). No merge needed — blogContent IS the final HTML.
-      if (templateCss) {
-        finalCss = `${templateCss}\n${blogCss}`;
+      const posts: string[] = [];
+
+      // Save blog post (if target is blog or both)
+      if ((targetPlatform === "blog" || targetPlatform === "both") && blogContent) {
+        let finalHtml = blogContent;
+        let finalCss = blogCss;
+        if (templateCss) finalCss = `${templateCss}\n${blogCss}`;
+
+        const htmlContent = JSON.stringify({ html: finalHtml, css: finalCss, js: "" });
+        const post = await cmaFetch<{ id: string }>("/api/cma/posts", {
+          method: "POST",
+          body: JSON.stringify({
+            orgId: org.id, title, content: htmlContent,
+            contentFormat: "html",
+            templateId: templateId || undefined,
+            excerpt: linkedinExcerpt || undefined,
+            tags: [], categories: [],
+          }),
+        });
+        posts.push(post.id);
       }
 
-      const htmlContent = JSON.stringify({ html: finalHtml, css: finalCss, js: "" });
-      const post = await cmaFetch<{ id: string }>("/api/cma/posts", {
-        method: "POST",
-        body: JSON.stringify({
-          orgId: org.id, title, content: htmlContent,
-          contentFormat: "html",
-          templateId: templateId || undefined,
-          excerpt: linkedinExcerpt || undefined,
-          tags: [], categories: [],
-        }),
-      });
-      router.push(`/admin/cma/posts/${post.id}`);
+      // Save Facebook post (if target is facebook or both)
+      if ((targetPlatform === "facebook" || targetPlatform === "both") && fbExcerpt) {
+        const fbTitle = targetPlatform === "facebook" ? title : `[FB] ${title}`;
+        const post = await cmaFetch<{ id: string }>("/api/cma/posts", {
+          method: "POST",
+          body: JSON.stringify({
+            orgId: org.id, title: fbTitle, content: fbExcerpt,
+            contentFormat: "markdown",
+            source: "web",
+          }),
+        });
+        posts.push(post.id);
+      }
+
+      if (posts.length > 0) {
+        router.push(`/admin/cma/posts/${posts[0]}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally { setLoading(false); }
@@ -202,6 +224,31 @@ export default function CmaAiGeneratorPage() {
           <div key={s} className={`h-1.5 flex-1 rounded-full ${s <= step ? "bg-primary" : "bg-muted"}`} />
         ))}
       </div>
+
+      {/* Target platform selector */}
+      <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-lg w-fit">
+        {([
+          { key: "blog" as const, label: "Blog Post", icon: Globe },
+          { key: "facebook" as const, label: "Facebook Post", icon: Facebook },
+          { key: "both" as const, label: "Blog + Facebook", icon: Sparkles },
+        ]).map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setTargetPlatform(key)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors cursor-pointer ${
+              targetPlatform === key ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5" /> {label}
+          </button>
+        ))}
+      </div>
+
+      {targetPlatform === "facebook" && (
+        <div className="rounded-md bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 text-sm">
+          Facebook mode: AI will generate short, engaging plain text optimized for Facebook. No HTML formatting.
+        </div>
+      )}
 
       {templateId && (
         <div className="rounded-md bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 text-sm flex items-center gap-2">
