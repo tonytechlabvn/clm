@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Image, Palette, FileText, Globe, Clock } from "lucide-react";
+import { ChevronDown, ChevronRight, Image, Palette, FileText, Globe, Facebook } from "lucide-react";
 import { getAvailableThemes } from "@/lib/cma/themes/theme-definitions";
+import { FacebookContentPreview } from "./facebook-content-preview";
 
 interface PlatformAccount {
   id: string;
@@ -31,6 +32,8 @@ interface CmaComposerSidebarProps {
   accounts: PlatformAccount[];
   // Content format indicator
   contentFormat?: "markdown" | "blocks" | "html";
+  // Content for Facebook preview
+  content?: string;
 }
 
 // Collapsible section wrapper
@@ -77,8 +80,11 @@ export function CmaComposerSidebar({
   onAccountChange,
   accounts,
   contentFormat,
+  content,
 }: CmaComposerSidebarProps) {
   const themes = getAvailableThemes();
+  const selectedAccount = accounts.find((a) => a.id === accountId);
+  const isFacebook = selectedAccount?.platform === "facebook";
 
   return (
     <div className="border rounded-lg bg-background overflow-hidden">
@@ -104,8 +110,15 @@ export function CmaComposerSidebar({
         )}
       </Section>
 
-      {/* Style Theme — available for all content formats */}
-      <Section title="Style Theme" icon={Palette}>
+      {/* Facebook preview — shown when FB account selected */}
+      {isFacebook && content && (
+        <Section title="Facebook Preview" icon={Facebook} defaultOpen={true}>
+          <FacebookContentPreview content={content} contentFormat={contentFormat} />
+        </Section>
+      )}
+
+      {/* Style Theme — WordPress only */}
+      {!isFacebook && <Section title="Style Theme" icon={Palette}>
         <select
           value={styleTheme}
           onChange={(e) => onStyleThemeChange(e.target.value)}
@@ -118,10 +131,10 @@ export function CmaComposerSidebar({
         <p className="text-xs text-muted-foreground">
           {THEME_DESCRIPTIONS[styleTheme] || "Applied when publishing"}
         </p>
-      </Section>
+      </Section>}
 
-      {/* Post Details */}
-      <Section title="Details" icon={FileText}>
+      {/* Post Details — WordPress only (FB doesn't use categories/tags/excerpt) */}
+      {!isFacebook && <Section title="Details" icon={FileText}>
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-muted-foreground">Excerpt</label>
           <textarea
@@ -152,7 +165,7 @@ export function CmaComposerSidebar({
             className="w-full rounded-md border px-3 py-2 text-sm bg-background"
           />
         </div>
-      </Section>
+      </Section>}
 
       {/* Platform */}
       <Section title="Publish To" icon={Globe}>

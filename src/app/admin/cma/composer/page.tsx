@@ -361,6 +361,7 @@ export default function CmaComposerPage() {
           onAccountChange={setAccountId}
           accounts={accounts}
           contentFormat={contentFormat}
+          content={content}
         />
       </div>
     </div>
