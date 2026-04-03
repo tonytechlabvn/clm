@@ -26,7 +26,7 @@ interface ZaloConfig {
 function ZaloPersonalLoginControls({ onZaloIdDetected }: { onZaloIdDetected?: (id: string) => void }) {
   const [status, setStatus] = useState<string | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // start as loading
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   async function checkStatus() {
@@ -34,12 +34,15 @@ function ZaloPersonalLoginControls({ onZaloIdDetected }: { onZaloIdDetected?: (i
     try {
       const res = await cmaFetch<{ loggedIn: boolean; zaloId?: string; status: string }>("/api/cma/settings/zalo/login");
       setLoggedIn(res.loggedIn);
-      setStatus(res.loggedIn ? "Connected" : res.status);
+      setStatus(res.loggedIn ? "Connected — bot is online" : res.status);
       if (res.loggedIn) setQrDataUrl(null);
       if (res.zaloId && onZaloIdDetected) onZaloIdDetected(res.zaloId);
-    } catch { setStatus("Failed to check"); }
+    } catch { setStatus("Unable to check status"); }
     finally { setLoading(false); }
   }
+
+  // Auto-check status on mount
+  useEffect(() => { checkStatus(); }, []);
 
   async function handleLogin() {
     setLoading(true); setQrDataUrl(null); setStatus("Generating QR code...");
@@ -215,7 +218,12 @@ export function ZaloSetupGuide({ orgId }: { orgId: string }) {
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5 text-blue-500" />
           <CardTitle className="text-base">Zalo Bot Setup</CardTitle>
-          {config.configured && <CheckCircle className="h-4 w-4 text-green-500" />}
+          {config.configured && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+              <CheckCircle className="h-3 w-3" />
+              {botType === "personal" ? "Personal" : "OA"} — Active
+            </span>
+          )}
         </div>
         <CardDescription>Configure Zalo bot for creating posts via messaging</CardDescription>
       </CardHeader>
