@@ -102,7 +102,7 @@ services:
         npm install -g openzca@latest 2>/dev/null
         mkdir -p /home/node/.openzca
         chown -R node:node /home/node/.openzca
-        if [ -f /home/node/.openzca/credentials.json ]; then
+        if [ -f /home/node/.openzca/profiles.json ]; then
           echo "[openzca] Credentials found, starting listener..."
           su -s /bin/sh node -c "openzca listen --webhook http://clm.tonytechlab.com:3000/api/webhooks/zalo --keep-alive --raw"
         else
