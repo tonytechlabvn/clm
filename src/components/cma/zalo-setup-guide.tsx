@@ -22,76 +22,95 @@ interface ZaloConfig {
   selfId?: string;
 }
 
-// Sub-component: login status + restart controls for personal mode
+// Sub-component: QR login + status controls for personal mode
 function ZaloPersonalLoginControls() {
   const [status, setStatus] = useState<string | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
-  const [checking, setChecking] = useState(false);
-  const [restarting, setRestarting] = useState(false);
-  const [sshCmd, setSshCmd] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   async function checkStatus() {
-    setChecking(true); setSshCmd(null);
+    setLoading(true);
     try {
       const res = await cmaFetch<{ loggedIn: boolean; status: string }>("/api/cma/settings/zalo/login");
       setLoggedIn(res.loggedIn);
-      setStatus(res.status);
-    } catch { setStatus("Failed to check status"); }
-    finally { setChecking(false); }
+      setStatus(res.loggedIn ? "Connected" : res.status);
+      if (res.loggedIn) setQrDataUrl(null); // hide QR if already logged in
+    } catch { setStatus("Failed to check"); }
+    finally { setLoading(false); }
   }
 
   async function handleLogin() {
-    setChecking(true); setSshCmd(null);
+    setLoading(true); setQrDataUrl(null); setStatus("Generating QR code...");
     try {
-      const res = await cmaFetch<{ success: boolean; loggedIn: boolean; message: string; sshCommand?: string }>(
+      const res = await cmaFetch<{ success: boolean; loggedIn?: boolean; qrDataUrl?: string; message: string }>(
         "/api/cma/settings/zalo/login", { method: "POST", body: JSON.stringify({ action: "login" }) }
       );
-      setLoggedIn(res.loggedIn);
-      setStatus(res.message);
-      if (res.sshCommand) setSshCmd(res.sshCommand);
-    } catch { setStatus("Login check failed"); }
-    finally { setChecking(false); }
+      if (res.qrDataUrl) {
+        setQrDataUrl(res.qrDataUrl);
+        setStatus("Scan the QR code below with your Zalo app");
+      } else if (res.loggedIn) {
+        setLoggedIn(true);
+        setStatus("Already connected");
+      } else {
+        setStatus(res.message);
+      }
+    } catch { setStatus("Login failed — try again"); }
+    finally { setLoading(false); }
   }
 
   async function handleRestart() {
-    setRestarting(true);
+    setLoading(true);
     try {
-      const res = await cmaFetch<{ success: boolean; message: string }>(
-        "/api/cma/settings/zalo/login", { method: "POST", body: JSON.stringify({ action: "restart" }) }
-      );
-      setStatus(res.message);
+      await cmaFetch("/api/cma/settings/zalo/login", { method: "POST", body: JSON.stringify({ action: "restart" }) });
+      setStatus("Bot restarted — now listening for messages");
+      setQrDataUrl(null);
     } catch { setStatus("Restart failed"); }
-    finally { setRestarting(false); }
+    finally { setLoading(false); }
   }
 
   return (
-    <div className="space-y-2 rounded-md border p-3 bg-muted/30">
+    <div className="space-y-3 rounded-md border p-3 bg-muted/30">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">Connection Status</span>
+        <span className="text-sm font-medium">Connection</span>
         <div className="flex gap-1.5">
-          <Button type="button" size="sm" variant="outline" onClick={checkStatus} disabled={checking}>
-            {checking ? <Loader2 className="h-3 w-3 animate-spin" /> : "Check Status"}
+          <Button type="button" size="sm" variant="outline" onClick={checkStatus} disabled={loading}>
+            {loading && !qrDataUrl ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+            Check Status
           </Button>
-          <Button type="button" size="sm" variant="outline" onClick={handleLogin} disabled={checking}>
-            Start Login
-          </Button>
+          {!loggedIn && (
+            <Button type="button" size="sm" onClick={handleLogin} disabled={loading}>
+              {loading && !qrDataUrl ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+              {qrDataUrl ? "Refresh QR" : "Login with QR"}
+            </Button>
+          )}
           {loggedIn && (
-            <Button type="button" size="sm" onClick={handleRestart} disabled={restarting}>
-              {restarting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Restart Listener"}
+            <Button type="button" size="sm" onClick={handleRestart} disabled={loading}>
+              {loading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+              Start Listener
             </Button>
           )}
         </div>
       </div>
+
+      {/* Status message */}
       {status && (
-        <div className={`text-xs px-2 py-1 rounded ${loggedIn ? "bg-green-50 text-green-700" : "bg-muted text-muted-foreground"}`}>
-          {loggedIn ? <><CheckCircle className="h-3 w-3 inline mr-1" />Logged in</> : status}
+        <div className={`text-xs px-2 py-1.5 rounded flex items-center gap-1.5 ${
+          loggedIn ? "bg-green-50 text-green-700 border border-green-200" : "bg-muted text-muted-foreground"
+        }`}>
+          {loggedIn && <CheckCircle className="h-3.5 w-3.5" />}
+          {status}
         </div>
       )}
-      {sshCmd && (
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">QR login requires terminal. Run this command:</p>
-          <code className="block text-[10px] bg-background border px-2 py-1.5 rounded break-all select-all">{sshCmd}</code>
-          <p className="text-xs text-muted-foreground">After scanning QR, click &quot;Check Status&quot; → &quot;Restart Listener&quot;</p>
+
+      {/* QR Code display */}
+      {qrDataUrl && (
+        <div className="flex flex-col items-center gap-2 py-2">
+          <img src={qrDataUrl} alt="Zalo Login QR Code" className="w-48 h-48 rounded-lg border shadow-sm" />
+          <p className="text-xs text-muted-foreground text-center">
+            Open <strong>Zalo</strong> → tap QR icon (top right) → scan this code
+          </p>
+          <p className="text-[10px] text-muted-foreground">After scanning, click &quot;Check Status&quot; to verify</p>
         </div>
       )}
     </div>
@@ -192,17 +211,7 @@ export function ZaloSetupGuide({ orgId }: { orgId: string }) {
                 </div>
               </div>
 
-              <div className="rounded-md bg-muted px-3 py-2 text-xs space-y-1.5">
-                <p className="font-medium text-sm">Setup Steps</p>
-                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                  <li>Install: <code className="bg-background px-1 rounded">npm install -g openzca@latest</code></li>
-                  <li>Login: <code className="bg-background px-1 rounded">openzca auth login</code> → scan QR with Zalo</li>
-                  <li>Start listener: <code className="bg-background px-1 rounded text-[10px]">openzca listen --webhook {webhookUrl} --keep-alive --raw</code></li>
-                  <li>Fill in your Zalo ID below and save</li>
-                </ol>
-              </div>
-
-              {/* Login status + controls */}
+              {/* QR Login + status controls */}
               <ZaloPersonalLoginControls />
 
               <div className="space-y-1">

@@ -1,17 +1,18 @@
-// POST /api/cma/settings/zalo/login — trigger openzca QR login on server
-// GET  /api/cma/settings/zalo/login — check openzca auth status + restart listener
+// POST /api/cma/settings/zalo/login — trigger openzca QR login, return QR as base64 image
+// GET  /api/cma/settings/zalo/login — check openzca auth status
 
 import { NextResponse } from "next/server";
 import { withAdminAuth } from "@/lib/cma/services/org-auth";
 
-// Execute command on the openzca container via Docker exec
-async function dockerExec(cmd: string): Promise<{ stdout: string; stderr: string; code: number }> {
-  const { exec } = await import("child_process");
-  return new Promise((resolve) => {
-    exec(`docker exec clm-openzca ${cmd}`, { timeout: 30000 }, (err, stdout, stderr) => {
-      resolve({ stdout: stdout || "", stderr: stderr || "", code: err?.code || 0 });
-    });
-  });
+// Execute command on the openzca container
+function dockerExec(cmd: string, timeout = 30000): Promise<{ stdout: string; stderr: string; code: number }> {
+  const { execSync } = require("child_process");
+  try {
+    const stdout = execSync(`docker exec clm-openzca npx openzca ${cmd}`, { timeout, encoding: "utf8" });
+    return Promise.resolve({ stdout, stderr: "", code: 0 });
+  } catch (err: any) {
+    return Promise.resolve({ stdout: err.stdout || "", stderr: err.stderr || "", code: err.status || 1 });
+  }
 }
 
 // GET — check if openzca is logged in
@@ -19,16 +20,17 @@ export async function GET(request: Request) {
   const auth = await withAdminAuth();
   if (auth instanceof NextResponse) return auth;
 
-  const result = await dockerExec("openzca auth status");
-  const loggedIn = result.stdout.toLowerCase().includes("logged in") || result.code === 0;
+  const result = await dockerExec("auth status");
+  const output = (result.stdout + result.stderr).toLowerCase();
+  const loggedIn = output.includes("logged in") || output.includes("authenticated");
 
   return NextResponse.json({
     loggedIn,
-    status: result.stdout.trim() || result.stderr.trim() || "Unknown",
+    status: result.stdout.trim() || result.stderr.trim() || "Not connected",
   });
 }
 
-// POST — start QR login process or restart listener
+// POST — start QR login or restart listener
 export async function POST(request: Request) {
   const auth = await withAdminAuth();
   if (auth instanceof NextResponse) return auth;
@@ -36,39 +38,46 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const action = (body as { action?: string }).action || "login";
 
+  // Restart the openzca container
   if (action === "restart") {
-    // Restart the openzca container to pick up new credentials
-    const { exec } = await import("child_process");
-    return new Promise<NextResponse>((resolve) => {
-      exec("docker restart clm-openzca", { timeout: 30000 }, (err, stdout, stderr) => {
-        if (err) {
-          resolve(NextResponse.json({ success: false, error: stderr || err.message }, { status: 500 }));
-        } else {
-          resolve(NextResponse.json({ success: true, message: "OpenZCA listener restarted" }));
-        }
+    const { execSync } = require("child_process");
+    try {
+      execSync("docker restart clm-openzca", { timeout: 30000 });
+      return NextResponse.json({ success: true, message: "Bot restarted successfully" });
+    } catch (err: any) {
+      return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    }
+  }
+
+  // Generate QR code as base64 data URL for web display
+  if (action === "login") {
+    const result = await dockerExec("auth login --qr-base64", 60000);
+    const output = result.stdout + result.stderr;
+
+    // Extract data URL from output (format: data:image/png;base64,...)
+    const dataUrlMatch = output.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
+    if (dataUrlMatch) {
+      return NextResponse.json({
+        success: true,
+        qrDataUrl: dataUrlMatch[0],
+        message: "Scan this QR code with your Zalo app",
       });
-    });
-  }
+    }
 
-  // Start interactive login — generate QR code URL
-  // openzca auth login outputs a QR code to terminal, which doesn't work via API
-  // Instead, use login-cred or provide instructions
-  // For now: check status and provide SSH command if not logged in
-  const status = await dockerExec("openzca auth status");
-  const loggedIn = status.stdout.toLowerCase().includes("logged in");
+    // Check if already logged in
+    if (output.toLowerCase().includes("logged in") || output.toLowerCase().includes("authenticated")) {
+      return NextResponse.json({
+        success: true,
+        loggedIn: true,
+        message: "Already logged in. Click 'Restart Listener' to start the bot.",
+      });
+    }
 
-  if (loggedIn) {
     return NextResponse.json({
-      success: true,
-      loggedIn: true,
-      message: "Already logged in. Click 'Restart Listener' to apply.",
-    });
+      success: false,
+      message: "Failed to generate QR code. " + (result.stderr || result.stdout).substring(0, 200),
+    }, { status: 500 });
   }
 
-  return NextResponse.json({
-    success: false,
-    loggedIn: false,
-    message: "QR login requires terminal access. Use the SSH command shown below.",
-    sshCommand: "ssh root@72.60.211.23 \"cd /opt/tonytechlab/clm && docker compose exec openzca openzca auth login\"",
-  });
+  return NextResponse.json({ error: "Invalid action" }, { status: 400 });
 }
