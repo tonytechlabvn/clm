@@ -35,15 +35,18 @@ export async function routeMessage(
   senderId: string,
   text: string,
   orgId: string,
-  provider: ZaloBotProvider
+  provider: ZaloBotProvider,
+  replyToId?: string // group threadId — if set, replies go to group instead of DM
 ): Promise<void> {
+  // Helper: send reply to correct destination (group or DM)
+  const reply = (msg: string) => provider.sendTextMessage(replyToId || senderId, msg);
   const { text: cleanText, imageUrl } = parseMessageContent(text);
   const trimmed = cleanText || text.trim();
   const cmd = trimmed.toLowerCase();
 
   // /help command
   if (cmd === "/help") {
-    await provider.sendTextMessage(senderId, [
+    await reply( [
       "📌 Commands:",
       "• /link <code> — Link Zalo to CLM",
       "• /list — Show your pending drafts",
@@ -61,11 +64,11 @@ export async function routeMessage(
   if (cmd.startsWith("/link ")) {
     const code = trimmed.slice(6).trim().toUpperCase();
     if (!code || code.length < 4) {
-      await provider.sendTextMessage(senderId, "Invalid code. Use: /link <CODE>");
+      await reply( "Invalid code. Use: /link <CODE>");
       return;
     }
     const result = await verifyAndLink(orgId, senderId, undefined, code);
-    await provider.sendTextMessage(senderId,
+    await reply(
       result.success ? "✅ Account linked! You can now send messages to create drafts.\n\nSend /help to see all commands." : `❌ Link failed: ${result.error}`
     );
     return;
@@ -79,7 +82,7 @@ export async function routeMessage(
   const userId = userMapping?.isActive ? userMapping.userId : null;
   const allowedAccountIds = userMapping?.allowedAccountIds || []; // empty = all
   if (!userId) {
-    await provider.sendTextMessage(senderId,
+    await reply(
       "Your Zalo is not linked to CLM.\nAsk your admin for a link code, then send: /link <CODE>"
     );
     return;
@@ -94,13 +97,13 @@ export async function routeMessage(
       select: { id: true, title: true, status: true, createdAt: true },
     });
     if (posts.length === 0) {
-      await provider.sendTextMessage(senderId, "No pending drafts.");
+      await reply( "No pending drafts.");
       return;
     }
     const list = posts.map((p, i) =>
       `${i + 1}. ${p.title}\n   Status: ${p.status === "pending_review" ? "⏳ Pending review" : "📝 Draft"}`
     ).join("\n\n");
-    await provider.sendTextMessage(senderId, `📋 Your recent drafts:\n\n${list}\n\nUse /approve or /approve <number> to approve.`);
+    await reply( `📋 Your recent drafts:\n\n${list}\n\nUse /approve or /approve <number> to approve.`);
     return;
   }
 
@@ -118,7 +121,7 @@ export async function routeMessage(
       select: { id: true, title: true },
     });
     if (posts.length === 0) {
-      await provider.sendTextMessage(senderId, "No drafts pending review.");
+      await reply( "No drafts pending review.");
       return;
     }
     const target = num > 0 && num <= posts.length ? posts[num - 1] : posts[0];
@@ -130,7 +133,7 @@ export async function routeMessage(
         select: { platform: true, label: true },
       });
       if (accounts.length === 0) {
-        await provider.sendTextMessage(senderId, "⚠️ No platform connected. Go to CLM settings to connect one.");
+        await reply( "⚠️ No platform connected. Go to CLM settings to connect one.");
         return;
       }
       // Store pending approval context so short replies (fb/wp/all) work
@@ -141,7 +144,7 @@ export async function routeMessage(
       if (hasFb) lines.push("👉 /approve fb");
       if (hasWp) lines.push("👉 /approve wp");
       if (hasFb && hasWp) lines.push("👉 /approve all");
-      await provider.sendTextMessage(senderId, lines.join("\n"));
+      await reply( lines.join("\n"));
       return;
     }
 
@@ -163,7 +166,7 @@ export async function routeMessage(
     // "all" keeps all accounts
 
     if (targetAccounts.length === 0) {
-      await provider.sendTextMessage(senderId, `⚠️ No ${platformArg} platform connected.`);
+      await reply( `⚠️ No ${platformArg} platform connected.`);
       return;
     }
 
@@ -172,7 +175,7 @@ export async function routeMessage(
       if (account.platform === "facebook") {
         const pubGuard = await canPublishToFacebook(orgId, account.id);
         if (!pubGuard.allowed) {
-          await provider.sendTextMessage(senderId, `⚠️ ${pubGuard.reason}`);
+          await reply( `⚠️ ${pubGuard.reason}`);
           return;
         }
       }
@@ -192,7 +195,7 @@ export async function routeMessage(
       }
     }
 
-    await provider.sendTextMessage(senderId, [
+    await reply( [
       `✅ Approved and queued for publishing!`,
       "",
       `Title: ${target.title}`,
@@ -205,7 +208,7 @@ export async function routeMessage(
   if (cmd.startsWith("/edit ")) {
     const newContent = trimmed.slice(6).trim();
     if (!newContent) {
-      await provider.sendTextMessage(senderId, "Usage: /edit <new content>");
+      await reply( "Usage: /edit <new content>");
       return;
     }
     const latest = await prisma.cmaPost.findFirst({
@@ -214,11 +217,11 @@ export async function routeMessage(
       select: { id: true, title: true },
     });
     if (!latest) {
-      await provider.sendTextMessage(senderId, "No draft to edit.");
+      await reply( "No draft to edit.");
       return;
     }
     await prisma.cmaPost.update({ where: { id: latest.id }, data: { content: newContent } });
-    await provider.sendTextMessage(senderId, `📝 Updated!\n\nTitle: ${latest.title}\nNew content saved.`);
+    await reply( `📝 Updated!\n\nTitle: ${latest.title}\nNew content saved.`);
     return;
   }
 
@@ -238,7 +241,7 @@ export async function routeMessage(
   // Spam guard: check rate limits before creating draft
   const draftGuard = await canCreateDraft(orgId, userId, trimmed);
   if (!draftGuard.allowed) {
-    await provider.sendTextMessage(senderId, `⚠️ ${draftGuard.reason}`);
+    await reply( `⚠️ ${draftGuard.reason}`);
     return;
   }
 
@@ -255,7 +258,7 @@ export async function routeMessage(
     const result = await routePostByMode(post.id, orgId, "zalo_bot");
 
     if (result.action === "auto_publish") {
-      await provider.sendTextMessage(senderId, `✅ Draft created and queued for auto-publish!\n\nTitle: ${title}`);
+      await reply( `✅ Draft created and queued for auto-publish!\n\nTitle: ${title}`);
     } else {
       // Fetch connected platforms filtered by user's permissions
       const allAccts = await prisma.cmaPlatformAccount.findMany({
@@ -273,7 +276,7 @@ export async function routeMessage(
       if (hasWp) options.push("wp — WordPress");
       if (hasFb && hasWp) options.push("all — cả hai");
 
-      await provider.sendTextMessage(senderId, [
+      await reply( [
         `📋 Draft created.`,
         `Title: ${title}`,
         ``,
@@ -285,6 +288,6 @@ export async function routeMessage(
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    await provider.sendTextMessage(senderId, `❌ Failed to create draft: ${msg}`);
+    await reply( `❌ Failed to create draft: ${msg}`);
   }
 }
