@@ -105,14 +105,15 @@ export async function routeMessage(
         await provider.sendTextMessage(senderId, "⚠️ No platform connected. Go to CLM settings to connect one.");
         return;
       }
-      const options = accounts.map((a) => `• /approve ${a.platform === "facebook" ? "fb" : "wp"} — ${a.label} (${a.platform})`);
-      if (accounts.length > 1) options.push("• /approve all — publish to all platforms");
-      await provider.sendTextMessage(senderId, [
-        `📋 "${target.title}"`,
-        "",
-        "Where to publish?",
-        ...options,
-      ].join("\n"));
+      // Store pending approval context so short replies (fb/wp/all) work
+      await prisma.cmaPost.update({ where: { id: target.id }, data: { status: "pending_review" } });
+      const hasFb = accounts.some((a) => a.platform === "facebook");
+      const hasWp = accounts.some((a) => a.platform === "wordpress");
+      const lines = [`📋 "${target.title}"`, "", "Where to publish? Reply:"];
+      if (hasFb) lines.push("👉 /approve fb");
+      if (hasWp) lines.push("👉 /approve wp");
+      if (hasFb && hasWp) lines.push("👉 /approve all");
+      await provider.sendTextMessage(senderId, lines.join("\n"));
       return;
     }
 
@@ -172,6 +173,19 @@ export async function routeMessage(
     await prisma.cmaPost.update({ where: { id: latest.id }, data: { content: newContent } });
     await provider.sendTextMessage(senderId, `📝 Updated!\n\nTitle: ${latest.title}\nNew content saved.`);
     return;
+  }
+
+  // Short replies: "fb", "wp", "all" → treat as /approve <platform> for pending review posts
+  if (["fb", "wp", "all", "facebook", "wordpress"].includes(cmd)) {
+    const pending = await prisma.cmaPost.findFirst({
+      where: { orgId, authorId: userId, status: "pending_review" },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+    if (pending) {
+      // Re-route as /approve <platform>
+      return routeMessage(senderId, `/approve ${trimmed}`, orgId, provider);
+    }
   }
 
   // Default: create new draft from text
