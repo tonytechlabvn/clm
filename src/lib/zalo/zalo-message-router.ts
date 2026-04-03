@@ -9,13 +9,35 @@ import type { ZaloBotProvider } from "./zalo-bot-provider";
 
 const MAX_TITLE_LENGTH = 100;
 
+// Strip OpenZCA media metadata from message, extract image URL if present
+function parseMessageContent(raw: string): { text: string; imageUrl: string | null } {
+  let text = raw;
+  let imageUrl: string | null = null;
+
+  // Extract Zalo CDN image URL from [media attached: ...] metadata
+  const cdnMatch = raw.match(/https?:\/\/[^\s\]]+\.zdn\.vn[^\s\]]+\.(jpg|jpeg|png|gif|webp)/i);
+  if (cdnMatch) imageUrl = cdnMatch[0];
+
+  // Remove [media attached: /home/node/...] metadata blocks
+  text = text.replace(/\[media attached:[^\]]*\]/gi, "").trim();
+  // Remove standalone file paths
+  text = text.replace(/\/home\/node\/[^\s]+/g, "").trim();
+  // Remove Zalo CDN URLs that were already extracted
+  if (imageUrl) text = text.replace(imageUrl, "").trim();
+  // Clean up leftover separators
+  text = text.replace(/\|\s*/g, "").replace(/\s+/g, " ").trim();
+
+  return { text, imageUrl };
+}
+
 export async function routeMessage(
   senderId: string,
   text: string,
   orgId: string,
   provider: ZaloBotProvider
 ): Promise<void> {
-  const trimmed = text.trim();
+  const { text: cleanText, imageUrl } = parseMessageContent(text);
+  const trimmed = cleanText || text.trim();
   const cmd = trimmed.toLowerCase();
 
   // /help command
@@ -196,6 +218,7 @@ export async function routeMessage(
     const post = await createPost({
       orgId, authorId: userId, title, content: trimmed,
       contentFormat: "markdown", source: "zalo_bot",
+      featuredImage: imageUrl || undefined,
     });
     const result = await routePostByMode(post.id, orgId, "zalo_bot");
 
