@@ -1,5 +1,6 @@
 volumes:
   clm-pgdata:
+  openzca-data:
 
 networks:
   tony-net:
@@ -83,3 +84,41 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  # OpenZCA — Zalo personal bot sidecar (forwards messages to CLM webhook)
+  # First-time setup: docker compose exec openzca openzca auth login
+  # Then restart: docker compose restart openzca
+  openzca:
+    image: node:22-alpine
+    container_name: clm-openzca
+    restart: unless-stopped
+    working_dir: /home/node
+    user: node
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        npm install -g openzca@latest 2>/dev/null
+        if [ -f /home/node/.openzca/credentials.json ]; then
+          echo "[openzca] Credentials found, starting listener..."
+          openzca listen --webhook http://clm.tonytechlab.com:3000/api/webhooks/zalo --keep-alive --raw
+        else
+          echo "[openzca] No credentials found. Run: docker compose exec openzca openzca auth login"
+          echo "[openzca] Waiting for login... (sleeping)"
+          sleep infinity
+        fi
+    volumes:
+      - openzca-data:/home/node/.openzca
+    networks:
+      - tony-net
+    depends_on:
+      - clm
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.25"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
