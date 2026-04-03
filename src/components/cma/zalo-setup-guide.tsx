@@ -50,7 +50,22 @@ function ZaloPersonalLoginControls({ onZaloIdDetected, isConfigured }: { onZaloI
       );
       if (res.qrDataUrl) {
         setQrDataUrl(res.qrDataUrl);
-        setStatus("Scan the QR code below with your Zalo app");
+        setStatus("⏳ Waiting for scan...");
+        // Auto-poll every 3s to detect when scan completes
+        const pollId = setInterval(async () => {
+          try {
+            const statusRes = await cmaFetch<{ loggedIn: boolean; zaloId?: string; status: string }>("/api/cma/settings/zalo/login");
+            if (statusRes.loggedIn) {
+              clearInterval(pollId);
+              setLoggedIn(true);
+              setQrDataUrl(null);
+              setStatus("✅ Connected successfully!");
+              if (statusRes.zaloId && onZaloIdDetected) onZaloIdDetected(statusRes.zaloId);
+            }
+          } catch {}
+        }, 3000);
+        // Stop polling after 90s
+        setTimeout(() => { clearInterval(pollId); setStatus("QR expired — click Login with QR to try again"); }, 90000);
       } else if (res.loggedIn) {
         setLoggedIn(true);
         setStatus("Already connected");
