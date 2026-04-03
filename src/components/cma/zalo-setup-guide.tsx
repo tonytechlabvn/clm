@@ -59,8 +59,15 @@ function ZaloPersonalLoginControls({ onZaloIdDetected, isConfigured }: { onZaloI
               clearInterval(pollId);
               setLoggedIn(true);
               setQrDataUrl(null);
-              setStatus("✅ Connected successfully!");
+              setStatus("✅ Connected — starting listener...");
               if (statusRes.zaloId && onZaloIdDetected) onZaloIdDetected(statusRes.zaloId);
+              // Auto-restart listener so bot starts receiving messages
+              try {
+                await cmaFetch("/api/cma/settings/zalo/login", { method: "POST", body: JSON.stringify({ action: "restart" }) });
+                setStatus("✅ Connected and listening for messages!");
+              } catch {
+                setStatus("✅ Connected — click Start Listener to begin");
+              }
             }
           } catch {}
         }, 3000);
