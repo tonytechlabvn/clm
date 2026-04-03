@@ -27,7 +27,8 @@ RUN apk add --no-cache openssl docker-cli
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 # Allow nextjs user to access Docker socket (for openzca management)
-RUN addgroup -g 999 docker 2>/dev/null || true && addgroup nextjs docker 2>/dev/null || true
+# GID 988 matches host's docker socket group
+RUN addgroup -g 988 dockerhost 2>/dev/null || true && addgroup nextjs dockerhost 2>/dev/null || true
 
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
