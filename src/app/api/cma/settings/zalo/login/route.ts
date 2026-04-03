@@ -54,29 +54,39 @@ export async function POST(request: Request) {
     }
   }
 
-  // Generate QR code as base64 data URL for web display
+  // Generate QR code: use --qr-path to save file, then read as base64
   if (action === "login") {
-    const result = await dockerExec("auth login --qr-base64", 60000);
-    const output = result.stdout + result.stderr;
+    // Clear stale credentials + lock files for fresh login
+    const { execSync } = require("child_process");
+    try {
+      execSync("docker exec clm-openzca rm -f /home/node/.openzca/profiles/default/listener-owner.json", { timeout: 5000 });
+    } catch {}
 
-    // Extract data URL from output (format: data:image/png;base64,...)
-    const dataUrlMatch = output.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
-    if (dataUrlMatch) {
-      return NextResponse.json({
-        success: true,
-        qrDataUrl: dataUrlMatch[0],
-        message: "Scan this QR code with your Zalo app",
-      });
-    }
+    const result = await dockerExec("auth login --qr-path /tmp/qr.png", 60000);
+    const output = result.stdout + result.stderr;
 
     // Check if already logged in
     if (output.toLowerCase().includes("logged in") || output.toLowerCase().includes("authenticated")) {
       return NextResponse.json({
         success: true,
         loggedIn: true,
-        message: "Already logged in. Click 'Restart Listener' to start the bot.",
+        message: "Already logged in. Click 'Start Listener' to start the bot.",
       });
     }
+
+    // Read QR image file as base64
+    try {
+      const qrBase64 = execSync("docker exec clm-openzca cat /tmp/qr.png | base64 -w0", {
+        timeout: 10000, encoding: "utf8", maxBuffer: 1024 * 1024,
+      });
+      if (qrBase64 && qrBase64.length > 100) {
+        return NextResponse.json({
+          success: true,
+          qrDataUrl: `data:image/png;base64,${qrBase64}`,
+          message: "Scan this QR code with your Zalo app",
+        });
+      }
+    } catch {}
 
     return NextResponse.json({
       success: false,
