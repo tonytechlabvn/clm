@@ -5,6 +5,7 @@ import { createPost } from "@/lib/cma/services/post-service";
 import { routePostByMode } from "@/lib/cma/services/publish-mode-router";
 import { publishPost } from "@/lib/cma/services/publishing-service";
 import { getLinkedUserId, verifyAndLink } from "./zalo-user-mapping";
+import { canCreateDraft, canPublishToFacebook } from "./zalo-spam-guard";
 import type { ZaloBotProvider } from "./zalo-bot-provider";
 
 const MAX_TITLE_LENGTH = 100;
@@ -157,13 +158,23 @@ export async function routeMessage(
       return;
     }
 
+    // Spam guard: check publish rate limits for Facebook accounts
+    for (const account of targetAccounts) {
+      if (account.platform === "facebook") {
+        const pubGuard = await canPublishToFacebook(orgId, account.id);
+        if (!pubGuard.allowed) {
+          await provider.sendTextMessage(senderId, `⚠️ ${pubGuard.reason}`);
+          return;
+        }
+      }
+    }
+
     // Approve the post
     await prisma.cmaPost.update({ where: { id: target.id }, data: { status: "approved" } });
 
-    // Create CmaPostPlatform records + enqueue publish for each target
+    // Publish to each target platform
     const published: string[] = [];
     for (const account of targetAccounts) {
-      // Publish directly (not via pg-boss queue)
       const result = await publishPost({ postId: target.id, accountId: account.id, orgId });
       if (result.success) {
         published.push(`${account.label} (${account.platform})\n🔗 ${result.platformUrl || ""}`);
@@ -213,6 +224,13 @@ export async function routeMessage(
       // Re-route as /approve <platform>
       return routeMessage(senderId, `/approve ${trimmed}`, orgId, provider);
     }
+  }
+
+  // Spam guard: check rate limits before creating draft
+  const draftGuard = await canCreateDraft(orgId, userId, trimmed);
+  if (!draftGuard.allowed) {
+    await provider.sendTextMessage(senderId, `⚠️ ${draftGuard.reason}`);
+    return;
   }
 
   // Default: create new draft from text
