@@ -14,7 +14,7 @@ interface ZaloConfig {
   refreshToken: string;
   isActive: boolean;
   configured: boolean;
-  botType?: BotType;
+  botType?: BotType; // the saved/active bot type from DB
   // Personal mode fields
   cookies?: string;
   imei?: string;
@@ -184,7 +184,7 @@ export function ZaloSetupGuide({ orgId }: { orgId: string }) {
 
   useEffect(() => {
     if (!orgId) return;
-    cmaFetch<ZaloConfig & { botType?: BotType }>(`/api/cma/settings/zalo?orgId=${orgId}`)
+    cmaFetch<ZaloConfig>(`/api/cma/settings/zalo?orgId=${orgId}`)
       .then((data) => { setConfig(data); if (data.botType) setBotType(data.botType); })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -215,10 +215,10 @@ export function ZaloSetupGuide({ orgId }: { orgId: string }) {
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5 text-blue-500" />
           <CardTitle className="text-base">Zalo Bot Setup</CardTitle>
-          {!loading && config.configured && (
+          {!loading && config.configured && config.botType && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
               <CheckCircle className="h-3 w-3" />
-              {botType === "personal" ? "Personal" : "OA"} — Active
+              {config.botType === "personal" ? "Personal" : "OA"} — Active
             </span>
           )}
         </div>
