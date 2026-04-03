@@ -113,18 +113,22 @@ export class FacebookAdapter implements PlatformAdapter {
     siteUrl: string,
     _username: string,
     token: string,
-    post: PublishPayload
+    post: PublishPayload,
+    imageUrl?: string // optional: direct image URL to attach (e.g. from Zalo CDN)
   ): Promise<PlatformPostResult> {
     const pageId = siteUrl; // siteUrl stores FB Page ID
     await checkRateLimit(pageId);
 
     let result;
-    if (post.featuredMediaId) {
-      // Publish photo post with message (photo was uploaded unpublished earlier)
+    // Determine image URL: from imageUrl param, or from featuredMediaId if it's a URL
+    const imgUrl = imageUrl || (post.featuredMediaId?.startsWith("http") ? post.featuredMediaId : undefined);
+
+    if (imgUrl) {
+      // Photo post: POST /{pageId}/photos with url + message (FB downloads the image)
       result = await fbGraphFetch(`/${pageId}/photos`, token, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: post.content, photo_id: post.featuredMediaId }),
+        body: JSON.stringify({ message: post.content, url: imgUrl }),
       });
     } else {
       // Text-only post
