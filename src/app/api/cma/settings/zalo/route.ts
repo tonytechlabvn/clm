@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     userAgent: config?.userAgent || "",
     isActive: config?.isActive ?? false,
     configured: config?.botType === "personal"
-      ? !!(config?.cookies && config?.selfId)
+      ? !!(config?.selfId && config?.isActive)
       : !!(config?.oaId && config?.accessToken),
   });
 }

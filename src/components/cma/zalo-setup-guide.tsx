@@ -23,10 +23,10 @@ interface ZaloConfig {
 }
 
 // Sub-component: QR login + status controls for personal mode
-function ZaloPersonalLoginControls({ onZaloIdDetected }: { onZaloIdDetected?: (id: string) => void }) {
-  const [status, setStatus] = useState<string | null>(null);
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [loading, setLoading] = useState(true); // start as loading
+function ZaloPersonalLoginControls({ onZaloIdDetected, isConfigured }: { onZaloIdDetected?: (id: string) => void; isConfigured?: boolean }) {
+  const [status, setStatus] = useState<string | null>(isConfigured ? "Configured — click Check Status to verify live connection" : null);
+  const [loggedIn, setLoggedIn] = useState(isConfigured || false);
+  const [loading, setLoading] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   async function checkStatus() {
@@ -40,9 +40,6 @@ function ZaloPersonalLoginControls({ onZaloIdDetected }: { onZaloIdDetected?: (i
     } catch { setStatus("Unable to check status"); }
     finally { setLoading(false); }
   }
-
-  // Auto-check status on mount
-  useEffect(() => { checkStatus(); }, []);
 
   async function handleLogin() {
     setLoading(true); setQrDataUrl(null); setStatus("Generating QR code...");
@@ -187,7 +184,7 @@ export function ZaloSetupGuide({ orgId }: { orgId: string }) {
 
   useEffect(() => {
     if (!orgId) return;
-    cmaFetch<ZaloConfig>(`/api/cma/settings/zalo?orgId=${orgId}`)
+    cmaFetch<ZaloConfig & { botType?: BotType }>(`/api/cma/settings/zalo?orgId=${orgId}`)
       .then((data) => { setConfig(data); if (data.botType) setBotType(data.botType); })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -277,7 +274,10 @@ export function ZaloSetupGuide({ orgId }: { orgId: string }) {
               </div>
 
               {/* QR Login + status controls */}
-              <ZaloPersonalLoginControls onZaloIdDetected={(id) => setConfig((c) => ({ ...c, selfId: id }))} />
+              <ZaloPersonalLoginControls
+                onZaloIdDetected={(id) => setConfig((c) => ({ ...c, selfId: id }))}
+                isConfigured={config.configured && botType === "personal"}
+              />
 
               <div className="space-y-1">
                 <label className="text-sm font-medium">Zalo Account ID</label>
