@@ -6,7 +6,7 @@ import { ZaloPersonalProvider } from "./zalo-personal-provider";
 
 export interface ZaloBotProvider {
   readonly botType: "oa" | "personal";
-  sendTextMessage(userId: string, text: string): Promise<void>;
+  sendTextMessage(userId: string, text: string, isGroup?: boolean): Promise<void>;
   sendImageMessage(userId: string, imageUrl: string, caption?: string): Promise<void>;
   // OA: webhook calls handleIncomingMessage → triggers callback
   // Personal (4b): WebSocket listens and triggers callback

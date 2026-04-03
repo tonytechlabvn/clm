@@ -38,8 +38,9 @@ export async function routeMessage(
   provider: ZaloBotProvider,
   replyToId?: string // group threadId — if set, replies go to group instead of DM
 ): Promise<void> {
-  // Helper: send reply to correct destination (group or DM)
-  const reply = (msg: string) => provider.sendTextMessage(replyToId || senderId, msg);
+  // Helper: send reply to correct destination (group with --group flag, or DM)
+  const isGroup = !!replyToId;
+  const reply = (msg: string) => provider.sendTextMessage(replyToId || senderId, msg, isGroup);
   const { text: cleanText, imageUrl } = parseMessageContent(text);
   const trimmed = cleanText || text.trim();
   const cmd = trimmed.toLowerCase();

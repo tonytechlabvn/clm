@@ -19,11 +19,11 @@ export class ZaloPersonalProvider implements ZaloBotProvider {
   readonly botType = "personal" as const;
   private messageCallback: ((senderId: string, text: string) => void) | null = null;
 
-  async sendTextMessage(userId: string, text: string): Promise<void> {
-    // Escape single quotes for shell safety — keep newlines as-is (openzca handles them)
+  async sendTextMessage(userId: string, text: string, isGroup = false): Promise<void> {
     const safeText = text.replace(/'/g, "'\\''");
-    console.log(`[zalo-personal] Sending to ${userId}: ${safeText.substring(0, 50)}...`);
-    const result = await openzcaExec(`msg send '${userId}' '${safeText}'`);
+    const groupFlag = isGroup ? " --group" : "";
+    console.log(`[zalo-personal] Sending to ${userId} (group=${isGroup}): ${safeText.substring(0, 50)}...`);
+    const result = await openzcaExec(`msg send '${userId}' '${safeText}'${groupFlag}`);
     console.log(`[zalo-personal] Send result: ${result.substring(0, 100)}`);
   }
 
