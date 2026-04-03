@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma-client";
 import { createPost } from "@/lib/cma/services/post-service";
 import { routePostByMode } from "@/lib/cma/services/publish-mode-router";
-import { enqueueScheduledPublish } from "@/lib/cma/services/pgboss-service";
+import { publishPost } from "@/lib/cma/services/publishing-service";
 import { getLinkedUserId, verifyAndLink } from "./zalo-user-mapping";
 import type { ZaloBotProvider } from "./zalo-bot-provider";
 
@@ -163,14 +163,13 @@ export async function routeMessage(
     // Create CmaPostPlatform records + enqueue publish for each target
     const published: string[] = [];
     for (const account of targetAccounts) {
-      // Upsert platform publish record (required by publishing-service)
-      await prisma.cmaPostPlatform.upsert({
-        where: { postId_accountId: { postId: target.id, accountId: account.id } },
-        create: { postId: target.id, accountId: account.id, status: "pending" },
-        update: { status: "pending", publishError: null },
-      });
-      await enqueueScheduledPublish(target.id, account.id, orgId, new Date());
-      published.push(`${account.label} (${account.platform})`);
+      // Publish directly (not via pg-boss queue)
+      const result = await publishPost({ postId: target.id, accountId: account.id, orgId });
+      if (result.success) {
+        published.push(`${account.label} (${account.platform})\n🔗 ${result.platformUrl || ""}`);
+      } else {
+        published.push(`${account.label} — ❌ ${result.error}`)
+      }
     }
 
     await provider.sendTextMessage(senderId, [
