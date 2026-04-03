@@ -82,6 +82,7 @@ export async function buildFbLoginUrl(orgId: string, userId: string): Promise<st
     scope: FB_SCOPES,
     state,
     response_type: "code",
+    auth_type: "rerequest", // always show page selection even if already authorized
   });
   return `${FB_OAUTH_BASE}?${params}`;
 }
