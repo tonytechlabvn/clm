@@ -76,9 +76,13 @@ export async function routeMessage(
     return;
   }
 
-  // /approve — approve latest or specific draft
+  // /approve — show platform options or approve to specific platform
+  // /approve fb, /approve wp, /approve all, /approve <number> fb
   if (cmd === "/approve" || cmd.startsWith("/approve ")) {
-    const num = parseInt(trimmed.slice(8).trim()) || 0;
+    const args = trimmed.slice(8).trim().toLowerCase().split(/\s+/);
+    const num = parseInt(args[0]) || 0;
+    const platformArg = num > 0 ? (args[1] || "") : (args[0] || "");
+
     const posts = await prisma.cmaPost.findMany({
       where: { orgId, authorId: userId, status: "pending_review" },
       orderBy: { createdAt: "desc" },
@@ -90,23 +94,62 @@ export async function routeMessage(
       return;
     }
     const target = num > 0 && num <= posts.length ? posts[num - 1] : posts[0];
-    // Approve: set status to approved
-    await prisma.cmaPost.update({ where: { id: target.id }, data: { status: "approved" } });
-    // Enqueue publish if there's an active platform account
-    const account = await prisma.cmaPlatformAccount.findFirst({
-      where: { orgId, isActive: true },
-      select: { id: true, platform: true },
-    });
-    if (account) {
-      await enqueueScheduledPublish(target.id, account.id, orgId, new Date());
-      await provider.sendTextMessage(senderId,
-        `✅ Approved and queued for publishing!\n\nTitle: ${target.title}\nPlatform: ${account.platform}`
-      );
-    } else {
-      await provider.sendTextMessage(senderId,
-        `✅ Approved!\n\nTitle: ${target.title}\n\n⚠️ No platform connected — go to CLM settings to connect one.`
-      );
+
+    // If no platform specified, show options
+    if (!platformArg) {
+      const accounts = await prisma.cmaPlatformAccount.findMany({
+        where: { orgId, isActive: true },
+        select: { platform: true, label: true },
+      });
+      if (accounts.length === 0) {
+        await provider.sendTextMessage(senderId, "⚠️ No platform connected. Go to CLM settings to connect one.");
+        return;
+      }
+      const options = accounts.map((a) => `• /approve ${a.platform === "facebook" ? "fb" : "wp"} — ${a.label} (${a.platform})`);
+      if (accounts.length > 1) options.push("• /approve all — publish to all platforms");
+      await provider.sendTextMessage(senderId, [
+        `📋 "${target.title}"`,
+        "",
+        "Where to publish?",
+        ...options,
+      ].join("\n"));
+      return;
     }
+
+    // Resolve target platforms
+    const allAccounts = await prisma.cmaPlatformAccount.findMany({
+      where: { orgId, isActive: true },
+      select: { id: true, platform: true, label: true },
+    });
+    let targetAccounts = allAccounts;
+    if (platformArg === "fb" || platformArg === "facebook") {
+      targetAccounts = allAccounts.filter((a) => a.platform === "facebook");
+    } else if (platformArg === "wp" || platformArg === "wordpress") {
+      targetAccounts = allAccounts.filter((a) => a.platform === "wordpress");
+    }
+    // "all" keeps all accounts
+
+    if (targetAccounts.length === 0) {
+      await provider.sendTextMessage(senderId, `⚠️ No ${platformArg} platform connected.`);
+      return;
+    }
+
+    // Approve the post
+    await prisma.cmaPost.update({ where: { id: target.id }, data: { status: "approved" } });
+
+    // Enqueue publish to each target platform
+    const published: string[] = [];
+    for (const account of targetAccounts) {
+      await enqueueScheduledPublish(target.id, account.id, orgId, new Date());
+      published.push(`${account.label} (${account.platform})`);
+    }
+
+    await provider.sendTextMessage(senderId, [
+      `✅ Approved and queued for publishing!`,
+      "",
+      `Title: ${target.title}`,
+      `Platform${published.length > 1 ? "s" : ""}: ${published.join(", ")}`,
+    ].join("\n"));
     return;
   }
 
