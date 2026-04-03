@@ -3,39 +3,37 @@
 
 import { NextResponse } from "next/server";
 import { withAdminAuth } from "@/lib/cma/services/org-auth";
+import { execSync, exec } from "child_process";
 
-// Execute openzca command in the sidecar container (as node user for proper file permissions)
-function dockerExec(cmd: string, timeout = 30000): Promise<{ stdout: string; stderr: string; code: number }> {
-  const { execSync } = require("child_process");
+const CMD_PREFIX = "docker exec -u node clm-openzca npx --yes openzca@latest";
+
+function dockerExecSync(cmd: string, timeout = 30000): { stdout: string; code: number } {
   try {
-    const stdout = execSync(`docker exec -u node clm-openzca npx openzca@latest ${cmd}`, { timeout, encoding: "utf8" });
-    return Promise.resolve({ stdout, stderr: "", code: 0 });
+    const stdout = execSync(`${CMD_PREFIX} ${cmd}`, { timeout, encoding: "utf8" });
+    return { stdout, code: 0 };
   } catch (err: any) {
-    return Promise.resolve({ stdout: err.stdout || "", stderr: err.stderr || "", code: err.status || 1 });
+    return { stdout: err.stdout || err.stderr || err.message || "", code: err.status || 1 };
   }
 }
 
-// GET — check if openzca is logged in, return account ID if available
+// GET — check if openzca is logged in
 export async function GET(request: Request) {
   const auth = await withAdminAuth();
   if (auth instanceof NextResponse) return auth;
 
-  const result = await dockerExec("auth status");
-  const output = result.stdout + result.stderr;
-  const loggedIn = output.includes("loggedIn: true") || output.includes("loggedIn:true") || output.toLowerCase().includes("logged in");
-
-  // Extract userId from output like: userId: '6137585649103333359'
+  const result = dockerExecSync("auth status", 15000);
+  const output = result.stdout;
+  const loggedIn = output.includes("loggedIn: true");
   const idMatch = output.match(/userId[:\s]*'?(\d{10,})'?/);
-  const zaloId = idMatch?.[1] || "";
 
   return NextResponse.json({
     loggedIn,
-    zaloId,
-    status: result.stdout.trim() || result.stderr.trim() || "Not connected",
+    zaloId: idMatch?.[1] || "",
+    status: output.trim() || "Not connected",
   });
 }
 
-// POST — start QR login or restart listener
+// POST — login (generate QR), restart, or check
 export async function POST(request: Request) {
   const auth = await withAdminAuth();
   if (auth instanceof NextResponse) return auth;
@@ -43,9 +41,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const action = (body as { action?: string }).action || "login";
 
-  // Restart the openzca container
   if (action === "restart") {
-    const { execSync } = require("child_process");
     try {
       execSync("docker restart clm-openzca", { timeout: 30000 });
       return NextResponse.json({ success: true, message: "Bot restarted successfully" });
@@ -54,43 +50,41 @@ export async function POST(request: Request) {
     }
   }
 
-  // Generate QR code: use --qr-path to save file, then read as base64
   if (action === "login") {
-    // Clear stale credentials + lock files for fresh login
-    const { execSync } = require("child_process");
+    // Clear stale files
     try {
-      execSync("docker exec clm-openzca rm -f /home/node/.openzca/profiles/default/listener-owner.json", { timeout: 5000 });
+      execSync("docker exec clm-openzca rm -f /tmp/qr.png /home/node/.openzca/profiles/default/listener-owner.json", { timeout: 5000 });
     } catch {}
 
-    const result = await dockerExec("auth login --qr-path /tmp/qr.png", 60000);
-    const output = result.stdout + result.stderr;
+    // Start login as BACKGROUND process (non-blocking) so QR stays valid
+    exec(`docker exec -d -u node clm-openzca sh -c 'npx --yes openzca@latest auth login --qr-path /tmp/qr.png > /tmp/login.log 2>&1'`);
 
-    // Check if already logged in
-    if (output.toLowerCase().includes("logged in") || output.toLowerCase().includes("authenticated")) {
-      return NextResponse.json({
-        success: true,
-        loggedIn: true,
-        message: "Already logged in. Click 'Start Listener' to start the bot.",
-      });
+    // Poll for QR file to appear (max 15s)
+    for (let i = 0; i < 15; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      try {
+        const qrBase64 = execSync("docker exec clm-openzca base64 -w0 /tmp/qr.png", {
+          timeout: 5000, encoding: "utf8",
+        });
+        if (qrBase64 && qrBase64.length > 100) {
+          return NextResponse.json({
+            success: true,
+            qrDataUrl: `data:image/png;base64,${qrBase64.trim()}`,
+            message: "Scan this QR code with your Zalo app — expires in ~60 seconds",
+          });
+        }
+      } catch {}
     }
 
-    // Read QR image file as base64
-    try {
-      const qrBase64 = execSync("docker exec clm-openzca cat /tmp/qr.png | base64 -w0", {
-        timeout: 10000, encoding: "utf8", maxBuffer: 1024 * 1024,
-      });
-      if (qrBase64 && qrBase64.length > 100) {
-        return NextResponse.json({
-          success: true,
-          qrDataUrl: `data:image/png;base64,${qrBase64}`,
-          message: "Scan this QR code with your Zalo app",
-        });
-      }
-    } catch {}
+    // Check if already logged in
+    const status = dockerExecSync("auth status", 10000);
+    if (status.stdout.includes("loggedIn: true")) {
+      return NextResponse.json({ success: true, loggedIn: true, message: "Already logged in" });
+    }
 
     return NextResponse.json({
       success: false,
-      message: "Failed to generate QR code. " + (result.stderr || result.stdout).substring(0, 200),
+      message: "Failed to generate QR code — try again",
     }, { status: 500 });
   }
 
