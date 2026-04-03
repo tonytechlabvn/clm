@@ -142,8 +142,25 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
       }
     }
 
-    // 7b–7c: Image resolution — only for HTML-based platforms (skip for plain text adapters)
+    // 7b–7c: Image handling
     let featuredMediaId: string | undefined;
+
+    // For non-HTML adapters (Facebook): if post has a featured image URL, upload it
+    if (!adapter.usesHtmlPipeline && post.featuredImage && adapter.uploadMedia) {
+      try {
+        const imgRes = await fetch(post.featuredImage);
+        if (imgRes.ok) {
+          const buffer = Buffer.from(await imgRes.arrayBuffer());
+          const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+          const uploaded = await adapter.uploadMedia(siteUrl, username, token, buffer, "zalo-image.jpg", contentType);
+          featuredMediaId = uploaded.platformMediaId;
+        }
+      } catch (err) {
+        console.error("[publish] Failed to upload featured image:", err);
+      }
+    }
+
+    // HTML-based platforms: resolve [IMAGE] placeholders + fetch Unsplash images
     if (adapter.usesHtmlPipeline) {
       const suggestedPrompts: string[] = (() => {
         try {
