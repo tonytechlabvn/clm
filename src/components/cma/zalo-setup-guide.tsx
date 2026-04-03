@@ -111,36 +111,27 @@ export function ZaloSetupGuide({ orgId }: { orgId: string }) {
               <div className="rounded-md bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2 text-xs flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium">Personal mode uses an unofficial library (zca-js)</p>
-                  <p>Use a dedicated throwaway Zalo account. Session dies if Zalo Web is opened in browser. Ban risk exists.</p>
+                  <p className="font-medium">Personal mode uses OpenZCA (open-source CLI)</p>
+                  <p>Uses a dedicated Zalo account. Session is single-device — don&apos;t open Zalo Web in browser while running.</p>
                 </div>
               </div>
+
+              <div className="rounded-md bg-muted px-3 py-2 text-xs space-y-1.5">
+                <p className="font-medium text-sm">Setup Steps</p>
+                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                  <li>Install: <code className="bg-background px-1 rounded">npm install -g openzca@latest</code></li>
+                  <li>Login: <code className="bg-background px-1 rounded">openzca auth login</code> → scan QR with Zalo</li>
+                  <li>Start listener: <code className="bg-background px-1 rounded text-[10px]">openzca listen --webhook {webhookUrl} --keep-alive --raw</code></li>
+                  <li>Fill in your Zalo ID below and save</li>
+                </ol>
+              </div>
+
               <div className="space-y-1">
                 <label className="text-sm font-medium">Zalo Account ID</label>
                 <input type="text" placeholder="Your personal Zalo user ID" value={config.selfId || ""}
                   onChange={(e) => setConfig({ ...config, selfId: e.target.value })}
                   className="w-full rounded-md border px-3 py-2 text-sm bg-background" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Cookies (from DevTools)</label>
-                <textarea placeholder="Paste cookie JSON from Zalo Web DevTools..." value={config.cookies || ""}
-                  onChange={(e) => setConfig({ ...config, cookies: e.target.value })}
-                  rows={3} className="w-full rounded-md border px-3 py-2 text-sm bg-background resize-none font-mono" />
-                <p className="text-xs text-muted-foreground">Open Zalo Web → DevTools → Application → Cookies → copy all as JSON</p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">IMEI</label>
-                  <input type="text" placeholder="Device IMEI for zca-js" value={config.imei || ""}
-                    onChange={(e) => setConfig({ ...config, imei: e.target.value })}
-                    className="w-full rounded-md border px-3 py-2 text-sm bg-background" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium">User Agent</label>
-                  <input type="text" placeholder="Browser User-Agent string" value={config.userAgent || ""}
-                    onChange={(e) => setConfig({ ...config, userAgent: e.target.value })}
-                    className="w-full rounded-md border px-3 py-2 text-sm bg-background" />
-                </div>
+                <p className="text-xs text-muted-foreground">Run <code>openzca auth status</code> to find your Zalo ID</p>
               </div>
             </>
           )}
