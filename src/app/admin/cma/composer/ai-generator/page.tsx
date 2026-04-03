@@ -68,6 +68,9 @@ export default function CmaAiGeneratorPage() {
   const [sections, setSections] = useState<OutlineSection[]>([]);
   const [imagePrompts, setImagePrompts] = useState<string[]>([]);
 
+  // Facebook draft state (used when targetPlatform is "facebook")
+  const [fbDraft, setFbDraft] = useState("");
+
   // Step 3 state
   const [blogContent, setBlogContent] = useState("");
   const [blogCss, setBlogCss] = useState("");
@@ -127,6 +130,11 @@ export default function CmaAiGeneratorPage() {
       });
       setTitle(result.title); setMetaDesc(result.metaDescription);
       setSections(result.sections); setImagePrompts(result.suggestedImagePrompts);
+      // For Facebook mode, pre-populate fbDraft from the title + first section
+      if (targetPlatform === "facebook") {
+        const preview = result.sections.map((s) => s.keyPoints[0] || "").filter(Boolean).join("\n\n");
+        setFbDraft(`${result.title}\n\n${preview}`);
+      }
       setStep(2);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Outline generation failed");
@@ -184,12 +192,13 @@ export default function CmaAiGeneratorPage() {
       }
 
       // Save Facebook post (if target is facebook or both)
-      if ((targetPlatform === "facebook" || targetPlatform === "both") && fbExcerpt) {
+      const fbContent = fbDraft || fbExcerpt;
+      if ((targetPlatform === "facebook" || targetPlatform === "both") && fbContent) {
         const fbTitle = targetPlatform === "facebook" ? title : `[FB] ${title}`;
         const post = await cmaFetch<{ id: string }>("/api/cma/posts", {
           method: "POST",
           body: JSON.stringify({
-            orgId: org.id, title: fbTitle, content: fbExcerpt,
+            orgId: org.id, title: fbTitle, content: fbContent,
             contentFormat: "markdown",
             source: "web",
           }),
@@ -273,7 +282,8 @@ export default function CmaAiGeneratorPage() {
       {step === 2 && (
         <OutlineReviewStep title={title} onTitleChange={setTitle} metaDesc={metaDesc} onMetaDescChange={setMetaDesc}
           sections={sections} onSectionsChange={setSections} onBack={() => setStep(1)}
-          onGenerate={handleGenerateContent} loading={loading} />
+          onGenerate={targetPlatform === "facebook" ? handleSaveAsDraft : handleGenerateContent} loading={loading}
+          targetPlatform={targetPlatform} fbDraft={fbDraft} onFbDraftChange={setFbDraft} />
       )}
       {step === 3 && (
         <ContentReviewStep blogContent={blogContent} blogCss={blogCss}

@@ -16,12 +16,18 @@ interface OutlineReviewStepProps {
   onBack: () => void;
   onGenerate: () => void;
   loading: boolean;
+  targetPlatform?: "blog" | "facebook" | "both";
+  // Facebook-specific fields
+  fbDraft?: string;
+  onFbDraftChange?: (v: string) => void;
 }
 
 export function OutlineReviewStep({
   title, onTitleChange, metaDesc, onMetaDescChange,
   sections, onSectionsChange, onBack, onGenerate, loading,
+  targetPlatform = "blog", fbDraft, onFbDraftChange,
 }: OutlineReviewStepProps) {
+  const isFacebook = targetPlatform === "facebook";
   function updateSection(idx: number, field: keyof OutlineSection, value: string | string[]) {
     onSectionsChange(sections.map((s, i) => i === idx ? { ...s, [field]: value } : s));
   }
@@ -33,6 +39,49 @@ export function OutlineReviewStep({
     const [item] = copy.splice(from, 1);
     copy.splice(to, 0, item);
     onSectionsChange(copy);
+  }
+
+  // Facebook mode: simple post editor instead of blog outline
+  if (isFacebook) {
+    const charCount = (fbDraft || "").length;
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader><CardTitle>Review & Edit Facebook Post</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Post Content</label>
+              <textarea
+                value={fbDraft || ""}
+                onChange={(e) => onFbDraftChange?.(e.target.value)}
+                rows={10}
+                placeholder="Write your Facebook post here... Use hooks, emojis, and a call to action."
+                className="w-full mt-1 rounded-md border px-3 py-2 text-sm resize-none"
+              />
+              <div className="flex justify-between mt-1">
+                <p className="text-xs text-muted-foreground">Tips: Start with a hook, keep it concise, end with a question or CTA</p>
+                <span className={`text-xs ${charCount > 63206 ? "text-destructive" : "text-muted-foreground"}`}>
+                  {charCount.toLocaleString()} / 63,206
+                </span>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Hashtags</label>
+              <input type="text" value={metaDesc} onChange={(e) => onMetaDescChange(e.target.value)}
+                placeholder="#AI #TonyTechLab #Education"
+                className="w-full mt-1 rounded-md border px-3 py-2 text-sm" />
+            </div>
+          </CardContent>
+        </Card>
+        <div className="flex justify-between">
+          <Button variant="outline" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" /> Back</Button>
+          <Button onClick={onGenerate} disabled={loading || !(fbDraft || "").trim()}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <ArrowRight className="h-4 w-4 mr-1" />}
+            Save as Draft
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
