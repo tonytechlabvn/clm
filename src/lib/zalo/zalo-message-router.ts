@@ -15,18 +15,23 @@ function parseMessageContent(raw: string): { text: string; imageUrl: string | nu
   let text = raw;
   let imageUrl: string | null = null;
 
-  // Extract Zalo CDN image URL from [media attached: ...] metadata
-  const cdnMatch = raw.match(/https?:\/\/[^\s\]]+\.zdn\.vn[^\s\]]+\.(jpg|jpeg|png|gif|webp)/i);
+  // Extract Zalo CDN image URL from various metadata formats
+  const cdnMatch = raw.match(/https?:\/\/[^\s\]\)]+\.zdn\.vn[^\s\]\)]+/i);
   if (cdnMatch) imageUrl = cdnMatch[0];
 
-  // Remove [media attached: /home/node/...] metadata blocks
+  // Remove [media attached: ...] blocks
   text = text.replace(/\[media attached:[^\]]*\]/gi, "").trim();
+  // Remove "ched: (type) ..." metadata prefix (OpenZCA format)
+  text = text.replace(/^ched:\s*\([^)]*\)\s*/gi, "").trim();
+  text = text.replace(/ched:\s*\([^)]*\)\s*/gi, "").trim();
   // Remove standalone file paths
   text = text.replace(/\/home\/node\/[^\s]+/g, "").trim();
   // Remove Zalo CDN URLs that were already extracted
-  if (imageUrl) text = text.replace(imageUrl, "").trim();
-  // Clean up leftover separators
-  text = text.replace(/\|\s*/g, "").replace(/\s+/g, " ").trim();
+  if (imageUrl) text = text.replaceAll(imageUrl, "").trim();
+  // Remove other https URLs that are metadata (not user content)
+  text = text.replace(/https?:\/\/[^\s]+\.zdn\.vn[^\s]*/gi, "").trim();
+  // Clean up leftover separators, brackets, pipes
+  text = text.replace(/\[\s*\]/g, "").replace(/\|\s*/g, "").replace(/\s{2,}/g, " ").trim();
 
   return { text, imageUrl };
 }
