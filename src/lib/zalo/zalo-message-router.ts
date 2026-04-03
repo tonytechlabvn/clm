@@ -68,10 +68,14 @@ export async function routeMessage(
     // Route through publishing mode system
     const result = await routePostByMode(post.id, orgId, "zalo_bot");
 
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://clm.tonytechlab.com";
+    const editUrl = `${baseUrl}/admin/cma/posts/${post.id}`;
+    const approvalUrl = `${baseUrl}/admin/cma/approval`;
+
     const statusMsg = result.action === "auto_publish"
-      ? "Draft created and queued for auto-publish!"
-      : "Draft created and sent for review.";
-    await provider.sendTextMessage(senderId, `${statusMsg}\nTitle: ${title}`);
+      ? `✅ Draft created and queued for auto-publish!\n\nTitle: ${title}\n\n📝 Edit: ${editUrl}`
+      : `📋 Draft created and sent for review.\n\nTitle: ${title}\n\n📝 Edit: ${editUrl}\n✅ Approve: ${approvalUrl}`;
+    await provider.sendTextMessage(senderId, statusMsg);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     await provider.sendTextMessage(senderId, `Failed to create draft: ${msg}`);
