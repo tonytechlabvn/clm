@@ -1,13 +1,20 @@
-// Spam guard — prevents Zalo bot from flooding Facebook with posts
+// Spam guard — prevents Zalo bot from flooding platforms with posts
+// Rate limits are configurable via admin settings (CmaOrgSettings)
 
 import { prisma } from "@/lib/prisma-client";
 
-// Configurable limits
-const MAX_DRAFTS_PER_HOUR = 15;  // max drafts a user can create per hour
-const MAX_DRAFTS_PER_DAY = 50;   // max drafts a user can create per day
-const MAX_PUBLISHES_PER_DAY = 10; // max FB publishes per page per day (conservative, FB allows 25)
-const MIN_PUBLISH_GAP_MINUTES = 30; // minimum minutes between FB publishes
-const DEDUP_WINDOW_MINUTES = 5;  // block identical messages within this window
+// Load rate limits from org settings (with defaults)
+async function getLimits(orgId: string) {
+  const settings = await prisma.cmaOrgSettings.findUnique({ where: { orgId } });
+  return {
+    maxDraftsPerHour: settings?.maxDraftsPerHour ?? 15,
+    maxDraftsPerDay: settings?.maxDraftsPerDay ?? 50,
+    maxPublishesPerDay: settings?.maxPublishesPerDay ?? 10,
+    minPublishGapMinutes: settings?.minPublishGapMinutes ?? 30,
+  };
+}
+
+const DEDUP_WINDOW_MINUTES = 5;
 
 interface GuardResult {
   allowed: boolean;
@@ -17,6 +24,7 @@ interface GuardResult {
 // Check if user can create a new draft
 export async function canCreateDraft(orgId: string, userId: string, content: string): Promise<GuardResult> {
   const now = new Date();
+  const limits = await getLimits(orgId);
 
   // 1. Dedup: block identical content within 5 minutes
   const recentDup = await prisma.cmaPost.findFirst({
@@ -33,8 +41,8 @@ export async function canCreateDraft(orgId: string, userId: string, content: str
   const hourCount = await prisma.cmaPost.count({
     where: { orgId, authorId: userId, source: "zalo_bot", createdAt: { gte: hourAgo } },
   });
-  if (hourCount >= MAX_DRAFTS_PER_HOUR) {
-    return { allowed: false, reason: `Rate limit: max ${MAX_DRAFTS_PER_HOUR} drafts per hour. Try again later.` };
+  if (hourCount >= limits.maxDraftsPerHour) {
+    return { allowed: false, reason: `Rate limit: max ${limits.maxDraftsPerHour} drafts per hour. Try again later.` };
   }
 
   // 3. Daily rate limit
@@ -43,8 +51,8 @@ export async function canCreateDraft(orgId: string, userId: string, content: str
   const dayCount = await prisma.cmaPost.count({
     where: { orgId, authorId: userId, source: "zalo_bot", createdAt: { gte: startOfDay } },
   });
-  if (dayCount >= MAX_DRAFTS_PER_DAY) {
-    return { allowed: false, reason: `Daily limit: max ${MAX_DRAFTS_PER_DAY} drafts per day.` };
+  if (dayCount >= limits.maxDraftsPerDay) {
+    return { allowed: false, reason: `Daily limit: max ${limits.maxDraftsPerDay} drafts per day.` };
   }
 
   return { allowed: true };
@@ -53,6 +61,7 @@ export async function canCreateDraft(orgId: string, userId: string, content: str
 // Check if a post can be published to Facebook (rate limiting)
 export async function canPublishToFacebook(orgId: string, accountId: string): Promise<GuardResult> {
   const now = new Date();
+  const limits = await getLimits(orgId);
 
   // 1. Minimum gap between publishes
   const lastPublish = await prisma.cmaPostPlatform.findFirst({
@@ -62,9 +71,9 @@ export async function canPublishToFacebook(orgId: string, accountId: string): Pr
   });
   if (lastPublish?.publishedAt) {
     const elapsedMin = (now.getTime() - lastPublish.publishedAt.getTime()) / 60_000;
-    if (elapsedMin < MIN_PUBLISH_GAP_MINUTES) {
-      const waitMin = Math.ceil(MIN_PUBLISH_GAP_MINUTES - elapsedMin);
-      return { allowed: false, reason: `Cooldown: wait ${waitMin} min before next FB publish (anti-spam).` };
+    if (elapsedMin < limits.minPublishGapMinutes) {
+      const waitMin = Math.ceil(limits.minPublishGapMinutes - elapsedMin);
+      return { allowed: false, reason: `Cooldown: wait ${waitMin} min before next publish (anti-spam).` };
     }
   }
 
@@ -74,8 +83,8 @@ export async function canPublishToFacebook(orgId: string, accountId: string): Pr
   const todayCount = await prisma.cmaPostPlatform.count({
     where: { accountId, status: "published", publishedAt: { gte: startOfDay } },
   });
-  if (todayCount >= MAX_PUBLISHES_PER_DAY) {
-    return { allowed: false, reason: `Daily limit: max ${MAX_PUBLISHES_PER_DAY} FB posts per day.` };
+  if (todayCount >= limits.maxPublishesPerDay) {
+    return { allowed: false, reason: `Daily limit: max ${limits.maxPublishesPerDay} posts per day.` };
   }
 
   return { allowed: true };

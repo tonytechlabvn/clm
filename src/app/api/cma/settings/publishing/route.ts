@@ -29,7 +29,8 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { orgId, publishingMode, autoPublishSources, requireApprovalSources } = body;
+    const { orgId, publishingMode, autoPublishSources, requireApprovalSources,
+            maxDraftsPerHour, maxDraftsPerDay, maxPublishesPerDay, minPublishGapMinutes } = body;
 
     if (!orgId) return NextResponse.json({ error: "orgId required" }, { status: 400 });
 
@@ -64,6 +65,10 @@ export async function PUT(request: Request) {
         ...(publishingMode && { publishingMode }),
         ...(autoPublishSources && { autoPublishSources }),
         ...(requireApprovalSources && { requireApprovalSources }),
+        ...(maxDraftsPerHour !== undefined && { maxDraftsPerHour }),
+        ...(maxDraftsPerDay !== undefined && { maxDraftsPerDay }),
+        ...(maxPublishesPerDay !== undefined && { maxPublishesPerDay }),
+        ...(minPublishGapMinutes !== undefined && { minPublishGapMinutes }),
       },
     });
 

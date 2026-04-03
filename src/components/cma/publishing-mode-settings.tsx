@@ -10,6 +10,10 @@ interface OrgSettings {
   publishingMode: string;
   autoPublishSources: string[];
   requireApprovalSources: string[];
+  maxDraftsPerHour: number;
+  maxDraftsPerDay: number;
+  maxPublishesPerDay: number;
+  minPublishGapMinutes: number;
 }
 
 const SOURCE_OPTIONS = [
@@ -109,6 +113,25 @@ export function PublishingModeSettings({ orgId }: { orgId: string }) {
                 <input type="checkbox" checked={settings?.requireApprovalSources.includes(opt.value) || false} onChange={() => toggleSource("requireApprovalSources", opt.value)} className="accent-primary" />
                 <span className="text-sm">{opt.label}</span>
               </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2 border-t pt-3">
+          <label className="text-sm font-medium">Rate Limits</label>
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              { key: "maxDraftsPerHour" as const, label: "Drafts/hour" },
+              { key: "maxDraftsPerDay" as const, label: "Drafts/day" },
+              { key: "maxPublishesPerDay" as const, label: "Publishes/day" },
+              { key: "minPublishGapMinutes" as const, label: "Publish gap (min)" },
+            ]).map(({ key, label }) => (
+              <div key={key} className="space-y-0.5">
+                <label className="text-xs text-muted-foreground">{label}</label>
+                <input type="number" min={1} value={settings?.[key] ?? 0}
+                  onChange={(e) => settings && setSettings({ ...settings, [key]: parseInt(e.target.value) || 1 })}
+                  className="w-full rounded-md border px-2 py-1 text-sm bg-background" />
+              </div>
             ))}
           </div>
         </div>
