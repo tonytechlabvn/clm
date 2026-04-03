@@ -20,9 +20,11 @@ export class ZaloPersonalProvider implements ZaloBotProvider {
   private messageCallback: ((senderId: string, text: string) => void) | null = null;
 
   async sendTextMessage(userId: string, text: string): Promise<void> {
-    // Escape quotes in message text for shell safety
-    const safeText = text.replace(/'/g, "'\\''");
-    await openzcaExec(`msg send '${userId}' '${safeText}'`);
+    // Escape quotes and newlines for shell safety
+    const safeText = text.replace(/'/g, "'\\''").replace(/\n/g, "\\n");
+    console.log(`[zalo-personal] Sending to ${userId}: ${safeText.substring(0, 50)}...`);
+    const result = await openzcaExec(`msg send '${userId}' '${safeText}'`);
+    console.log(`[zalo-personal] Send result: ${result.substring(0, 100)}`);
   }
 
   async sendImageMessage(userId: string, imageUrl: string, _caption?: string): Promise<void> {
