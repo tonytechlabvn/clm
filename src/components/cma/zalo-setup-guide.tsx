@@ -215,7 +215,7 @@ export function ZaloSetupGuide({ orgId }: { orgId: string }) {
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5 text-blue-500" />
           <CardTitle className="text-base">Zalo Bot Setup</CardTitle>
-          {config.configured && (
+          {!loading && config.configured && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
               <CheckCircle className="h-3 w-3" />
               {botType === "personal" ? "Personal" : "OA"} — Active
