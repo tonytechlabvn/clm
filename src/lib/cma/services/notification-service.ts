@@ -54,7 +54,7 @@ export async function notifyApprovers(postId: string, orgId: string): Promise<vo
   }
 }
 
-// Notify author + admins after successful publish (with group share reminder)
+// Notify author after successful publish — send Zalo message with published links
 export async function notifyPublished(postId: string, orgId: string): Promise<void> {
   const post = await prisma.cmaPost.findUnique({
     where: { id: postId },
@@ -62,30 +62,36 @@ export async function notifyPublished(postId: string, orgId: string): Promise<vo
   });
   if (!post) return;
 
-  // Get platform URL for the published post
-  const postPlatform = await prisma.cmaPostPlatform.findFirst({
-    where: { postId, status: "published" },
-    select: { platformUrl: true, account: { select: { platform: true } } },
+  // Get all published platform URLs for this post
+  const platforms = await prisma.cmaPostPlatform.findMany({
+    where: { postId, status: "published", platformUrl: { not: null } },
+    select: { platformUrl: true, account: { select: { platform: true, label: true } } },
   });
 
   const provider = await createZaloBotProvider(orgId);
-  if (!provider || provider.botType !== "oa") return;
+  if (!provider) return;
 
-  const platformUrl = postPlatform?.platformUrl || "";
-  const platformName = postPlatform?.account?.platform || "platform";
-
-  // Notify author
+  // Find author's Zalo mapping
   const authorMapping = await prisma.cmaZaloUserMapping.findFirst({
     where: { orgId, userId: post.authorId, isActive: true },
     select: { zaloUserId: true },
   });
+  if (!authorMapping) return;
 
-  if (authorMapping) {
-    const msg = `Your post "${post.title}" is now live on ${platformName}!\n${platformUrl}`;
-    try {
-      await provider.sendTextMessage(authorMapping.zaloUserId, msg);
-    } catch (err) {
-      console.error("[notifications] Failed to send publish notification:", err);
-    }
+  const links = platforms.map((p) =>
+    `🔗 ${p.account.platform}: ${p.platformUrl}`
+  );
+
+  const msg = [
+    `🎉 Published successfully!`,
+    ``,
+    `Title: ${post.title}`,
+    ...(links.length > 0 ? ["", ...links] : ["", "⏳ Links will be available shortly."]),
+  ].join("\n");
+
+  try {
+    await provider.sendTextMessage(authorMapping.zaloUserId, msg);
+  } catch (err) {
+    console.error("[notifications] Failed to send publish notification:", err);
   }
 }
