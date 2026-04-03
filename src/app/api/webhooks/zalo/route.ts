@@ -61,40 +61,47 @@ async function processOpenZcaMessage(event: Record<string, unknown>): Promise<vo
   const toId = event.toId as string | undefined;
   const chatType = event.chatType as string | undefined;
   const threadId = event.threadId as string | undefined;
+  const mentionIds = event.mentionIds as string[] | undefined;
   if (!content || !senderId) return;
 
-  // Find personal bot config
-  const config = toId
-    ? await prisma.cmaZaloBotConfig.findFirst({ where: { selfId: toId, botType: "personal", isActive: true } })
-    : await prisma.cmaZaloBotConfig.findFirst({ where: { botType: "personal", isActive: true } });
+  // For group messages, toId is the group — use mentionIds to find the bot
+  // For DMs, toId is the bot's ID
+  let config;
+  if (chatType === "group" && mentionIds?.length) {
+    // Find bot config where selfId matches any mentioned ID
+    config = await prisma.cmaZaloBotConfig.findFirst({
+      where: { selfId: { in: mentionIds }, botType: "personal", isActive: true },
+    });
+  } else {
+    // DM: toId is the bot
+    config = toId
+      ? await prisma.cmaZaloBotConfig.findFirst({ where: { selfId: toId, botType: "personal", isActive: true } })
+      : await prisma.cmaZaloBotConfig.findFirst({ where: { botType: "personal", isActive: true } });
+  }
 
   if (!config) {
-    console.log("[zalo-webhook] No active personal bot config found");
-    return;
+    if (chatType !== "group") console.log("[zalo-webhook] No active personal bot config found");
+    return; // silently ignore unmentioned group messages
   }
 
   const provider = await createZaloBotProvider(config.orgId);
   if (!provider) return;
 
-  // Group messages: only process if bot is @mentioned
+  // Group messages: strip @mention from content
   if (chatType === "group") {
-    const botSelfId = config.selfId || "";
-    // Check if message mentions the bot (OpenZCA includes mention metadata)
-    const mentions = event.mentions as Array<{ uid: string }> | undefined;
-    const mentionedInMeta = mentions?.some((m) => m.uid === botSelfId);
-    // Also check for @name in content text (fallback)
-    const mentionedInText = content.includes(`@`) && botSelfId;
-
-    if (!mentionedInMeta && !mentionedInText) return; // not mentioned, ignore
-
-    // Strip the @mention from content to get the actual post content
+    // Remove @Name at the beginning (OpenZCA format: @DisplayName followed by content)
+    const mentions = event.mentions as Array<{ pos: number; len: number }> | undefined;
     let cleanContent = content;
-    // Remove @Name patterns at the start of message
-    cleanContent = cleanContent.replace(/^@\S+\s*/, "").trim();
+    if (mentions?.length) {
+      // Sort mentions by position desc to remove from end first (preserve positions)
+      const sorted = [...mentions].sort((a, b) => b.pos - a.pos);
+      for (const m of sorted) {
+        cleanContent = cleanContent.slice(0, m.pos) + cleanContent.slice(m.pos + m.len);
+      }
+    }
+    cleanContent = cleanContent.trim();
+    if (!cleanContent) return;
 
-    if (!cleanContent) return; // empty after stripping mention
-
-    // Route message — use threadId (group) for replies so response goes to group
     await routeMessage(senderId, cleanContent, config.orgId, provider, threadId);
     return;
   }
