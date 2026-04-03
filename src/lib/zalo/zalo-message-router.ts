@@ -230,15 +230,27 @@ export async function routeMessage(
     if (result.action === "auto_publish") {
       await provider.sendTextMessage(senderId, `✅ Draft created and queued for auto-publish!\n\nTitle: ${title}`);
     } else {
+      // Fetch connected platforms to show direct approve options
+      const accounts = await prisma.cmaPlatformAccount.findMany({
+        where: { orgId, isActive: true },
+        select: { platform: true },
+      });
+      const hasFb = accounts.some((a) => a.platform === "facebook");
+      const hasWp = accounts.some((a) => a.platform === "wordpress");
+
+      const options: string[] = [];
+      if (hasFb) options.push("fb — Facebook");
+      if (hasWp) options.push("wp — WordPress");
+      if (hasFb && hasWp) options.push("all — cả hai");
+
       await provider.sendTextMessage(senderId, [
-        `📋 Draft created and sent for review.`,
-        ``,
+        `📋 Draft created.`,
         `Title: ${title}`,
         ``,
-        `Reply with:`,
-        `• /approve — to approve and publish`,
-        `• /edit <new text> — to change content`,
-        `• /list — to see all drafts`,
+        `Đăng lên đâu? Reply:`,
+        ...options,
+        ``,
+        `Hoặc: /edit <nội dung mới> | /list | /help`,
       ].join("\n"));
     }
   } catch (err) {
