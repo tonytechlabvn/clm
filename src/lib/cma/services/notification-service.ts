@@ -58,7 +58,7 @@ export async function notifyApprovers(postId: string, orgId: string): Promise<vo
 export async function notifyPublished(postId: string, orgId: string): Promise<void> {
   const post = await prisma.cmaPost.findUnique({
     where: { id: postId },
-    select: { title: true, authorId: true },
+    select: { title: true, authorId: true, outlineData: true },
   });
   if (!post) return;
 
@@ -90,7 +90,14 @@ export async function notifyPublished(postId: string, orgId: string): Promise<vo
   ].join("\n");
 
   try {
-    await provider.sendTextMessage(authorMapping.zaloUserId, msg);
+    // If post was created from a group @mention, send notification to the group
+    const outlineData = post.outlineData as { zaloGroupThreadId?: string } | null;
+    const groupThreadId = outlineData?.zaloGroupThreadId;
+    if (groupThreadId) {
+      await provider.sendTextMessage(groupThreadId, msg, true);
+    } else {
+      await provider.sendTextMessage(authorMapping.zaloUserId, msg);
+    }
   } catch (err) {
     console.error("[notifications] Failed to send publish notification:", err);
   }

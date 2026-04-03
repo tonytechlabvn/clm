@@ -256,6 +256,13 @@ export async function routeMessage(
       contentFormat: "markdown", source: "zalo_bot",
       featuredImage: imageUrl || undefined,
     });
+    // Store group threadId in post metadata for publish notification routing
+    if (isGroup && replyToId) {
+      await prisma.cmaPost.update({
+        where: { id: post.id },
+        data: { outlineData: { zaloGroupThreadId: replyToId } },
+      });
+    }
     const result = await routePostByMode(post.id, orgId, "zalo_bot");
 
     if (result.action === "auto_publish") {

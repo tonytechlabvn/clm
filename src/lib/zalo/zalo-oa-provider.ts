@@ -15,7 +15,7 @@ export class ZaloOaProvider implements ZaloBotProvider {
 
   constructor(private config: CmaZaloBotConfig) {}
 
-  async sendTextMessage(userId: string, text: string): Promise<void> {
+  async sendTextMessage(userId: string, text: string, _isGroup?: boolean): Promise<void> {
     const token = await this.getToken();
     const res = await fetch(`${ZALO_OA_API}/message/cs`, {
       method: "POST",
