@@ -100,7 +100,10 @@ services:
     command:
       - |
         apk add --no-cache curl 2>/dev/null
-        npm install -g openzca@latest 2>/dev/null
+        # Install xdg-open stub to prevent crash when generating QR
+        printf '#!/bin/sh\nexit 0\n' > /usr/local/bin/xdg-open && chmod +x /usr/local/bin/xdg-open
+        # Use npx for fresh openzca install (global npm install broken on Node 22)
+        su -s /bin/sh node -c "npx openzca@latest --help" > /dev/null 2>&1
         mkdir -p /home/node/.openzca
         chown -R node:node /home/node/.openzca
         rm -f /home/node/.openzca/profiles/default/listener-owner.json 2>/dev/null
@@ -108,7 +111,7 @@ services:
         (while true; do find /home/node/.openzca -path '*/inbound/*' -type f -mtime +7 -delete 2>/dev/null; sleep 3600; done) &
         if [ -f /home/node/.openzca/profiles.json ]; then
           echo "[openzca] Credentials found, starting listener..."
-          su -s /bin/sh node -c "openzca listen --keep-alive --raw 2>&1 | node /home/node/webhook-pipe.mjs"
+          su -s /bin/sh node -c "npx openzca@latest listen --keep-alive --raw 2>&1 | node /home/node/webhook-pipe.mjs"
         else
           echo "[openzca] No credentials found. Use CLM settings UI to login."
           sleep infinity

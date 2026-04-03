@@ -7,7 +7,7 @@ function openzcaExec(cmd: string): Promise<string> {
   const { execSync } = require("child_process");
   try {
     return Promise.resolve(
-      execSync(`docker exec -u node clm-openzca npx openzca ${cmd}`, { timeout: 15000, encoding: "utf8" })
+      execSync(`docker exec -u node clm-openzca npx openzca@latest ${cmd}`, { timeout: 15000, encoding: "utf8" })
     );
   } catch (err: any) {
     console.error("[zalo-personal] Command failed:", err.stderr || err.message);
