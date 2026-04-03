@@ -139,12 +139,9 @@ export async function routeMessage(
       }
       // Store pending approval context so short replies (fb/wp/all) work
       await prisma.cmaPost.update({ where: { id: target.id }, data: { status: "pending_review" } });
-      const hasFb = accounts.some((a) => a.platform === "facebook");
-      const hasWp = accounts.some((a) => a.platform === "wordpress");
-      const lines = [`📋 "${target.title}"`, "", "Where to publish? Reply:"];
-      if (hasFb) lines.push("👉 /approve fb");
-      if (hasWp) lines.push("👉 /approve wp");
-      if (hasFb && hasWp) lines.push("👉 /approve all");
+      const lines = [`📋 "${target.title}"`, "", "Đăng lên đâu? Reply:"];
+      accounts.forEach((a, i) => lines.push(`👉 ${i + 1} — ${a.label} (${a.platform})`));
+      if (accounts.length > 1) lines.push(`👉 all — tất cả`);
       await reply( lines.join("\n"));
       return;
     }
@@ -154,15 +151,19 @@ export async function routeMessage(
       where: { orgId, isActive: true },
       select: { id: true, platform: true, label: true },
     });
-    // Filter by user's allowed platforms (empty allowedAccountIds = all)
     const userAccounts = allowedAccountIds.length === 0
       ? allAccounts
       : allAccounts.filter((a) => allowedAccountIds.includes(a.id));
     let targetAccounts = userAccounts;
-    if (platformArg === "fb" || platformArg === "facebook") {
-      targetAccounts = allAccounts.filter((a) => a.platform === "facebook");
+
+    // Support: number (1,2,3), platform name (fb,wp), or "all"
+    const accountNum = parseInt(platformArg);
+    if (accountNum > 0 && accountNum <= userAccounts.length) {
+      targetAccounts = [userAccounts[accountNum - 1]];
+    } else if (platformArg === "fb" || platformArg === "facebook") {
+      targetAccounts = userAccounts.filter((a) => a.platform === "facebook");
     } else if (platformArg === "wp" || platformArg === "wordpress") {
-      targetAccounts = allAccounts.filter((a) => a.platform === "wordpress");
+      targetAccounts = userAccounts.filter((a) => a.platform === "wordpress");
     }
     // "all" keeps all accounts
 
@@ -226,8 +227,8 @@ export async function routeMessage(
     return;
   }
 
-  // Short replies: "fb", "wp", "all" → treat as /approve <platform> for pending review posts
-  if (["fb", "wp", "all", "facebook", "wordpress"].includes(cmd)) {
+  // Short replies: "fb", "wp", "all", "1", "2", "3" → treat as /approve <platform>
+  if (["fb", "wp", "all", "facebook", "wordpress"].includes(cmd) || /^\d+$/.test(cmd)) {
     const pending = await prisma.cmaPost.findFirst({
       where: { orgId, authorId: userId, status: "pending_review" },
       orderBy: { createdAt: "desc" },
@@ -276,13 +277,9 @@ export async function routeMessage(
       const accounts = allowedAccountIds.length === 0
         ? allAccts
         : allAccts.filter((a) => allowedAccountIds.includes(a.id));
-      const hasFb = accounts.some((a) => a.platform === "facebook");
-      const hasWp = accounts.some((a) => a.platform === "wordpress");
-
-      const options: string[] = [];
-      if (hasFb) options.push("fb — Facebook");
-      if (hasWp) options.push("wp — WordPress");
-      if (hasFb && hasWp) options.push("all — cả hai");
+      // Show each account individually when multiple exist
+      const options = accounts.map((a, i) => `${i + 1}. ${a.label} (${a.platform})`);
+      if (accounts.length > 1) options.push(`all — tất cả (${accounts.length} nền tảng)`);
 
       await reply( [
         `📋 Draft created.`,
