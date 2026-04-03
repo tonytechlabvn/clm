@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma-client";
 import { createPost } from "@/lib/cma/services/post-service";
 import { routePostByMode } from "@/lib/cma/services/publish-mode-router";
 import { publishPost } from "@/lib/cma/services/publishing-service";
-import { getLinkedUserId, verifyAndLink } from "./zalo-user-mapping";
+import { verifyAndLink } from "./zalo-user-mapping";
 import { canCreateDraft, canPublishToFacebook } from "./zalo-spam-guard";
 import type { ZaloBotProvider } from "./zalo-bot-provider";
 
@@ -72,7 +72,12 @@ export async function routeMessage(
   }
 
   // All commands below require linked account
-  const userId = await getLinkedUserId(orgId, senderId);
+  const userMapping = await prisma.cmaZaloUserMapping.findUnique({
+    where: { orgId_zaloUserId: { orgId, zaloUserId: senderId } },
+    select: { userId: true, isActive: true, allowedAccountIds: true },
+  });
+  const userId = userMapping?.isActive ? userMapping.userId : null;
+  const allowedAccountIds = userMapping?.allowedAccountIds || []; // empty = all
   if (!userId) {
     await provider.sendTextMessage(senderId,
       "Your Zalo is not linked to CLM.\nAsk your admin for a link code, then send: /link <CODE>"
@@ -145,7 +150,11 @@ export async function routeMessage(
       where: { orgId, isActive: true },
       select: { id: true, platform: true, label: true },
     });
-    let targetAccounts = allAccounts;
+    // Filter by user's allowed platforms (empty allowedAccountIds = all)
+    const userAccounts = allowedAccountIds.length === 0
+      ? allAccounts
+      : allAccounts.filter((a) => allowedAccountIds.includes(a.id));
+    let targetAccounts = userAccounts;
     if (platformArg === "fb" || platformArg === "facebook") {
       targetAccounts = allAccounts.filter((a) => a.platform === "facebook");
     } else if (platformArg === "wp" || platformArg === "wordpress") {
@@ -248,11 +257,14 @@ export async function routeMessage(
     if (result.action === "auto_publish") {
       await provider.sendTextMessage(senderId, `✅ Draft created and queued for auto-publish!\n\nTitle: ${title}`);
     } else {
-      // Fetch connected platforms to show direct approve options
-      const accounts = await prisma.cmaPlatformAccount.findMany({
+      // Fetch connected platforms filtered by user's permissions
+      const allAccts = await prisma.cmaPlatformAccount.findMany({
         where: { orgId, isActive: true },
-        select: { platform: true },
+        select: { id: true, platform: true },
       });
+      const accounts = allowedAccountIds.length === 0
+        ? allAccts
+        : allAccts.filter((a) => allowedAccountIds.includes(a.id));
       const hasFb = accounts.some((a) => a.platform === "facebook");
       const hasWp = accounts.some((a) => a.platform === "wordpress");
 

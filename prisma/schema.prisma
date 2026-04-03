@@ -544,15 +544,16 @@ model CmaZaloBotConfig {
 
 // Maps Zalo user IDs to CLM users for bot authorship
 model CmaZaloUserMapping {
-  id         String   @id @default(cuid())
-  orgId      String
-  userId     String
-  zaloUserId String
-  zaloName   String?
-  linkCode   String? // admin-generated code for secure linking
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                String   @id @default(cuid())
+  orgId             String
+  userId            String
+  zaloUserId        String
+  zaloName          String?
+  linkCode          String? // admin-generated code for secure linking
+  allowedAccountIds String[] @default([]) // platform account IDs user can publish to (empty = all)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@unique([orgId, zaloUserId])
   @@index([orgId])

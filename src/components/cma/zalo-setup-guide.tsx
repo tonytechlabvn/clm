@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, MessageCircle, CheckCircle, AlertTriangle } from "lucide-react";
+import { ZaloLinkedUsers } from "./zalo-linked-users";
 import { cmaFetch } from "@/lib/cma/use-cma-api";
 
 type BotType = "oa" | "personal";
@@ -312,6 +313,9 @@ export function ZaloSetupGuide({ orgId }: { orgId: string }) {
             <p><span className="text-foreground">any text</span> — Create a draft post</p>
           </div>
         </div>
+
+        {/* Linked users + permissions management */}
+        <ZaloLinkedUsers orgId={orgId} />
 
         {/* Link code generator for admins */}
         <ZaloLinkCodeGenerator orgId={orgId} />
