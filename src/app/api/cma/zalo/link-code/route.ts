@@ -28,8 +28,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { orgId, userId } = body;
 
-    if (!orgId || !userId) {
-      return NextResponse.json({ error: "orgId and userId required" }, { status: 400 });
+    if (!orgId) {
+      return NextResponse.json({ error: "orgId required" }, { status: 400 });
     }
 
     const auth = await withOrgAuth(orgId);
@@ -40,7 +40,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Only org admin/owner can generate link codes" }, { status: 403 });
     }
 
-    const code = await generateLinkCode(orgId, userId);
+    // __self__ = generate for the authenticated user
+    const targetUserId = (!userId || userId === "__self__") ? auth.userId : userId;
+    const code = await generateLinkCode(orgId, targetUserId);
 
     return NextResponse.json({ code, instruction: `Send this to the Zalo user: /link ${code}` });
   } catch (error) {

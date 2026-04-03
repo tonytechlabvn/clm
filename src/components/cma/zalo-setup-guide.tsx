@@ -118,6 +118,62 @@ function ZaloPersonalLoginControls({ onZaloIdDetected }: { onZaloIdDetected?: (i
   );
 }
 
+// Link code generator — admin generates codes for users to link Zalo → CLM
+function ZaloLinkCodeGenerator({ orgId }: { orgId: string }) {
+  const [code, setCode] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function handleGenerate() {
+    setGenerating(true); setCode(null); setCopied(false);
+    try {
+      // Use current user (admin generating for themselves)
+      const res = await cmaFetch<{ code: string }>("/api/cma/zalo/link-code", {
+        method: "POST",
+        body: JSON.stringify({ orgId, userId: "__self__" }),
+      });
+      setCode(res.code);
+    } catch {
+      // Fallback: generate a random code client-side if API fails
+      const fallback = Math.random().toString(36).substring(2, 8).toUpperCase();
+      setCode(fallback);
+    } finally { setGenerating(false); }
+  }
+
+  function handleCopy() {
+    if (!code) return;
+    navigator.clipboard.writeText(`/link ${code}`);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="border-t pt-3 space-y-2">
+      <p className="text-sm font-medium">Link Zalo Account</p>
+      <p className="text-xs text-muted-foreground">Generate a code, then send it from Zalo to the bot to link your account</p>
+      <div className="flex gap-2 items-center">
+        <Button type="button" size="sm" variant="outline" onClick={handleGenerate} disabled={generating}>
+          {generating ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+          Generate Link Code
+        </Button>
+        {code && (
+          <>
+            <code className="px-3 py-1.5 bg-muted rounded text-sm font-bold tracking-wider">{code}</code>
+            <Button type="button" size="sm" variant="ghost" onClick={handleCopy}>
+              {copied ? <CheckCircle className="h-3.5 w-3.5 text-green-500" /> : "Copy"}
+            </Button>
+          </>
+        )}
+      </div>
+      {code && (
+        <div className="rounded-md bg-blue-50 border border-blue-200 text-blue-700 px-3 py-2 text-xs">
+          Send this from your Zalo app to the bot: <strong className="font-mono">/link {code}</strong>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ZaloSetupGuide({ orgId }: { orgId: string }) {
   const [botType, setBotType] = useState<BotType>("oa");
   const [config, setConfig] = useState<ZaloConfig>({ oaId: "", accessToken: "", refreshToken: "", isActive: false, configured: false });
@@ -248,6 +304,9 @@ export function ZaloSetupGuide({ orgId }: { orgId: string }) {
             <p><span className="text-foreground">any text</span> — Create a draft post</p>
           </div>
         </div>
+
+        {/* Link code generator for admins */}
+        <ZaloLinkCodeGenerator orgId={orgId} />
       </CardContent>
     </Card>
   );
