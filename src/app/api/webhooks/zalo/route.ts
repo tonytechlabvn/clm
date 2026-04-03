@@ -1,13 +1,14 @@
-// POST /api/webhooks/zalo — Zalo OA webhook handler with HMAC-SHA256 verification
+// POST /api/webhooks/zalo — handles both Zalo OA webhooks and OpenZCA personal bot webhooks
 
 import { NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma-client";
 import { ZaloOaProvider } from "@/lib/zalo/zalo-oa-provider";
 import { routeMessage } from "@/lib/zalo/zalo-message-router";
+import { createZaloBotProvider } from "@/lib/zalo/zalo-bot-provider";
 
-// Verify Zalo webhook signature (HMAC-SHA256 of request body)
-function verifySignature(body: string, signature: string | null): boolean {
+// Verify Zalo OA webhook signature (HMAC-SHA256)
+function verifyOaSignature(body: string, signature: string | null): boolean {
   const secret = process.env.ZALO_WEBHOOK_SECRET;
   if (!secret || !signature) return false;
   const expected = createHmac("sha256", secret).update(body).digest("hex");
@@ -17,24 +18,15 @@ function verifySignature(body: string, signature: string | null): boolean {
   return timingSafeEqual(sigBuf, expectedBuf);
 }
 
-// Validate webhook payload has required fields
-function isValidEvent(event: Record<string, unknown>): boolean {
-  return typeof event.event_name === "string"
-    && typeof event.sender === "object" && event.sender !== null
-    && typeof (event.sender as Record<string, unknown>).id === "string";
+// Detect if payload is from OpenZCA (personal bot) vs Zalo OA
+function isOpenZcaPayload(data: Record<string, unknown>): boolean {
+  return typeof data.senderId === "string" && typeof data.content === "string" && typeof data.threadId === "string";
 }
 
 export async function POST(request: Request) {
   const rawBody = await request.text();
-  const signature = request.headers.get("X-ZEvent-Signature")
-    || request.headers.get("mac"); // Zalo uses "mac" header
+  const signature = request.headers.get("X-ZEvent-Signature") || request.headers.get("mac");
 
-  // Verify HMAC signature
-  if (!verifySignature(rawBody, signature)) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-  }
-
-  // Return 200 immediately — process async (Zalo requires <5s response)
   let event: Record<string, unknown>;
   try {
     event = JSON.parse(rawBody);
@@ -42,32 +34,61 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Malformed JSON" }, { status: 400 });
   }
 
-  // Validate event structure
-  if (!isValidEvent(event)) {
-    return NextResponse.json({ error: "Invalid event payload" }, { status: 400 });
+  // Route based on payload format
+  if (isOpenZcaPayload(event)) {
+    // OpenZCA personal bot — no HMAC signature (trusted sidecar on same network)
+    processOpenZcaMessage(event).catch((err) =>
+      console.error("[zalo-webhook] OpenZCA error:", err)
+    );
+    return NextResponse.json({ received: true });
   }
 
-  // Fire and forget — don't await to meet Zalo's 5s timeout
-  processEventAsync(event).catch((err) => {
-    console.error("[zalo-webhook] Error processing event:", err);
-  });
+  // Zalo OA webhook — requires HMAC signature
+  if (!verifyOaSignature(rawBody, signature)) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  }
 
+  processOaEvent(event).catch((err) =>
+    console.error("[zalo-webhook] OA error:", err)
+  );
   return NextResponse.json({ received: true });
 }
 
-async function processEventAsync(event: Record<string, unknown>): Promise<void> {
-  const eventName = event.event_name as string;
-  const sender = event.sender as { id: string };
-  const senderId = sender.id;
+// Handle OpenZCA personal bot messages
+async function processOpenZcaMessage(event: Record<string, unknown>): Promise<void> {
+  const senderId = event.senderId as string;
+  const content = (event.content as string)?.trim();
+  const toId = event.toId as string | undefined;
+  if (!content || !senderId) return;
 
-  // Find the org that owns this OA bot config
+  // Find personal bot config matching the receiver (our bot's ID)
+  const config = toId
+    ? await prisma.cmaZaloBotConfig.findFirst({ where: { selfId: toId, botType: "personal", isActive: true } })
+    : await prisma.cmaZaloBotConfig.findFirst({ where: { botType: "personal", isActive: true } });
+
+  if (!config) {
+    console.log("[zalo-webhook] No active personal bot config found");
+    return;
+  }
+
+  const provider = await createZaloBotProvider(config.orgId);
+  if (!provider) return;
+
+  await routeMessage(senderId, content, config.orgId, provider);
+}
+
+// Handle Zalo OA webhook events
+async function processOaEvent(event: Record<string, unknown>): Promise<void> {
+  const eventName = event.event_name as string;
+  const sender = event.sender as { id: string } | undefined;
+  if (!sender?.id) return;
+
   const oaId = event.oa_id as string | undefined;
   const config = oaId
     ? await prisma.cmaZaloBotConfig.findFirst({ where: { oaId, botType: "oa", isActive: true } })
     : await prisma.cmaZaloBotConfig.findFirst({ where: { botType: "oa", isActive: true } });
 
-  if (!config) return; // No active OA config — ignore
-
+  if (!config) return;
   const provider = new ZaloOaProvider(config);
 
   switch (eventName) {
@@ -75,20 +96,15 @@ async function processEventAsync(event: Record<string, unknown>): Promise<void> 
       const message = event.message as { text?: string } | undefined;
       const text = message?.text?.trim();
       if (!text) return;
-      await routeMessage(senderId, text, config.orgId, provider);
+      await routeMessage(sender.id, text, config.orgId, provider);
       break;
     }
-    case "follow": {
-      await provider.sendTextMessage(senderId,
+    case "follow":
+      await provider.sendTextMessage(sender.id,
         "Welcome! Send /help to see available commands.\nTo start creating posts, ask your admin for a link code."
       );
       break;
-    }
-    case "unfollow":
-      // Clean up: could deactivate user mapping, but keep for now
-      break;
     default:
-      // Ignore other event types (user_send_image handled in future)
       break;
   }
 }

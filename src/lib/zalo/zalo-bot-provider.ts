@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma-client";
 import { ZaloOaProvider } from "./zalo-oa-provider";
+import { ZaloPersonalProvider } from "./zalo-personal-provider";
 
 export interface ZaloBotProvider {
   readonly botType: "oa" | "personal";
@@ -19,7 +20,7 @@ export async function createZaloBotProvider(orgId: string): Promise<ZaloBotProvi
   const config = await prisma.cmaZaloBotConfig.findUnique({ where: { orgId } });
   if (!config?.isActive) return null;
 
-  // Phase 4b: if (config.botType === "personal") return new ZaloPersonalProvider(config);
+  if (config.botType === "personal") return new ZaloPersonalProvider();
   if (config.botType === "oa") return new ZaloOaProvider(config);
 
   return null;
