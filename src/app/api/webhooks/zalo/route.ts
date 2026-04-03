@@ -64,6 +64,8 @@ async function processOpenZcaMessage(event: Record<string, unknown>): Promise<vo
   const mentionIds = event.mentionIds as string[] | undefined;
   if (!content || !senderId) return;
 
+  console.log(`[zalo-webhook] chatType=${chatType} senderId=${senderId} mentionIds=${JSON.stringify(mentionIds)} toId=${toId}`);
+
   // For group messages, toId is the group — use mentionIds to find the bot
   // For DMs, toId is the bot's ID
   let config;
