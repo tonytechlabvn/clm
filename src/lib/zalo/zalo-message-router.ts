@@ -272,7 +272,7 @@ export async function routeMessage(
       // Fetch connected platforms filtered by user's permissions
       const allAccts = await prisma.cmaPlatformAccount.findMany({
         where: { orgId, isActive: true },
-        select: { id: true, platform: true },
+        select: { id: true, platform: true, label: true },
       });
       const accounts = allowedAccountIds.length === 0
         ? allAccts
