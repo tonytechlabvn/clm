@@ -7,23 +7,26 @@ import { X, Upload, ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CmaUnsplashSearchPanel } from "./cma-unsplash-search-panel";
 import { CmaAiImageGeneratorPanel } from "./cma-ai-image-generator-panel";
+import { CmaImageTemplatePanel } from "./image-template/cma-image-template-panel";
 
-type Tab = "upload" | "unsplash" | "ai";
+type Tab = "upload" | "unsplash" | "ai" | "template";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onSelect: (url: string) => void;
   orgId: string;
+  postData?: { title?: string; excerpt?: string; featuredImage?: string };
 }
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "upload", label: "Upload" },
   { id: "unsplash", label: "Unsplash" },
   { id: "ai", label: "AI Generate" },
+  { id: "template", label: "Template" },
 ];
 
-export function CmaFeaturedImagePicker({ open, onClose, onSelect, orgId }: Props) {
+export function CmaFeaturedImagePicker({ open, onClose, onSelect, orgId, postData }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>("upload");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -146,6 +149,14 @@ export function CmaFeaturedImagePicker({ open, onClose, onSelect, orgId }: Props
 
           {activeTab === "ai" && (
             <CmaAiImageGeneratorPanel orgId={orgId} onSelect={handleSelect} />
+          )}
+
+          {activeTab === "template" && (
+            <CmaImageTemplatePanel
+              orgId={orgId}
+              postData={postData}
+              onImageGenerated={handleSelect}
+            />
           )}
         </div>
       </div>

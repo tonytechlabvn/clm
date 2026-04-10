@@ -114,29 +114,42 @@ export class FacebookAdapter implements PlatformAdapter {
     _username: string,
     token: string,
     post: PublishPayload,
-    imageUrl?: string // optional: direct image URL to attach (e.g. from Zalo CDN)
+    imageUrl?: string, // optional: direct image URL to attach (e.g. from Zalo CDN)
+    imageBuffer?: Buffer // optional: raw image buffer for locally generated images
   ): Promise<PlatformPostResult> {
     const pageId = siteUrl; // siteUrl stores FB Page ID
     await checkRateLimit(pageId);
 
     let result;
-    // Determine image URL: from imageUrl param, or from featuredMediaId if it's a URL
-    const imgUrl = imageUrl || (post.featuredMediaId?.startsWith("http") ? post.featuredMediaId : undefined);
 
-    if (imgUrl) {
-      // Photo post: POST /{pageId}/photos with url + message (FB downloads the image)
+    if (imageBuffer) {
+      // Buffer upload: POST /{pageId}/photos with multipart form data (for template-generated images)
+      const formData = new FormData();
+      formData.append("message", post.content);
+      formData.append("source", new Blob([new Uint8Array(imageBuffer)], { type: "image/png" }), "image.png");
       result = await fbGraphFetch(`/${pageId}/photos`, token, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: post.content, url: imgUrl }),
+        body: formData,
       });
     } else {
-      // Text-only post
-      result = await fbGraphFetch(`/${pageId}/feed`, token, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: post.content }),
-      });
+      // Determine image URL: from imageUrl param, or from featuredMediaId if it's a URL
+      const imgUrl = imageUrl || (post.featuredMediaId?.startsWith("http") ? post.featuredMediaId : undefined);
+
+      if (imgUrl) {
+        // Photo post: POST /{pageId}/photos with url + message (FB downloads the image)
+        result = await fbGraphFetch(`/${pageId}/photos`, token, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: post.content, url: imgUrl }),
+        });
+      } else {
+        // Text-only post
+        result = await fbGraphFetch(`/${pageId}/feed`, token, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: post.content }),
+        });
+      }
     }
 
     const data = await result.json();

@@ -4,6 +4,61 @@ All notable changes to Tony Tech Lab CLM are documented here. Format: [ISO 8601 
 
 ---
 
+## [2026-04-11] — v0.3.0-image-templates — Image Template System MVP
+
+### Added (Image Template System: Puppeteer Renderer + Template CRUD + UI)
+
+**Renderer Service**
+- `src/lib/cma/services/image-template-renderer-service.ts` — Headless Puppeteer-based HTML→PNG rendering
+  - Supports variable interpolation (text, number, color, image URL)
+  - Screenshot dimensions tied to template width/height
+  - Error handling with status tracking ("pending"|"completed"|"failed")
+
+**Database Models (2 new)**
+- `CmaImageTemplate` — Template definition (orgId, name, html, css, width, height, variables JSON, thumbnail)
+- `GeneratedImage` — Rendered image (orgId, templateId, variables JSON, imageData blob, status)
+
+**API Routes (6 endpoints)**
+- `GET/POST /api/cma/image-templates` — CRUD templates
+- `GET/PATCH/DELETE /api/cma/image-templates/[id]` — Template detail
+- `POST /api/cma/image-templates/[id]/render` — Render template with variables
+- `GET /api/cma/image-templates/[id]/preview` — HTML preview
+
+**Type System**
+- `src/lib/cma/types/image-template-types.ts` — Zod validators for templates, variables, requests
+
+**Starter Templates (2)**
+- Facebook Post (1200×630) with text/color variables
+- Generic Announcement (1200×630) with title/subtitle/background color
+
+**UI Components (4 new)**
+- `image-template-grid.tsx` — Template selector card grid
+- `template-variable-form.tsx` — Dynamic form based on variable schema
+- `template-live-preview.tsx` — Real-time HTML/PNG preview
+- `image-template-panel.tsx` — Main editor (integrated into featured image picker tab)
+
+**Featured Image Picker Integration**
+- New "Template" tab in featured image picker
+- Live variable form → preview → render → set as featured image
+- Seamless PNG generation and storage
+
+### Tests (26 new)
+- Variable validation (required fields, type checking)
+- Renderer integration (HTML interpolation, Puppeteer rendering)
+- API CRUD operations
+- Error handling (failed renders, invalid variables)
+
+### Documentation
+- [x] `docs/system-architecture.md` — Image Template System MVP section
+- [x] `docs/codebase-summary.md` — New files, data models
+- [x] `docs/project-changelog.md` — This entry
+
+### No Breaking Changes
+- Existing featured image picker works as-is
+- Template tab purely additive to image picker UI
+
+---
+
 ## [2026-04-02] — v0.2.0-phase10 — Facebook Auto-Post System with Zalo OA Bot
 
 ### Added (Phase 10: Social Platform Publishing + Zalo Bot Integration)

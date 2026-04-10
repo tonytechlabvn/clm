@@ -81,6 +81,9 @@ ck.md
 # External repos for study/reference
 external/
 
+# Uploaded/generated media (local dev only)
+uploads/
+
 # Git worktrees (local development only)
 worktrees/
 

@@ -7,6 +7,7 @@ const QUEUE_SCHEDULED_PUBLISH = "cma-scheduled-publish";
 const QUEUE_RSS_CRAWL = "cma:rss-crawl";
 const QUEUE_CURATE = "cma:curate";
 const QUEUE_METRICS_SYNC = "cma:metrics-sync";
+export const QUEUE_IMAGE_RENDER = "cma:image-render"; // future: async batch rendering
 
 let boss: PgBoss | null = null;
 let initPromise: Promise<PgBoss> | null = null;

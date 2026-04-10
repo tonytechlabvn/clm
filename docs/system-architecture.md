@@ -630,6 +630,81 @@ Result: "Blog post published at [URL]"
 
 ---
 
+## Image Template System (MVP)
+
+### 1. Puppeteer-Based Renderer
+
+**Service:** `src/lib/cma/services/image-template-renderer-service.ts`
+
+Renders HTML + CSS templates to PNG images via headless Puppeteer browser. Supports dynamic variable substitution (text, numbers, colors, image URLs).
+
+**Rendering Pipeline:**
+```
+Template + Variables (JSON)
+  ↓
+HTML interpolation (variable substitution)
+  ↓
+Puppeteer launch browser
+  ↓
+Set viewport (width × height)
+  ↓
+Navigate to HTML (data:// URL)
+  ↓
+Screenshot as PNG
+  ↓
+Return PNG blob
+```
+
+**Key Features:**
+- Supports starter templates: Facebook Post (1200×630), Generic Announcement (1200×630)
+- Variable types: text, number, color, image URL
+- Error handling for failed renders (status: "failed")
+- Integrated with featured image picker UI
+
+### 2. Image Template Models
+
+**CmaImageTemplate** — Template definition
+- HTML + CSS base template, width/height, variable schema (JSON array)
+- Thumbnail preview (base64-encoded PNG)
+- Org-scoped (orgId) or system-wide (orgId=null for starters)
+
+**GeneratedImage** — Rendered output
+- Links template → variables → PNG image blob
+- Status tracking: "pending" | "completed" | "failed"
+- Tied to featured image picker for seamless integration
+
+### 3. API Routes (6 endpoints)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/cma/image-templates` | GET/POST | List templates, create custom |
+| `/api/cma/image-templates/[id]` | GET/PATCH/DELETE | Template CRUD |
+| `/api/cma/image-templates/[id]/render` | POST | Render template with variables → PNG |
+| `/api/cma/image-templates/[id]/preview` | GET | HTML preview (no render) |
+
+### 4. UI Integration
+
+**Components:**
+- `image-template-grid.tsx` — Template selector (card grid with thumbnails)
+- `template-variable-form.tsx` — Dynamic form based on template variables
+- `template-live-preview.tsx` — Real-time HTML/PNG preview
+- `image-template-panel.tsx` — Main editor interface (integrated into featured image picker)
+
+**Featured Image Picker Integration:**
+- Template tab in existing featured image picker
+- Variables form dynamically generated from template schema
+- Live preview updates as user edits variables
+- Render button generates PNG, stores as featured image
+
+### 5. Type System
+
+**Zod Validators:** `src/lib/cma/types/image-template-types.ts`
+- TemplateVariable schema (name, label, type, defaultValue, required)
+- CreateImageTemplateRequest, RenderImageRequest, GeneratedImageResponse
+- Validates variable types and required fields before rendering
+
+---
+
 ## Phase 9: CMA Template Studio (Summary)
 
 Advanced template extraction, generation, and slot-based editing via URL extraction. See separate template studio documentation for full details.

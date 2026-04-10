@@ -3,7 +3,7 @@
 **Project:** Tony Tech Lab Core Learning Management (CLM)
 **Modules:** Content Management (CMA) + Classroom System + Learning Management System (LMS) + MCP Server + Social Platforms (Facebook, Zalo)
 **Phase:** 10 (Facebook Auto-Post + Zalo OA Bot) + Phase 8 (MCP Server & API Key) + Phase 7 (Templates)
-**Last Updated:** 2026-04-02
+**Last Updated:** 2026-04-11
 **Status:** In Progress
 
 ---
@@ -151,6 +151,21 @@ src/
 
 ## Key Files by Feature
 
+### Image Template System (MVP)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `src/lib/cma/services/image-template-renderer-service.ts` | ~180 | Puppeteer-based HTML→PNG renderer |
+| `src/lib/cma/types/image-template-types.ts` | ~80 | Zod validators for templates & variables |
+| `src/app/api/cma/image-templates/route.ts` | ~60 | GET/POST templates (CRUD) |
+| `src/app/api/cma/image-templates/[id]/route.ts` | ~50 | GET/PATCH/DELETE template detail |
+| `src/app/api/cma/image-templates/[id]/render/route.ts` | ~70 | POST render template with variables |
+| `src/app/api/cma/image-templates/[id]/preview/route.ts` | ~50 | GET live preview (HTML view) |
+| `src/components/cma/image-template/template-grid.tsx` | ~100 | Template gallery card grid |
+| `src/components/cma/image-template/template-variable-form.tsx` | ~120 | Dynamic form for template variables |
+| `src/components/cma/image-template/template-live-preview.tsx` | ~100 | Real-time preview panel |
+| `src/components/cma/image-template/image-template-panel.tsx` | ~150 | Main template editor interface |
+
 ### Facebook & Zalo Integration (Phase 10)
 
 | File | Lines | Purpose |
@@ -270,7 +285,18 @@ src/
 
 ---
 
-## Data Model (Prisma) — 29 Models (Phase 3-10)
+## Data Model (Prisma) — 31 Models (Phase 3-10)
+
+### Image Template System (MVP)
+
+**CmaImageTemplate** — Reusable image template with HTML + CSS
+- id, orgId, name, description, width, height, html, css, variables (JSON array), thumbnail (PNG base64)
+- Variables: name, label, type ("text"|"number"|"color"|"image"), defaultValue, required
+- Starter templates: Facebook Post (1200×630), Generic Announcement (1200×630)
+
+**GeneratedImage** — Rendered image from template
+- id, orgId, templateId, variables (JSON), imageData (PNG blob), status ("pending"|"completed"|"failed")
+- Error tracking for failed renders, tied to featured image picker integration
 
 ### Phase 10: Facebook Auto-Post & Zalo OA Bot (2 models)
 

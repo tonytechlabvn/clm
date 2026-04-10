@@ -28,6 +28,7 @@ model User {
   cmaPosts            CmaPost[]
   templateFavorites   CmaTemplateFavorite[]
   apiKeys             ApiKey[]
+  generatedImages     GeneratedImage[]
 
   // LMS relations
   instructedCourses Course[]           @relation("CourseInstructor")
@@ -72,6 +73,8 @@ model Organization {
   cmaTemplates        CmaTemplate[]
   apiKeys             ApiKey[]
   cmaOrgSettings      CmaOrgSettings?
+  cmaImageTemplates   CmaImageTemplate[]
+  generatedImages     GeneratedImage[]
 
   // LMS relations
   courses Course[]
@@ -563,4 +566,54 @@ model CmaZaloUserMapping {
   @@unique([orgId, zaloUserId])
   @@index([orgId])
   @@index([zaloUserId])
+}
+
+// ─── CMA: Image Template System ───
+
+// Stores HTML/CSS templates for generating branded social media images via Puppeteer
+model CmaImageTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  platform        String   // "facebook" | "generic" (more platforms added later)
+  width           Int
+  height          Int
+  htmlContent     String   @db.Text // HTML/CSS template with {{variable}} Handlebars placeholders
+  variableSchema  Json     // Array of { name, type, label, defaultValue?, required?, maxLength?, placeholder? }
+  thumbnail       String?  // Preview image path
+  isSystem        Boolean  @default(false)
+  orgId           String?
+  org             Organization? @relation(fields: [orgId], references: [id])
+  generatedImages GeneratedImage[]
+  usageCount      Int      @default(0)
+  lastUsedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([orgId])
+  @@index([platform])
+}
+
+// Tracks each image generated from a template, with variable provenance
+model GeneratedImage {
+  id          String   @id @default(cuid())
+  templateId  String
+  template    CmaImageTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  variables   Json     // Actual variable values used for generation
+  imagePath   String   // Local path: uploads/cma/generated/{orgId}/{uuid}.png
+  width       Int
+  height      Int
+  fileSize    Int?     // Bytes
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  postId      String?  // Optional link to CmaPost
+  mediaId     String?  // Link to CmaMedia for serving via existing pipeline
+  expiresAt   DateTime? // For future cleanup job
+  createdAt   DateTime @default(now())
+
+  @@index([orgId])
+  @@index([templateId])
+  @@index([postId])
 }
