@@ -22,10 +22,7 @@ async function getBrowser(): Promise<Browser> {
     console.log(`${LOG} Launching browser...`);
     const b = await puppeteer.launch({
       headless: true,
-      // Use system Chromium if PUPPETEER_EXECUTABLE_PATH is set (Docker production)
-      ...(process.env.PUPPETEER_EXECUTABLE_PATH
-        ? { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH }
-        : {}),
+      // Puppeteer auto-finds its bundled Chrome for Testing via PUPPETEER_CACHE_DIR
       args: [
         "--no-sandbox", // required when running as non-root in Docker
         "--disable-setuid-sandbox",

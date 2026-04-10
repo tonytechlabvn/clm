@@ -11,8 +11,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Skip Puppeteer's bundled Chromium download — we'll use system chromium in runner
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+# Download Chrome for Testing during build (Puppeteer's tested version)
+ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
+RUN npx puppeteer browsers install chrome
 
 ARG NEXTAUTH_URL=http://localhost:3000
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
@@ -41,9 +42,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Tell Puppeteer to use system Chromium instead of bundled
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+# Let Puppeteer use its own bundled Chrome for Testing (system Chromium 147 has crashpad bugs)
+ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
 
 RUN groupadd --system --gid 1001 nodejs
 RUN useradd --system --uid 1001 nextjs
@@ -61,10 +61,11 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY scripts/docker-entrypoint.sh ./docker-entrypoint.sh
 
-# Copy Puppeteer + Handlebars packages needed at runtime
+# Copy Puppeteer + Handlebars + Chrome for Testing (bundled, tested to work)
 COPY --from=builder /app/node_modules/puppeteer ./node_modules/puppeteer
 COPY --from=builder /app/node_modules/puppeteer-core ./node_modules/puppeteer-core
 COPY --from=builder /app/node_modules/handlebars ./node_modules/handlebars
+COPY --from=builder /app/.cache/puppeteer ./.cache/puppeteer
 
 # Create uploads directory for generated images + writable tmp for Chromium crashpad
 RUN mkdir -p /app/uploads/cma/generated /tmp/.chromium-data

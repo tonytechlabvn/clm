@@ -62,9 +62,8 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CMA_ENCRYPTION_KEY=${CMA_ENCRYPTION_KEY}
       - ENABLE_API_KEY_AUTH=${ENABLE_API_KEY_AUTH:-true}
-      # Puppeteer: use system Chromium (installed in Dockerfile)
-      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      # Puppeteer: bundled Chrome for Testing (auto-detected via PUPPETEER_CACHE_DIR)
+      - PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
       # Cap Node.js heap to 768MB — Chromium spawns separate processes with own memory
       - NODE_OPTIONS=--max-old-space-size=768
     ports:
