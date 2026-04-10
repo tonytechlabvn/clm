@@ -66,10 +66,11 @@ COPY --from=builder /app/node_modules/puppeteer ./node_modules/puppeteer
 COPY --from=builder /app/node_modules/puppeteer-core ./node_modules/puppeteer-core
 COPY --from=builder /app/node_modules/handlebars ./node_modules/handlebars
 
-# Create uploads directory for generated images
-RUN mkdir -p /app/uploads/cma/generated
+# Create uploads directory for generated images + writable tmp for Chromium crashpad
+RUN mkdir -p /app/uploads/cma/generated /tmp/.chromium-data
+RUN chmod 1777 /tmp
 
-RUN chown -R nextjs:nodejs /app
+RUN chown -R nextjs:nodejs /app /tmp/.chromium-data
 RUN chmod +x /app/docker-entrypoint.sh
 
 USER nextjs
