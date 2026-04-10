@@ -29,9 +29,11 @@ async function getBrowser(): Promise<Browser> {
         "--disable-dev-shm-usage",
         "--disable-gpu",
         "--no-first-run",
-        "--disable-crash-reporter", // prevent chrome_crashpad_handler error in containers
+        "--disable-crash-reporter",
         "--disable-extensions",
         "--disable-background-networking",
+        "--no-zygote", // single-process model for containers
+        "--disable-features=VizDisplayCompositor",
       ],
     });
     browser = b;

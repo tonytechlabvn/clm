@@ -67,11 +67,12 @@ COPY --from=builder /app/node_modules/puppeteer-core ./node_modules/puppeteer-co
 COPY --from=builder /app/node_modules/handlebars ./node_modules/handlebars
 COPY --from=builder /app/.cache/puppeteer ./.cache/puppeteer
 
-# Create uploads directory for generated images + writable tmp for Chromium crashpad
-RUN mkdir -p /app/uploads/cma/generated /tmp/.chromium-data
+# Create uploads directory + replace crashpad handler with no-op stub (broken in containers)
+RUN mkdir -p /app/uploads/cma/generated
+RUN find /app/.cache/puppeteer -name chrome_crashpad_handler -exec sh -c 'printf "#!/bin/sh\nexit 0\n" > "$1" && chmod +x "$1"' _ {} \;
 RUN chmod 1777 /tmp
 
-RUN chown -R nextjs:nodejs /app /tmp/.chromium-data
+RUN chown -R nextjs:nodejs /app
 RUN chmod +x /app/docker-entrypoint.sh
 
 USER nextjs
