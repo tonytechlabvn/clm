@@ -18,6 +18,7 @@ import {
   CheckCircle,
   Rss,
   Palette,
+  BookOpen,
 } from "lucide-react";
 
 const navItems = [
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/admin/cma/settings", label: "Connections", icon: Plug },
   { href: "/admin/cma/approval", label: "Approval", icon: CheckCircle },
   { href: "/admin/cma/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/cma/kb/image-templates", label: "Image Templates", icon: BookOpen },
 ];
 
 const settingsItems = [
