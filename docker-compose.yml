@@ -1,5 +1,6 @@
 volumes:
   clm-pgdata:
+  clm-uploads:
   openzca-data:
 
 networks:
@@ -61,20 +62,24 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - CMA_ENCRYPTION_KEY=${CMA_ENCRYPTION_KEY}
       - ENABLE_API_KEY_AUTH=${ENABLE_API_KEY_AUTH:-true}
-      # Cap Node.js heap to 512MB — prevents runaway AI responses from consuming all server RAM
-      - NODE_OPTIONS=--max-old-space-size=512
+      # Puppeteer: use system Chromium (installed in Dockerfile)
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      # Cap Node.js heap to 768MB — Chromium spawns separate processes with own memory
+      - NODE_OPTIONS=--max-old-space-size=768
     ports:
       - "3001:3000"
     networks:
       - tony-net
-    # Docker-level resource limits — hard ceiling so a stuck process can't take down the host
+    # Docker-level resource limits — Chromium needs ~500MB on top of Next.js ~300MB
     deploy:
       resources:
         limits:
-          memory: 768M
-          cpus: "1.0"
+          memory: 1536M
+          cpus: "1.5"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - clm-uploads:/app/uploads
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "--timeout=5", "http://0.0.0.0:3000/api/health"]
       interval: 30s
