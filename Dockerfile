@@ -11,9 +11,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Download Chrome for Testing during build (Puppeteer's tested version)
-ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
-RUN npx puppeteer browsers install chrome
+# Skip Puppeteer Chrome download — using system Chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 ARG NEXTAUTH_URL=http://localhost:3000
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
@@ -42,8 +41,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Let Puppeteer use its own bundled Chrome for Testing (system Chromium 147 has crashpad bugs)
-ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
+# Use system Chromium with crashpad handler wrapper
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 RUN groupadd --system --gid 1001 nodejs
 RUN useradd --system --uid 1001 nextjs
@@ -61,16 +61,21 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY scripts/docker-entrypoint.sh ./docker-entrypoint.sh
 
-# Copy Puppeteer + Handlebars + Chrome for Testing (bundled, tested to work)
+# Copy Puppeteer + Handlebars packages needed at runtime
 COPY --from=builder /app/node_modules/puppeteer ./node_modules/puppeteer
 COPY --from=builder /app/node_modules/puppeteer-core ./node_modules/puppeteer-core
 COPY --from=builder /app/node_modules/handlebars ./node_modules/handlebars
-COPY --from=builder /app/.cache/puppeteer ./.cache/puppeteer
 
-# Create uploads directory + replace crashpad handler with no-op stub (broken in containers)
+# Create uploads directory + fix Chromium crashpad handler for Docker
 RUN mkdir -p /app/uploads/cma/generated
-RUN find /app/.cache/puppeteer -name chrome_crashpad_handler -exec sh -c 'printf "#!/bin/sh\nexit 0\n" > "$1" && chmod +x "$1"' _ {} \;
 RUN chmod 1777 /tmp
+# Wrap chrome_crashpad_handler to inject --database flag (required in Chromium 147+)
+RUN if [ -f /usr/lib/chromium/chrome_crashpad_handler ]; then \
+      mv /usr/lib/chromium/chrome_crashpad_handler /usr/lib/chromium/chrome_crashpad_handler.real && \
+      printf '#!/bin/sh\nmkdir -p /tmp/crashpad-db\nexec /usr/lib/chromium/chrome_crashpad_handler.real --database=/tmp/crashpad-db "$@"\n' \
+        > /usr/lib/chromium/chrome_crashpad_handler && \
+      chmod +x /usr/lib/chromium/chrome_crashpad_handler; \
+    fi
 
 RUN chown -R nextjs:nodejs /app
 RUN chmod +x /app/docker-entrypoint.sh
