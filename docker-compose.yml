@@ -70,9 +70,10 @@ services:
       - "3001:3000"
     networks:
       - tony-net
-    # Chrome/Puppeteer needs relaxed seccomp for sandboxing
+    # Chrome/Puppeteer needs relaxed seccomp + shared memory for headless rendering
     security_opt:
       - seccomp=unconfined
+    shm_size: "256mb"
     # Docker-level resource limits — Chromium needs ~500MB on top of Next.js ~300MB
     deploy:
       resources:
