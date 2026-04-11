@@ -2,6 +2,22 @@
 // Used by API routes, renderer service, and UI components
 
 import { z } from "zod";
+import { templateLayerDataSchema } from "./image-template-layer-types";
+
+// ── Platform enum (visual editor categories + legacy MVP platforms) ──
+
+export const IMAGE_TEMPLATE_PLATFORMS = [
+  "facebook",
+  "instagram",
+  "linkedin",
+  "twitter",
+  "pinterest",
+  "og-image",
+  "blog-header",
+  "generic",
+] as const;
+
+export type ImageTemplatePlatform = (typeof IMAGE_TEMPLATE_PLATFORMS)[number];
 
 // ── Variable definition schema (stored as JSON in CmaImageTemplate.variableSchema) ──
 
@@ -26,10 +42,13 @@ export type VariableSchema = VariableDefinition[];
 export const createImageTemplateSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
-  platform: z.string().min(1),
+  platform: z.enum(IMAGE_TEMPLATE_PLATFORMS),
   width: z.number().int().min(100).max(4096),
   height: z.number().int().min(100).max(4096),
   htmlContent: z.string().min(1),
+  // Structured layer tree from the visual editor. Optional for legacy/seed
+  // templates that only have hand-written htmlContent.
+  layerData: templateLayerDataSchema.optional(),
   variableSchema: variableSchemaValidator,
 });
 

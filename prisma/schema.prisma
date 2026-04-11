@@ -85,8 +85,8 @@ model CmaOrgSettings {
   id                     String   @id @default(cuid())
   orgId                  String   @unique
   publishingMode         String   @default("human_in_loop") // "auto" | "human_in_loop"
-  autoPublishSources     String[] @default(["scheduler"])   // sources that auto-publish in auto mode
-  requireApprovalSources String[] @default(["zalo_bot"])    // sources that always require approval
+  autoPublishSources     String[] @default(["scheduler"]) // sources that auto-publish in auto mode
+  requireApprovalSources String[] @default(["zalo_bot"]) // sources that always require approval
   // Rate limits (configurable via admin settings)
   maxDraftsPerHour       Int      @default(15)
   maxDraftsPerDay        Int      @default(50)
@@ -529,23 +529,23 @@ model CourseEnrollment {
 
 // Zalo OA/Personal bot configuration per org
 model CmaZaloBotConfig {
-  id           String    @id @default(cuid())
-  orgId        String    @unique
-  botType      String    @default("oa") // "oa" | "personal"
-  oaId         String? // Zalo OA ID
-  accessToken  String?   @db.Text // encrypted OA access token
-  refreshToken String?   @db.Text // encrypted OA refresh token
-  tokenExpiry  DateTime?
+  id               String    @id @default(cuid())
+  orgId            String    @unique
+  botType          String    @default("oa") // "oa" | "personal"
+  oaId             String? // Zalo OA ID
+  accessToken      String?   @db.Text // encrypted OA access token
+  refreshToken     String?   @db.Text // encrypted OA refresh token
+  tokenExpiry      DateTime?
   // Personal fields (Phase 4b)
-  cookies      String?   @db.Text // encrypted zca-js cookies JSON
-  cookieExpiry DateTime?
-  selfId       String?
-  imei         String?
-  userAgent    String?
-  allowedSenderIds String[] @default([])
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  cookies          String?   @db.Text // encrypted zca-js cookies JSON
+  cookieExpiry     DateTime?
+  selfId           String?
+  imei             String?
+  userAgent        String?
+  allowedSenderIds String[]  @default([])
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([orgId])
 }
@@ -572,26 +572,27 @@ model CmaZaloUserMapping {
 
 // Stores HTML/CSS templates for generating branded social media images via Puppeteer
 model CmaImageTemplate {
-  id              String   @id @default(cuid())
+  id              String           @id @default(cuid())
   name            String
   description     String?
-  platform        String   // "facebook" | "generic" (more platforms added later)
+  platform        String // "facebook" | "generic" (more platforms added later)
   width           Int
   height          Int
-  htmlContent     String   @db.Text // HTML/CSS template with {{variable}} Handlebars placeholders
-  variableSchema  Json     // Array of { name, type, label, defaultValue?, required?, maxLength?, placeholder? }
-  thumbnail       String?  // Preview image path
-  isSystem        Boolean  @default(false)
+  htmlContent     String           @db.Text // HTML/CSS template with {{variable}} Handlebars placeholders (derived from layerData when present)
+  layerData       Json? // Structured layer tree from visual editor (source of truth when set; null for legacy/seed templates)
+  variableSchema  Json // Array of { name, type, label, defaultValue?, required?, maxLength?, placeholder? }
+  thumbnail       String? // Preview image path
+  isSystem        Boolean          @default(false)
   // Auth code for Direct URL image access (rotatable, like APITemplate.io)
   // Allows image URLs to be used publicly (og:image, social media) without session auth
-  authCode        String   @default(cuid())
+  authCode        String           @default(cuid())
   orgId           String?
-  org             Organization? @relation(fields: [orgId], references: [id])
+  org             Organization?    @relation(fields: [orgId], references: [id])
   generatedImages GeneratedImage[]
-  usageCount      Int      @default(0)
+  usageCount      Int              @default(0)
   lastUsedAt      DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@index([orgId])
   @@index([platform])
@@ -599,22 +600,22 @@ model CmaImageTemplate {
 
 // Tracks each image generated from a template, with variable provenance
 model GeneratedImage {
-  id          String   @id @default(cuid())
+  id          String           @id @default(cuid())
   templateId  String
   template    CmaImageTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  variables   Json     // Actual variable values used for generation
-  imagePath   String   // Local path: uploads/cma/generated/{orgId}/{uuid}.png
+  variables   Json // Actual variable values used for generation
+  imagePath   String // Local path: uploads/cma/generated/{orgId}/{uuid}.png
   width       Int
   height      Int
-  fileSize    Int?     // Bytes
+  fileSize    Int? // Bytes
   orgId       String
-  org         Organization @relation(fields: [orgId], references: [id])
+  org         Organization     @relation(fields: [orgId], references: [id])
   createdById String
-  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  postId      String?  // Optional link to CmaPost
-  mediaId     String?  // Link to CmaMedia for serving via existing pipeline
+  createdBy   User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  postId      String? // Optional link to CmaPost
+  mediaId     String? // Link to CmaMedia for serving via existing pipeline
   expiresAt   DateTime? // For future cleanup job
-  createdAt   DateTime @default(now())
+  createdAt   DateTime         @default(now())
 
   @@index([orgId])
   @@index([templateId])
