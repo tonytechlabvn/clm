@@ -131,6 +131,56 @@ export async function resolveImagePlaceholders(
 }
 
 /**
+ * Download a pre-set featured image URL and upload it to the target platform.
+ * Use this when post.featuredImage is already set (e.g., from image template Direct URL,
+ * Zalo CDN, or any external image source).
+ * Returns platform media ID + URL, or undefined on failure.
+ */
+export async function fetchAndUploadExistingFeaturedImage(
+  imageUrl: string,
+  ctx: { siteUrl: string; username: string; token: string; orgId: string; postId: string },
+  adapter: PlatformAdapter
+): Promise<{ mediaId: string; url: string } | undefined> {
+  try {
+    if (!adapter.uploadMedia) return undefined;
+    console.log(`[image-resolution] Downloading pre-set featured image: ${imageUrl.substring(0, 80)}...`);
+
+    const res = await fetch(imageUrl);
+    if (!res.ok) {
+      console.warn(`[image-resolution] Failed to fetch ${imageUrl}: ${res.status}`);
+      return undefined;
+    }
+    const contentType = res.headers.get("content-type") || "image/png";
+    const buffer = Buffer.from(await res.arrayBuffer());
+
+    const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+    const fileName = `featured-${crypto.randomUUID()}.${ext}`;
+    const uploaded = await adapter.uploadMedia(
+      ctx.siteUrl, ctx.username, ctx.token, buffer, fileName, contentType
+    );
+
+    await prisma.cmaMedia.create({
+      data: {
+        orgId: ctx.orgId,
+        postId: ctx.postId,
+        fileName,
+        originalName: fileName,
+        mimeType: contentType,
+        size: buffer.length,
+        localPath: "",
+        source: "template-generated", // or "external-url" — reuse existing enum
+        sourceUrl: imageUrl,
+      },
+    });
+
+    return { mediaId: uploaded.platformMediaId, url: uploaded.url };
+  } catch (err) {
+    console.warn("[image-resolution] Failed to download/upload pre-set featured image:", err);
+    return undefined;
+  }
+}
+
+/**
  * Fetch and upload a single Unsplash photo for featured image.
  * Returns WP media ID and URL, or undefined on failure.
  */

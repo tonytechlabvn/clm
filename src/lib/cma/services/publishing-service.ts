@@ -7,7 +7,11 @@ import { markdownToSanitizedHtml } from "../markdown-to-html";
 import { blocksToSanitizedHtml } from "../blocks-to-html";
 import { blocksToStyledHtml } from "../themes/apply-theme-styles";
 import { markdownToThemedHtml } from "../themes/apply-theme-to-markdown-html";
-import { resolveImagePlaceholders, fetchAndUploadFeaturedImage } from "./image-resolution-service";
+import {
+  resolveImagePlaceholders,
+  fetchAndUploadFeaturedImage,
+  fetchAndUploadExistingFeaturedImage,
+} from "./image-resolution-service";
 import { TONYTECHLAB_CUSTOM_CSS } from "../themes/tonytechlab-custom-css";
 import { inlineCssIntoHtml } from "../css-inliner";
 import { wrapHtmlInTemplate } from "./template-html-wrapper";
@@ -167,10 +171,28 @@ export async function publishPost(req: PublishRequest): Promise<PublishResult> {
       }, adapter);
       htmlContent = imageResult.html;
 
-      // Determine featured image — use first inline image, or fetch dedicated one
+      // Determine featured image with clear priority:
+      // 1. Inline [IMAGE] placeholders from HTML content
+      // 2. Pre-set post.featuredImage (e.g., from image template Direct URL, Zalo CDN)
+      // 3. Fallback: Unsplash search based on post title
       if (imageResult.uploadedMediaIds.length > 0) {
         featuredMediaId = imageResult.uploadedMediaIds[0];
+      } else if (post.featuredImage && adapter.uploadMedia) {
+        // Post already has a featured image URL — download + upload to platform
+        const uploaded = await fetchAndUploadExistingFeaturedImage(
+          post.featuredImage,
+          { siteUrl, username, token, orgId: req.orgId, postId: req.postId },
+          adapter
+        );
+        if (uploaded) {
+          featuredMediaId = uploaded.mediaId;
+          await prisma.cmaPost.update({
+            where: { id: req.postId },
+            data: { featuredImage: uploaded.url },
+          });
+        }
       } else if (adapter.uploadMedia) {
+        // No featured image set — fall back to Unsplash search
         const featured = await fetchAndUploadFeaturedImage(
           post.title,
           { siteUrl, username, token, orgId: req.orgId, postId: req.postId },
