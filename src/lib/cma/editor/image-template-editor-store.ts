@@ -33,6 +33,7 @@ export const useEditorStore = create<EditorState>()(
       selectedLayerId: null,
       zoom: ZOOM_DEFAULT,
       isDirty: false,
+      previewMode: false,
 
       // ── meta ────────────────────────────────────────────────────────
       setMeta: (patch) =>
@@ -54,6 +55,7 @@ export const useEditorStore = create<EditorState>()(
           selectedLayerId: null,
           zoom: ZOOM_DEFAULT,
           isDirty: false,
+          previewMode: false,
         })),
 
       reset: () =>
@@ -64,7 +66,10 @@ export const useEditorStore = create<EditorState>()(
           selectedLayerId: null,
           zoom: ZOOM_DEFAULT,
           isDirty: false,
+          previewMode: false,
         })),
+
+      setPreviewMode: (next) => set(() => ({ previewMode: next })),
 
       // ── layers ──────────────────────────────────────────────────────
       addLayer: (layer) =>
@@ -114,7 +119,13 @@ export const useEditorStore = create<EditorState>()(
 
       // ── variables ───────────────────────────────────────────────────
       addVariable: (v) =>
-        set((s) => ({ variables: [...s.variables, v], isDirty: true })),
+        set((s) => {
+          // Defensive uniqueness guard — silently ignore duplicates so the
+          // store invariant (name is a primary key) holds no matter what the
+          // caller passes. Panels surface their own UX for collisions.
+          if (s.variables.some((x) => x.name === v.name)) return s;
+          return { variables: [...s.variables, v], isDirty: true };
+        }),
 
       updateVariable: (name, patch) =>
         set((s) => ({

@@ -5,9 +5,9 @@
 
 import { useState } from "react";
 import { Layers, SlidersHorizontal, Braces } from "lucide-react";
-import { useEditorStore } from "@/lib/cma/editor/image-template-editor-store";
 import { LayerTree } from "./panels/layer-tree";
 import { PropertiesInspector } from "./panels/properties-inspector";
+import { VariablesPanel } from "./panels/variables-panel";
 
 type Tab = "layers" | "properties" | "variables";
 
@@ -19,7 +19,6 @@ const TABS: Array<{ key: Tab; label: string; Icon: typeof Layers }> = [
 
 export function EditorRightPanel() {
   const [tab, setTab] = useState<Tab>("layers");
-  const variableCount = useEditorStore((s) => s.variables.length);
 
   return (
     <aside className="w-72 shrink-0 border-l bg-background flex flex-col">
@@ -49,13 +48,7 @@ export function EditorRightPanel() {
       <div className="flex-1 overflow-hidden flex flex-col min-h-0">
         {tab === "layers" && <LayerTree />}
         {tab === "properties" && <PropertiesInspector />}
-        {tab === "variables" && (
-          <div className="p-3 text-xs text-muted-foreground">
-            {variableCount === 0
-              ? "No variables defined — full variables panel arrives in phase-11."
-              : `${variableCount} variable${variableCount === 1 ? "" : "s"} — edit in phase-11`}
-          </div>
-        )}
+        {tab === "variables" && <VariablesPanel />}
       </div>
     </aside>
   );

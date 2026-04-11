@@ -13,6 +13,8 @@ import {
   RotateCcw,
   Save,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +33,8 @@ export function EditorTopBar({ onCancel, onSave }: Props) {
   const setZoom = useEditorStore((s) => s.setZoom);
   const isDirty = useEditorStore((s) => s.isDirty);
   const isSystem = useEditorStore((s) => s.meta.isSystem);
+  const previewMode = useEditorStore((s) => s.previewMode);
+  const setPreviewMode = useEditorStore((s) => s.setPreviewMode);
 
   const { undo, redo, pastCount, futureCount } = useTemporalStore();
 
@@ -118,6 +122,23 @@ export function EditorTopBar({ onCancel, onSave }: Props) {
         title="Fit to screen (phase-09)"
       >
         <Maximize2 className="h-4 w-4" />
+      </Button>
+
+      <div className="mx-2 h-6 w-px bg-border" />
+
+      {/* Preview mode toggle — swaps canvas token substitution */}
+      <Button
+        variant={previewMode ? "default" : "ghost"}
+        size="sm"
+        onClick={() => setPreviewMode(!previewMode)}
+        title={previewMode ? "Preview on — click to show raw tokens" : "Preview off — click to substitute variables"}
+      >
+        {previewMode ? (
+          <Eye className="h-4 w-4 mr-1.5" />
+        ) : (
+          <EyeOff className="h-4 w-4 mr-1.5" />
+        )}
+        <span className="text-xs">Preview</span>
       </Button>
 
       <div className="ml-auto" />

@@ -29,11 +29,16 @@ export interface EditorState {
   selectedLayerId: string | null;
   zoom: number; // clamped to [ZOOM_MIN, ZOOM_MAX]
   isDirty: boolean;
+  // Phase-11: when true, text/image/rect tokens render substituted with
+  // variable defaults; when false, raw `{{name}}` tokens appear on canvas
+  // so authors can see which slots they've wired up.
+  previewMode: boolean;
 
   // meta
   setMeta: (patch: Partial<EditorMeta>) => void;
   loadTemplate: (payload: LoadPayload) => void;
   reset: () => void;
+  setPreviewMode: (next: boolean) => void;
 
   // layers
   addLayer: (layer: Layer) => void;
