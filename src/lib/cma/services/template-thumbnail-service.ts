@@ -19,6 +19,30 @@ const LOG = "[template-thumbnail]";
 // templates so gallery thumbnails have a consistent visual weight.
 const THUMBNAIL_SCALE = 0.25;
 
+// Walk the variable schema and collect every declared defaultValue as a
+// string map suitable for the renderer's Handlebars context. This is what
+// makes the gallery thumbnail show "Your headline goes here" instead of
+// a mostly-empty background — rendering with an empty variables map would
+// leave every {{token}} collapsing to "".
+interface DeclaredVariable {
+  name?: string;
+  defaultValue?: string;
+}
+
+function buildSampleVariables(schema: unknown): Record<string, string> {
+  const map: Record<string, string> = {};
+  if (!Array.isArray(schema)) return map;
+  for (const raw of schema as DeclaredVariable[]) {
+    if (!raw || typeof raw !== "object") continue;
+    const { name, defaultValue } = raw;
+    if (typeof name !== "string" || name.length === 0) continue;
+    if (typeof defaultValue === "string" && defaultValue.length > 0) {
+      map[name] = defaultValue;
+    }
+  }
+  return map;
+}
+
 export async function generateAndStoreThumbnail(
   templateId: string
 ): Promise<string | null> {
@@ -37,9 +61,13 @@ export async function generateAndStoreThumbnail(
     const thumbnailWidth = Math.max(1, Math.round(template.width * THUMBNAIL_SCALE));
     const thumbnailHeight = Math.max(1, Math.round(template.height * THUMBNAIL_SCALE));
 
+    // Use declared defaultValues as sample content so the thumbnail shows
+    // meaningful text/colors instead of collapsed empty tokens.
+    const sampleVariables = buildSampleVariables(template.variableSchema);
+
     const result = await renderTemplate({
       htmlContent: template.htmlContent,
-      variables: {},
+      variables: sampleVariables,
       width: thumbnailWidth,
       height: thumbnailHeight,
     });

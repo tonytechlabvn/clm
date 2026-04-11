@@ -70,6 +70,11 @@ export function renderText(l: TextLayer): string {
 
 // ── Image layer ──────────────────────────────────────────────────────
 
+// Match a src that is exactly a single {{token}} (with optional whitespace)
+// so we can wrap the img tag in a Handlebars #if and avoid rendering a
+// broken-image icon when the token has no value at render time.
+const PURE_TOKEN_RE = /^\{\{\s*(\w+)\s*\}\}$/;
+
 export function renderImage(l: ImageLayer): string {
   const objectFit = l.fitMode === "fill" ? "fill" : l.fitMode;
   const radiusCss = l.borderRadius ? `;border-radius:${l.borderRadius}px` : "";
@@ -84,9 +89,25 @@ export function renderImage(l: ImageLayer): string {
     `object-fit:${objectFit}`,
     "display:block",
   ].join(";");
+
   // src may contain {{token}} — keep it untouched, Handlebars substitutes later.
   // Non-token chars are still escaped via escapeKeepTokens to block attribute breakout.
   const safeSrc = escapeKeepTokens(l.src);
+
+  // If the entire src is a single {{token}}, wrap the <img> in a Handlebars
+  // #if so it's skipped when the token is unset. Otherwise the layer renders
+  // as an empty hidden div and the layer below shows through cleanly.
+  // Literal URLs are emitted unconditionally.
+  const tokenMatch = l.src.match(PURE_TOKEN_RE);
+  if (tokenMatch) {
+    const tokenName = tokenMatch[1];
+    return (
+      `<div style="${style}">{{#if ${tokenName}}}` +
+      `<img src="${safeSrc}" style="${imgStyle}" alt="">` +
+      `{{/if}}</div>`
+    );
+  }
+
   return `<div style="${style}"><img src="${safeSrc}" style="${imgStyle}" alt=""></div>`;
 }
 
