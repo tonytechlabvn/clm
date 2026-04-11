@@ -25,8 +25,26 @@ export async function middleware(request: NextRequest) {
   const isImageTemplateDirectUrl =
     /^\/api\/cma\/image-templates\/[^/]+\/image$/.test(pathname);
 
-  // Allow auth API, public endpoints, public pages, webhooks, and direct-URL images through
-  if (isAuthApi || isPublicApi || isPublicPage || isWebhook || isImageTemplateDirectUrl)
+  // Image template asset GET (editor-uploaded images used inside templates)
+  // Public-by-obscurity: UUID filenames + orgId prefix. Same security model as
+  // the Direct URL endpoint. POST uploads still go through the session-auth
+  // branch below because the POST pattern has /assets with no extra segment
+  // trailing it beyond that, but any GET requesting a file under assets/* is
+  // public so Puppeteer can reach it during render without session cookies.
+  const isImageTemplateAssetGet =
+    request.method === "GET" &&
+    /^\/api\/cma\/image-templates\/assets\/[^/]+\/[^/]+$/.test(pathname);
+
+  // Allow auth API, public endpoints, public pages, webhooks, direct-URL images,
+  // and public asset GETs through.
+  if (
+    isAuthApi ||
+    isPublicApi ||
+    isPublicPage ||
+    isWebhook ||
+    isImageTemplateDirectUrl ||
+    isImageTemplateAssetGet
+  )
     return withRequestId(request, NextResponse.next());
 
   // API key auth bypass — gated behind feature flag

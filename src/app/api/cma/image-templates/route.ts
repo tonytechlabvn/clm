@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma-client";
 import { withApiKeyOrSessionAuth } from "@/lib/cma/services/org-auth";
 import { createImageTemplateSchema } from "@/lib/cma/types/image-template-types";
+import { generateAndStoreThumbnail } from "@/lib/cma/services/template-thumbnail-service";
 
 // GET /api/cma/image-templates?orgId=...&platform=... (optional filter)
 export async function GET(request: Request) {
@@ -62,10 +63,19 @@ export async function POST(request: Request) {
       data: {
         ...parsed.data,
         variableSchema: parsed.data.variableSchema as unknown as object[],
+        // layerData is optional in the Zod schema; pass undefined if not present
+        // so Prisma keeps the column null for legacy seed templates.
+        ...(parsed.data.layerData
+          ? { layerData: parsed.data.layerData as unknown as object }
+          : {}),
         orgId: auth.orgId,
         isSystem: false,
       },
     });
+
+    // Fire-and-forget thumbnail generation — save response returns immediately.
+    // Thumbnail rendering can take a few seconds and must never block persist.
+    void generateAndStoreThumbnail(template.id);
 
     return NextResponse.json({ data: template }, { status: 201 });
   } catch (err) {

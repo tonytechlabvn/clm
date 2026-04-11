@@ -1,8 +1,13 @@
 "use client";
 // Image-layer-specific properties: src, fit mode, border radius, border.
-// Upload button wired in phase-12 (asset upload flow).
+// Phase-12 wires the Upload button through useTemplateAssetUpload — the
+// hook returns a public URL we write straight into layer.src.
 
+import { useRef } from "react";
+import { Upload, Loader2 } from "lucide-react";
 import { useEditorStore } from "@/lib/cma/editor/image-template-editor-store";
+import { useCmaOrg } from "@/lib/cma/hooks/use-cma-org";
+import { useTemplateAssetUpload } from "@/lib/cma/editor/use-template-asset-upload";
 import {
   ColorInput,
   InspectorSectionHeader,
@@ -23,23 +28,66 @@ interface Props {
 export function ImagePropertiesSection({ layerId }: Props) {
   const layer = useEditorStore((s) => s.layers.find((l) => l.id === layerId));
   const updateLayer = useEditorStore((s) => s.updateLayer);
+  const { org } = useCmaOrg();
+  const { upload, uploading, error } = useTemplateAssetUpload();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!layer || layer.type !== "image") return null;
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !org?.id) return;
+    const url = await upload(file, org.id);
+    if (url) updateLayer(layerId, { src: url });
+    // Reset the input so the same file can be picked again later
+    e.target.value = "";
+  };
 
   return (
     <section>
       <InspectorSectionHeader>Image</InspectorSectionHeader>
 
-      <label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-        Source URL
-      </label>
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          Source URL
+        </label>
+        <button
+          type="button"
+          onClick={handleUploadClick}
+          disabled={uploading || !org?.id}
+          className="text-[10px] flex items-center gap-1 text-primary hover:underline disabled:opacity-50"
+          title={org?.id ? "Upload an image" : "Organization not loaded"}
+        >
+          {uploading ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Upload className="h-3 w-3" />
+          )}
+          Upload
+        </button>
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        onChange={handleFileChange}
+        className="hidden"
+      />
       <input
         type="text"
         value={layer.src}
         onChange={(e) => updateLayer(layerId, { src: e.target.value })}
         placeholder="https://... or {{imageUrl}}"
-        className="w-full text-xs border rounded px-2 py-1 bg-background mt-0.5 mb-2 font-mono"
+        className="w-full text-xs border rounded px-2 py-1 bg-background mb-1 font-mono"
       />
+      {error && (
+        <p className="text-[10px] text-destructive mb-2">{error}</p>
+      )}
+      <div className="mb-2" />
 
       <div className="grid grid-cols-2 gap-2">
         <div className="col-span-2">

@@ -1,7 +1,8 @@
 "use client";
 // Top bar for the visual template editor. Contains the template-name input,
-// undo/redo buttons (wired to zundo temporal store), zoom controls, and
-// Cancel/Save buttons. Save is a no-op until phase-12 wires the API.
+// undo/redo buttons (wired to zundo temporal store), zoom controls, preview
+// toggle, and Save/Cancel buttons. Save compiles the layer tree to HTML and
+// POSTs/PUTs the template via editor-save-handler.
 
 import { useCallback } from "react";
 import {
@@ -20,13 +21,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useEditorStore } from "@/lib/cma/editor/image-template-editor-store";
 import { useTemporalStore } from "./use-temporal-store";
+import { useEditorSave } from "./use-editor-save";
 
 interface Props {
   onCancel?: () => void;
-  onSave?: () => void;
+  onSaved?: (templateId: string) => void;
 }
 
-export function EditorTopBar({ onCancel, onSave }: Props) {
+export function EditorTopBar({ onCancel, onSaved }: Props) {
   const name = useEditorStore((s) => s.meta.name);
   const setMeta = useEditorStore((s) => s.setMeta);
   const zoom = useEditorStore((s) => s.zoom);
@@ -37,6 +39,9 @@ export function EditorTopBar({ onCancel, onSave }: Props) {
   const setPreviewMode = useEditorStore((s) => s.setPreviewMode);
 
   const { undo, redo, pastCount, futureCount } = useTemporalStore();
+  const { save: handleSave, saving, error: saveError } = useEditorSave({
+    onSaved,
+  });
 
   const handleZoomIn = useCallback(() => setZoom(zoom + 0.1), [zoom, setZoom]);
   const handleZoomOut = useCallback(() => setZoom(zoom - 0.1), [zoom, setZoom]);
@@ -143,15 +148,30 @@ export function EditorTopBar({ onCancel, onSave }: Props) {
 
       <div className="ml-auto" />
 
+      {saveError && (
+        <span
+          className="text-[11px] text-destructive max-w-[200px] truncate"
+          title={saveError}
+        >
+          {saveError}
+        </span>
+      )}
+
       {/* Save */}
       <Button
         size="sm"
-        onClick={onSave}
-        disabled={!isDirty || isSystem}
-        title={isSystem ? "System template — fork first" : "Save (phase-12)"}
+        onClick={handleSave}
+        disabled={(!isDirty && useEditorStore.getState().meta.id !== null) || isSystem || saving}
+        title={
+          isSystem
+            ? "System template — fork first (phase-13)"
+            : saving
+            ? "Saving…"
+            : "Save template"
+        }
       >
         <Save className="h-4 w-4 mr-1.5" />
-        Save
+        {saving ? "Saving…" : "Save"}
       </Button>
     </div>
   );

@@ -45,14 +45,9 @@ export function ImageTemplateEditor({ templateId, initialPlatform, onExit }: Pro
     };
   }, [templateId, initialPlatform, loadTemplate, reset]);
 
-  const handleSave = () => {
-    // Phase-12 wires the save flow; the button is disabled unless isDirty.
-    console.info("[editor] save clicked — wired in phase-12");
-  };
-
   return (
     <div className="h-screen flex flex-col bg-background">
-      <EditorTopBar onCancel={onExit} onSave={handleSave} />
+      <EditorTopBar onCancel={onExit} />
       <div className="flex-1 flex overflow-hidden">
         <EditorLeftPalette />
         <EditorCanvasArea />

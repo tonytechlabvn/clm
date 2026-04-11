@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma-client";
 import { withApiKeyOrSessionAuth } from "@/lib/cma/services/org-auth";
 import { updateImageTemplateSchema } from "@/lib/cma/types/image-template-types";
+import { generateAndStoreThumbnail } from "@/lib/cma/services/template-thumbnail-service";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -84,8 +85,14 @@ export async function PUT(request: Request, { params }: RouteParams) {
         ...(parsed.data.variableSchema
           ? { variableSchema: parsed.data.variableSchema as unknown as object[] }
           : {}),
+        ...(parsed.data.layerData
+          ? { layerData: parsed.data.layerData as unknown as object }
+          : {}),
       },
     });
+
+    // Fire-and-forget thumbnail refresh after content change.
+    void generateAndStoreThumbnail(template.id);
 
     return NextResponse.json({ data: template });
   } catch (err) {
