@@ -143,9 +143,19 @@ export async function fetchAndUploadExistingFeaturedImage(
 ): Promise<{ mediaId: string; url: string } | undefined> {
   try {
     if (!adapter.uploadMedia) return undefined;
-    console.log(`[image-resolution] Downloading pre-set featured image: ${imageUrl.substring(0, 80)}...`);
 
-    const res = await fetch(imageUrl);
+    // Self-URL rewrite: if the URL points to our own public domain (NEXTAUTH_URL),
+    // rewrite to localhost to avoid routing through Cloudflare tunnel from inside Docker.
+    let fetchUrl = imageUrl;
+    const publicUrl = process.env.NEXTAUTH_URL;
+    if (publicUrl && imageUrl.startsWith(publicUrl)) {
+      fetchUrl = imageUrl.replace(publicUrl, "http://localhost:3000");
+      console.log(`[image-resolution] Self-URL detected, rewriting to localhost`);
+    }
+
+    console.log(`[image-resolution] Downloading pre-set featured image: ${fetchUrl.substring(0, 80)}...`);
+
+    const res = await fetch(fetchUrl);
     if (!res.ok) {
       console.warn(`[image-resolution] Failed to fetch ${imageUrl}: ${res.status}`);
       return undefined;
