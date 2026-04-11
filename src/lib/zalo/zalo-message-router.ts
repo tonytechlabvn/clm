@@ -59,6 +59,7 @@ export async function routeMessage(
       "• /approve — Approve your latest draft",
       "• /approve <number> — Approve draft by number",
       "• /edit <new content> — Edit your latest draft",
+      "• /daily <text> — Render on MAF-DAILY + auto-publish to Facebook",
       "• /help — Show this message",
       "",
       "Or send any text to create a new draft post.",
@@ -229,6 +230,107 @@ export async function routeMessage(
     }
     await prisma.cmaPost.update({ where: { id: latest.id }, data: { content: newContent } });
     await reply( `📝 Updated!\n\nTitle: ${latest.title}\nNew content saved.`);
+    return;
+  }
+
+  // /daily <text> — render text as title on the MAF-DAILY image template and
+  // auto-publish to the first active Facebook account for this org. Exists so
+  // a user can send "/daily Sáng nay chạy 10km" and get an image post on
+  // Facebook in one step, without the draft/approve roundtrip.
+  if (cmd.startsWith("/daily ") || cmd === "/daily") {
+    const message = trimmed.slice(6).trim();
+    if (!message) {
+      await reply("Usage: /daily <text>\nExample: /daily Sáng nay chạy 10km");
+      return;
+    }
+
+    // Locate the MAF-DAILY template for this org (or a system-wide copy).
+    // We match by name so other orgs can create their own "MAF-DAILY" clone.
+    const template = await prisma.cmaImageTemplate.findFirst({
+      where: {
+        OR: [{ orgId, name: "MAF-DAILY" }, { isSystem: true, name: "MAF-DAILY" }],
+      },
+      select: { id: true, authCode: true, name: true, width: true, height: true },
+    });
+    if (!template) {
+      await reply("❌ MAF-DAILY template not found. Create it in Image Studio first.");
+      return;
+    }
+
+    // Locate the org's active Facebook account — the /daily shortcut is
+    // Facebook-specific. Multi-platform versions can use /approve instead.
+    const fbAccount = await prisma.cmaPlatformAccount.findFirst({
+      where: {
+        orgId,
+        platform: "facebook",
+        isActive: true,
+        ...(allowedAccountIds.length === 0 ? {} : { id: { in: allowedAccountIds } }),
+      },
+      select: { id: true, label: true },
+    });
+    if (!fbAccount) {
+      await reply("❌ No active Facebook account connected for this org.");
+      return;
+    }
+
+    // Spam guard — same rate limits /approve fb would apply.
+    const pubGuard = await canPublishToFacebook(orgId, fbAccount.id);
+    if (!pubGuard.allowed) {
+      await reply(`⚠️ ${pubGuard.reason}`);
+      return;
+    }
+
+    // Build the Direct URL with the caller's text as the {{title}} variable.
+    // URLSearchParams handles non-ASCII encoding for Vietnamese characters.
+    const params = new URLSearchParams({ auth: template.authCode, title: message });
+    const base = process.env.NEXTAUTH_URL?.replace(/\/$/, "") ?? "https://clm.tonytechlab.com";
+    const directUrl = `${base}/api/cma/image-templates/${template.id}/image?${params.toString()}`;
+
+    // Title: first 100 chars of the message, same truncation as the default flow.
+    const firstLine = message.split("\n")[0] || "Daily post";
+    const postTitle = firstLine.length > MAX_TITLE_LENGTH
+      ? firstLine.substring(0, MAX_TITLE_LENGTH) + "..."
+      : firstLine;
+
+    try {
+      const post = await createPost({
+        orgId,
+        authorId: userId,
+        title: postTitle,
+        content: message,
+        contentFormat: "markdown",
+        source: "zalo_bot",
+        featuredImage: directUrl,
+      });
+      if (isGroup && replyToId) {
+        await prisma.cmaPost.update({
+          where: { id: post.id },
+          data: { outlineData: { zaloGroupThreadId: replyToId } },
+        });
+      }
+
+      const result = await publishPost({
+        postId: post.id,
+        accountId: fbAccount.id,
+        orgId,
+      });
+
+      if (result.success) {
+        await reply(
+          [
+            `🎉 Published to ${fbAccount.label}`,
+            ``,
+            `Title: ${postTitle}`,
+            result.platformUrl ? `🔗 ${result.platformUrl}` : "",
+          ].filter(Boolean).join("\n")
+        );
+      } else {
+        await reply(`❌ Publish failed: ${result.error}`);
+      }
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Unknown error";
+      await reply(`❌ /daily failed: ${errMsg}`);
+    }
     return;
   }
 
