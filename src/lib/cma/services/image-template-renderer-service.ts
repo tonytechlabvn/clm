@@ -22,6 +22,9 @@ async function getBrowser(): Promise<Browser> {
     console.log(`${LOG} Launching browser...`);
     const b = await puppeteer.launch({
       headless: true,
+      // Raise the Puppeteer CDP protocol timeout so a slow screenshot under
+      // load doesn't fall back to the 180s default and hang the tunnel.
+      protocolTimeout: 30_000,
       // Use system Chromium if PUPPETEER_EXECUTABLE_PATH is set (Docker production)
       ...(process.env.PUPPETEER_EXECUTABLE_PATH
         ? { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH }
@@ -44,6 +47,23 @@ async function getBrowser(): Promise<Browser> {
     return b;
   })();
   return browserPromise;
+}
+
+// When a render fails with a protocol-level error the browser is in an
+// undefined state — the cleanest recovery is to close it so the next call
+// re-launches a fresh instance. Safe no-op when the browser is already
+// disconnected.
+async function resetBrowserOnFatalError(): Promise<void> {
+  const current = browser;
+  browser = null;
+  browserPromise = null;
+  if (current) {
+    try {
+      await current.close();
+    } catch {
+      // Swallow — we're already in an error path
+    }
+  }
 }
 
 export async function shutdownBrowser(): Promise<void> {
@@ -135,19 +155,31 @@ export async function renderTemplate(opts: RenderOptions): Promise<RenderResult>
   const html = compiled(context);
 
   await acquirePage();
-  const b = await getBrowser();
-  const page = await b.newPage();
+  let page;
   try {
+    const b = await getBrowser();
+    page = await b.newPage();
     await page.setViewport({ width, height, deviceScaleFactor: 2 });
-    // 10s timeout to prevent hangs on slow external resources
-    await page.setContent(html, { waitUntil: "networkidle0", timeout: 10_000 });
+    // networkidle2 ignores up to 2 persistent connections (Google Fonts keeps
+    // one open); networkidle0 would hang waiting for those. 10s hard cap so
+    // slow external resources can't stall us.
+    await page.setContent(html, { waitUntil: "networkidle2", timeout: 10_000 });
     const buffer = (await page.screenshot({
       type: "png",
       clip: { x: 0, y: 0, width, height },
     })) as Buffer;
     return { buffer, width, height };
+  } catch (err) {
+    // Protocol-level errors (screenshot timeout etc.) leave the browser
+    // in a corrupt state. Close + relaunch on next call.
+    if (err instanceof Error && /Protocol|timed out|Target closed/i.test(err.message)) {
+      await resetBrowserOnFatalError();
+    }
+    throw err;
   } finally {
-    await page.close();
+    if (page) {
+      try { await page.close(); } catch { /* page may already be gone */ }
+    }
     releasePage();
   }
 }
@@ -184,17 +216,25 @@ export async function renderPreview(opts: RenderOptions): Promise<Buffer> {
   const html = compiled(context);
 
   await acquirePage();
-  const b = await getBrowser();
-  const page = await b.newPage();
+  let page;
   try {
+    const b = await getBrowser();
+    page = await b.newPage();
     await page.setViewport({ width: previewWidth, height: previewHeight });
-    await page.setContent(html, { waitUntil: "networkidle0", timeout: 10_000 });
+    await page.setContent(html, { waitUntil: "networkidle2", timeout: 10_000 });
     return (await page.screenshot({
       type: "png",
       clip: { x: 0, y: 0, width: previewWidth, height: previewHeight },
     })) as Buffer;
+  } catch (err) {
+    if (err instanceof Error && /Protocol|timed out|Target closed/i.test(err.message)) {
+      await resetBrowserOnFatalError();
+    }
+    throw err;
   } finally {
-    await page.close();
+    if (page) {
+      try { await page.close(); } catch { /* page may already be gone */ }
+    }
     releasePage();
   }
 }
