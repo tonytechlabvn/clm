@@ -1,16 +1,19 @@
 "use client";
 
-// Main image template panel — orchestrates grid, form, preview, and generate actions
+// Main image template panel — Direct URL approach (APITemplate.io-style)
+// The image URL IS the image — no "generate then use" step, just build URL and set
 
 import { useState, useCallback } from "react";
-import { Loader2, Download, ImagePlus } from "lucide-react";
+import { Download, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cmaFetch } from "@/lib/cma/use-cma-api";
 import { CmaImageTemplateGrid } from "./cma-image-template-grid";
 import { CmaImageTemplateVariableForm } from "./cma-image-template-variable-form";
 import { CmaImageTemplatePreview } from "./cma-image-template-preview";
 import type { CmaImageTemplate } from "@prisma/client";
-import type { VariableDefinition } from "@/lib/cma/types/image-template-types";
+import {
+  type VariableDefinition,
+  buildImageUrl,
+} from "@/lib/cma/types/image-template-types";
 
 interface PostData {
   title?: string;
@@ -24,29 +27,24 @@ interface Props {
   onImageGenerated: (url: string) => void;
 }
 
-interface RenderResponse {
-  data: { imageUrl: string; mediaId: string; width: number; height: number };
-}
-
 const PLATFORMS = ["all", "facebook", "generic"] as const;
 
 export function CmaImageTemplatePanel({ orgId, postData, onImageGenerated }: Props) {
   const [platform, setPlatform] = useState<string>("all");
   const [selected, setSelected] = useState<CmaImageTemplate | null>(null);
   const [variables, setVariables] = useState<Record<string, string>>({});
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
-  const [genError, setGenError] = useState<string | null>(null);
 
   // Parse variableSchema from JSON (stored as Json in Prisma)
   const schema: VariableDefinition[] = selected
     ? (selected.variableSchema as unknown as VariableDefinition[])
     : [];
 
+  // Build the Direct URL for this template + current variables
+  // This is the exact URL that will be set as the featured image
+  const directUrl = selected ? buildImageUrl(selected, variables) : null;
+
   const handleSelect = useCallback((tpl: CmaImageTemplate) => {
     setSelected(tpl);
-    setGeneratedUrl(null);
-    setGenError(null);
     // Initialize variables with defaults
     const defs = tpl.variableSchema as unknown as VariableDefinition[];
     const initial: Record<string, string> = {};
@@ -70,26 +68,17 @@ export function CmaImageTemplatePanel({ orgId, postData, onImageGenerated }: Pro
     setVariables(filled);
   }, [postData, selected, variables]);
 
-  const handleGenerate = useCallback(async () => {
-    if (!selected) return;
-    setIsGenerating(true);
-    setGenError(null);
-    try {
-      const res = await cmaFetch<RenderResponse>(
-        `/api/cma/image-templates/${selected.id}/render?orgId=${orgId}`,
-        { method: "POST", body: JSON.stringify({ variables }) }
-      );
-      setGeneratedUrl(res.data.imageUrl);
-    } catch (err) {
-      setGenError(err instanceof Error ? err.message : "Generation failed");
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [selected, orgId, variables]);
-
+  // Set the direct URL as the post's featured image — that's it.
+  // Facebook and other adapters will fetch the image from this URL when publishing.
   const handleUseAsImage = useCallback(() => {
-    if (generatedUrl) onImageGenerated(generatedUrl);
-  }, [generatedUrl, onImageGenerated]);
+    if (directUrl) {
+      // Convert relative URL to absolute (Facebook needs a public URL)
+      const absoluteUrl = directUrl.startsWith("http")
+        ? directUrl
+        : `${window.location.origin}${directUrl}`;
+      onImageGenerated(absoluteUrl);
+    }
+  }, [directUrl, onImageGenerated]);
 
   return (
     <div className="space-y-4">
@@ -120,13 +109,13 @@ export function CmaImageTemplatePanel({ orgId, postData, onImageGenerated }: Pro
         />
       )}
 
-      {/* Selected template: form + preview */}
+      {/* Selected template: form + preview + actions */}
       {selected && (
         <div className="space-y-4">
           {/* Back button + template name */}
           <div className="flex items-center justify-between">
             <button
-              onClick={() => { setSelected(null); setGeneratedUrl(null); }}
+              onClick={() => setSelected(null)}
               className="text-xs text-muted-foreground hover:text-foreground"
             >
               &larr; Back to templates
@@ -134,10 +123,10 @@ export function CmaImageTemplatePanel({ orgId, postData, onImageGenerated }: Pro
             <span className="text-sm font-medium">{selected.name}</span>
           </div>
 
-          {/* Preview */}
+          {/* Preview — uses the direct URL via <img src> */}
           <CmaImageTemplatePreview
             templateId={selected.id}
-            orgId={orgId}
+            authCode={selected.authCode}
             variables={variables}
             width={selected.width}
             height={selected.height}
@@ -151,37 +140,25 @@ export function CmaImageTemplatePanel({ orgId, postData, onImageGenerated }: Pro
             onAutoFill={postData ? handleAutoFill : undefined}
           />
 
-          {/* Action buttons */}
+          {/* Action buttons — no "generate" step, URL IS the image */}
           <div className="flex gap-2">
             <Button
-              onClick={handleGenerate}
-              disabled={isGenerating}
+              onClick={handleUseAsImage}
               className="flex-1"
               size="sm"
             >
-              {isGenerating ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-              ) : (
-                <ImagePlus className="h-3.5 w-3.5 mr-1.5" />
-              )}
-              {isGenerating ? "Generating..." : "Generate Image"}
+              <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+              Use as Featured Image
             </Button>
 
-            {generatedUrl && (
-              <>
-                <Button variant="outline" size="sm" onClick={handleUseAsImage}>
-                  Use as Featured Image
+            {directUrl && (
+              <a href={directUrl} download={`${selected.name}.png`} target="_blank" rel="noopener">
+                <Button variant="ghost" size="sm" title="Download">
+                  <Download className="h-3.5 w-3.5" />
                 </Button>
-                <a href={generatedUrl} download>
-                  <Button variant="ghost" size="sm">
-                    <Download className="h-3.5 w-3.5" />
-                  </Button>
-                </a>
-              </>
+              </a>
             )}
           </div>
-
-          {genError && <p className="text-xs text-destructive">{genError}</p>}
         </div>
       )}
     </div>

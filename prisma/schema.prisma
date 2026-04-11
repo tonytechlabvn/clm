@@ -582,6 +582,9 @@ model CmaImageTemplate {
   variableSchema  Json     // Array of { name, type, label, defaultValue?, required?, maxLength?, placeholder? }
   thumbnail       String?  // Preview image path
   isSystem        Boolean  @default(false)
+  // Auth code for Direct URL image access (rotatable, like APITemplate.io)
+  // Allows image URLs to be used publicly (og:image, social media) without session auth
+  authCode        String   @default(cuid())
   orgId           String?
   org             Organization? @relation(fields: [orgId], references: [id])
   generatedImages GeneratedImage[]

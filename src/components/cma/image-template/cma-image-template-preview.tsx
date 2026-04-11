@@ -1,86 +1,72 @@
 "use client";
 
-// Live preview — calls preview API with debounced variables, displays base64 PNG
+// Live preview — uses Direct URL as <img src>
+// No API calls needed — the URL IS the image. Browser caches by URL.
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
-import { cmaFetch } from "@/lib/cma/use-cma-api";
+import { buildImageUrl } from "@/lib/cma/types/image-template-types";
 
 interface Props {
   templateId: string;
-  orgId: string;
+  authCode: string;
   variables: Record<string, string>;
   width: number;
   height: number;
 }
 
-interface PreviewResponse {
-  data: { base64: string; width: number; height: number };
-}
-
-export function CmaImageTemplatePreview({ templateId, orgId, variables, width, height }: Props) {
-  const [preview, setPreview] = useState<string | null>(null);
+export function CmaImageTemplatePreview({ templateId, authCode, variables, width, height }: Props) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-  // Serialize variables for stable dependency comparison (avoids infinite re-render loop)
+  const [error, setError] = useState(false);
+
+  // Serialize variables for stable debounce dependency
   const variablesKey = useMemo(() => JSON.stringify(variables), [variables]);
 
+  // Debounce URL updates: only build new URL 500ms after last variable change
+  const [debouncedUrl, setDebouncedUrl] = useState<string>("");
   useEffect(() => {
-    // Debounce preview requests — 500ms after last variable change
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    debounceRef.current = setTimeout(async () => {
+    const timer = setTimeout(() => {
+      const url = buildImageUrl({ id: templateId, authCode }, variables);
+      setDebouncedUrl(url);
       setLoading(true);
-      setError(null);
-      try {
-        const res = await cmaFetch<PreviewResponse>(
-          `/api/cma/image-templates/${templateId}/preview?orgId=${orgId}`,
-          { method: "POST", body: JSON.stringify({ variables }) }
-        );
-        setPreview(res.data.base64);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Preview failed");
-      } finally {
-        setLoading(false);
-      }
+      setError(false);
     }, 500);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templateId, orgId, variablesKey]);
+  }, [templateId, authCode, variablesKey]);
 
   return (
     <div
       className="relative bg-muted rounded-lg overflow-hidden border"
       style={{ aspectRatio: `${width}/${height}` }}
     >
-      {preview && (
+      {debouncedUrl && (
         <img
-          src={preview}
+          key={debouncedUrl}
+          src={debouncedUrl}
           alt="Template preview"
           className="w-full h-full object-contain"
+          onLoad={() => setLoading(false)}
+          onError={() => { setLoading(false); setError(true); }}
         />
       )}
 
-      {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/60">
+      {loading && !error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/40">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       )}
 
-      {error && !loading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-1">
+      {error && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-1 bg-background/80">
           <AlertCircle className="h-5 w-5" />
-          <p className="text-xs">{error}</p>
+          <p className="text-xs">Preview failed</p>
         </div>
       )}
 
-      {!preview && !loading && !error && (
+      {!debouncedUrl && !loading && (
         <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-          <p className="text-xs">Fill in variables to see preview</p>
+          <p className="text-xs">Loading...</p>
         </div>
       )}
     </div>

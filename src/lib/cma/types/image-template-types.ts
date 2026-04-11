@@ -50,3 +50,35 @@ export function validateRequiredVariables(
     .filter((v) => v.required && !variables[v.name])
     .map((v) => v.name);
 }
+
+// ── Direct URL builder (APITemplate.io-style) ──
+// Builds a URL that returns the rendered image directly
+// Usage: <img src={buildImageUrl(template, { title: "Hello" })} />
+
+interface TemplateForUrl {
+  id: string;
+  authCode: string;
+}
+
+/**
+ * Build a Direct URL for an image template.
+ * The returned URL returns image/png directly — use it as an <img src>,
+ * og:image, or pass to Facebook/social adapters as a public image URL.
+ *
+ * @param template - The template with id and authCode
+ * @param variables - Variable values to substitute
+ * @param baseUrl - Optional base URL (defaults to relative path, useful for server-side)
+ */
+export function buildImageUrl(
+  template: TemplateForUrl,
+  variables: Record<string, string> = {},
+  baseUrl = ""
+): string {
+  const params = new URLSearchParams({ auth: template.authCode });
+  for (const [key, value] of Object.entries(variables)) {
+    if (value !== undefined && value !== "") {
+      params.set(key, value);
+    }
+  }
+  return `${baseUrl}/api/cma/image-templates/${template.id}/image?${params.toString()}`;
+}
