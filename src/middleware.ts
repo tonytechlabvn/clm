@@ -20,9 +20,14 @@ export async function middleware(request: NextRequest) {
   const isWebhook = pathname.startsWith("/api/webhooks/");
   const isApiRoute = pathname.startsWith("/api/");
   const isCmaApi = pathname.startsWith("/api/cma/");
+  // Image template Direct URLs are authCode-gated (public like og:image endpoints)
+  // Pattern: /api/cma/image-templates/[id]/image
+  const isImageTemplateDirectUrl =
+    /^\/api\/cma\/image-templates\/[^/]+\/image$/.test(pathname);
 
-  // Allow auth API, public endpoints, public pages, and webhooks through
-  if (isAuthApi || isPublicApi || isPublicPage || isWebhook) return withRequestId(request, NextResponse.next());
+  // Allow auth API, public endpoints, public pages, webhooks, and direct-URL images through
+  if (isAuthApi || isPublicApi || isPublicPage || isWebhook || isImageTemplateDirectUrl)
+    return withRequestId(request, NextResponse.next());
 
   // API key auth bypass — gated behind feature flag
   if (
