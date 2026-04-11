@@ -144,6 +144,25 @@ function validateVariables(variables: Record<string, string>): void {
 
 // ── Core render: HTML + variables → PNG buffer ──
 
+// Puppeteer's page.setContent() loads HTML with an `about:blank` base URL,
+// so any relative `src="/api/..."` (e.g., editor-uploaded assets stored as
+// /api/cma/image-templates/assets/...) fails to resolve and the <img> silently
+// renders nothing. We inject a <base href> tag so the in-page fetch runs
+// against the internal localhost origin instead. Localhost is correct inside
+// the container — the Next.js server serves its own asset routes there and
+// Puppeteer hits them via the loopback interface (no DNS, no Cloudflare,
+// no external network path).
+const INTERNAL_ORIGIN = process.env.INTERNAL_ORIGIN ?? "http://localhost:3000";
+
+function injectBaseHref(html: string): string {
+  // Only inject if <head> exists and no <base> already set
+  if (html.includes("<base ")) return html;
+  return html.replace(
+    /<head([^>]*)>/i,
+    `<head$1><base href="${INTERNAL_ORIGIN}/">`
+  );
+}
+
 export async function renderTemplate(opts: RenderOptions): Promise<RenderResult> {
   const { htmlContent, variables, width, height } = opts;
 
@@ -152,7 +171,7 @@ export async function renderTemplate(opts: RenderOptions): Promise<RenderResult>
   // Inject system variables (width, height) into Handlebars context
   const context = { ...variables, width, height };
   const compiled = Handlebars.compile(htmlContent);
-  const html = compiled(context);
+  const html = injectBaseHref(compiled(context));
 
   await acquirePage();
   let page;
@@ -213,7 +232,7 @@ export async function renderPreview(opts: RenderOptions): Promise<Buffer> {
   // Inject system variables for preview too
   const context = { ...variables, width, height };
   const compiled = Handlebars.compile(htmlContent);
-  const html = compiled(context);
+  const html = injectBaseHref(compiled(context));
 
   await acquirePage();
   let page;
