@@ -32,8 +32,20 @@ export function compileLayersToHtml(data: TemplateLayerData): string {
 
   const bg = escapeHtml(data.backgroundColor);
 
-  // {{width}} / {{height}} tokens are injected by the renderer (system vars).
-  // Keep them verbatim — Handlebars resolves them before Puppeteer loads the HTML.
+  // The layer positions inside `body` are absolute pixel offsets from the
+  // source dimensions (data.width × data.height). The renderer supplies the
+  // actual render viewport via the {{width}} / {{height}} system tokens,
+  // which may be smaller (thumbnail) or larger (hi-res print) than the
+  // source. To keep a single compiled artifact usable at any viewport, we
+  // wrap the layers in a `.stage` div at the source dimensions and scale it
+  // uniformly via CSS transform — `calc({{width}}/SOURCE)` produces a
+  // unitless ratio that `transform: scale(...)` accepts.
+  //
+  // Important: {{width}} / {{height}} are substituted by the renderer as
+  // plain numbers (not dimensions), so the calc expression stays valid CSS.
+  const srcW = data.width;
+  const srcH = data.height;
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -43,10 +55,13 @@ ${fontLink}
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{width:{{width}}px;height:{{height}}px}
   body{background:${bg};position:relative;overflow:hidden;font-family:'Be Vietnam Pro',sans-serif}
+  .stage{position:absolute;left:0;top:0;width:${srcW}px;height:${srcH}px;transform-origin:top left;transform:scale(calc({{width}} / ${srcW}))}
 </style>
 </head>
 <body>
+<div class="stage">
 ${body}
+</div>
 </body>
 </html>`;
 }
