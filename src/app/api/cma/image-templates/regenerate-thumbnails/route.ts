@@ -13,6 +13,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma-client";
 import { withApiKeyOrSessionAuth } from "@/lib/cma/services/org-auth";
 import { generateAndStoreThumbnail } from "@/lib/cma/services/template-thumbnail-service";
+import { compileLayersToHtml } from "@/lib/cma/services/template-layer-compiler";
+import { templateLayerDataSchema } from "@/lib/cma/types/image-template-layer-types";
 
 interface RegenerateResult {
   id: string;
@@ -38,7 +40,7 @@ export async function POST(request: Request) {
     where: {
       OR: [{ isSystem: true }, { orgId: auth.orgId }],
     },
-    select: { id: true, name: true },
+    select: { id: true, name: true, layerData: true },
     orderBy: { id: "asc" },
   });
 
@@ -48,6 +50,20 @@ export async function POST(request: Request) {
   // browser is cold and the renderer semaphore queue saturates.
   for (const t of templates) {
     try {
+      // Recompile htmlContent from layerData on the fly so the thumbnail
+      // reflects the latest compiler output. Legacy templates without
+      // layerData keep their hand-written htmlContent unchanged.
+      if (t.layerData) {
+        const parsed = templateLayerDataSchema.safeParse(t.layerData);
+        if (parsed.success) {
+          const htmlContent = compileLayersToHtml(parsed.data);
+          await prisma.cmaImageTemplate.update({
+            where: { id: t.id },
+            data: { htmlContent },
+          });
+        }
+      }
+
       const thumbnail = await generateAndStoreThumbnail(t.id);
       results.push({ id: t.id, name: t.name, ok: thumbnail !== null, thumbnail });
     } catch (err) {
