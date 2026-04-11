@@ -1,37 +1,64 @@
 "use client";
-// Left-side element palette. Phase-10 wires drag-drop for Text / Image / Rect
-// layer creation; phase-08 only renders a disabled scaffold so the 3-panel
-// layout takes its final shape.
+// Left-side element palette — Phase 10 wiring. Click-to-add pattern (no
+// drag-drop for MVP, per plan YAGNI). Each button constructs a fully-valid
+// layer via the default-layer factories and hands it to the store.
 
 import { Type, Image as ImageIcon, Square } from "lucide-react";
+import { useEditorStore } from "@/lib/cma/editor/image-template-editor-store";
+import {
+  makeTextLayer,
+  makeImageLayer,
+  makeRectLayer,
+  nextZIndex,
+} from "./palette/default-layers";
 
-interface PaletteEntry {
-  key: string;
+type IconComponent = typeof Type;
+
+interface PaletteButtonProps {
   label: string;
-  Icon: typeof Type;
+  Icon: IconComponent;
+  onClick: () => void;
 }
 
-const ENTRIES: PaletteEntry[] = [
-  { key: "text", label: "Text", Icon: Type },
-  { key: "image", label: "Image", Icon: ImageIcon },
-  { key: "rect", label: "Rectangle", Icon: Square },
-];
+function PaletteButton({ label, Icon, onClick }: PaletteButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`Add ${label}`}
+      className="w-12 h-12 flex flex-col items-center justify-center gap-0.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+    >
+      <Icon className="h-4 w-4" />
+      <span className="text-[10px] leading-none">{label}</span>
+    </button>
+  );
+}
 
 export function EditorLeftPalette() {
+  const width = useEditorStore((s) => s.meta.width);
+  const height = useEditorStore((s) => s.meta.height);
+  const addLayer = useEditorStore((s) => s.addLayer);
+
+  const addText = () => {
+    const layers = useEditorStore.getState().layers;
+    addLayer(makeTextLayer(width, height, nextZIndex(layers)));
+  };
+
+  const addImage = () => {
+    const layers = useEditorStore.getState().layers;
+    addLayer(makeImageLayer(width, height, nextZIndex(layers)));
+  };
+
+  const addRect = () => {
+    const layers = useEditorStore.getState().layers;
+    addLayer(makeRectLayer(width, height, nextZIndex(layers)));
+  };
+
   return (
     <aside className="w-16 shrink-0 border-r bg-background flex flex-col items-center py-3 gap-1">
-      {ENTRIES.map(({ key, label, Icon }) => (
-        <button
-          key={key}
-          type="button"
-          disabled
-          title={`${label} (phase-10)`}
-          className="w-12 h-12 flex flex-col items-center justify-center gap-0.5 rounded-md text-muted-foreground cursor-not-allowed opacity-60"
-        >
-          <Icon className="h-4 w-4" />
-          <span className="text-[10px] leading-none">{label}</span>
-        </button>
-      ))}
+      <PaletteButton label="Text" Icon={Type} onClick={addText} />
+      <PaletteButton label="Image" Icon={ImageIcon} onClick={addImage} />
+      <PaletteButton label="Rect" Icon={Square} onClick={addRect} />
     </aside>
   );
 }
