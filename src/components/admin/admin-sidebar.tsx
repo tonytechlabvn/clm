@@ -19,6 +19,7 @@ import {
   Rss,
   Palette,
   BookOpen,
+  ImagePlus,
 } from "lucide-react";
 
 const navItems = [
@@ -26,11 +27,12 @@ const navItems = [
   { href: "/admin/cma/composer", label: "Composer", icon: PenSquare },
   { href: "/admin/cma/posts", label: "Posts", icon: FileText },
   { href: "/admin/cma/templates", label: "Templates", icon: Palette },
+  { href: "/admin/cma/image-templates", label: "Image Studio", icon: ImagePlus },
   { href: "/admin/cma/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/admin/cma/settings", label: "Connections", icon: Plug },
   { href: "/admin/cma/approval", label: "Approval", icon: CheckCircle },
   { href: "/admin/cma/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/admin/cma/kb/image-templates", label: "Image Templates", icon: BookOpen },
+  { href: "/admin/cma/kb/image-templates", label: "Image Templates Docs", icon: BookOpen },
 ];
 
 const settingsItems = [
