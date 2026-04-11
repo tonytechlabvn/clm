@@ -20,6 +20,38 @@ function validateFbPostId(id: string): void {
   if (!/^\d+_\d+$/.test(id)) throw new Error("Invalid Facebook post ID format");
 }
 
+// Recursively extract plain text from BlockNote JSON block array
+// Handles paragraphs, headings, lists, and any nested children
+interface BlockNoteBlock {
+  type?: string;
+  content?: Array<{ type?: string; text?: string }> | string;
+  children?: BlockNoteBlock[];
+}
+
+function extractTextFromBlocks(blocks: BlockNoteBlock[]): string {
+  if (!Array.isArray(blocks)) return "";
+  const lines: string[] = [];
+  for (const block of blocks) {
+    const parts: string[] = [];
+    // content is array of inline nodes (text, link, etc.)
+    if (Array.isArray(block.content)) {
+      for (const inline of block.content) {
+        if (inline?.text) parts.push(inline.text);
+      }
+    } else if (typeof block.content === "string") {
+      parts.push(block.content);
+    }
+    const line = parts.join("");
+    if (line) lines.push(line);
+    // Recurse into children (e.g., nested lists)
+    if (Array.isArray(block.children) && block.children.length > 0) {
+      const childText = extractTextFromBlocks(block.children);
+      if (childText) lines.push(childText);
+    }
+  }
+  return lines.join("\n\n").trim();
+}
+
 // DB-based rate limiter: query CmaPostPlatform.publishedAt for spacing + daily cap
 async function checkRateLimit(pageId: string): Promise<void> {
   const now = new Date();
@@ -99,13 +131,31 @@ export class FacebookAdapter implements PlatformAdapter {
     }
   }
 
-  // Facebook uses plain text — strip markdown/HTML, return clean text
+  // Facebook uses plain text — strip markdown/HTML/JSON, return clean text
   prepareContent(content: string, format: string): string {
     if (format === "markdown") return stripMarkdownToPlainText(content);
-    if (format === "blocks" || format === "html") {
-      // Strip HTML tags for plain text output
+
+    if (format === "blocks") {
+      // BlockNote JSON → extract plain text from nested content structure
+      // Block format: [{ type, content: [{ type: "text", text: "..." }], children: [] }, ...]
+      try {
+        const blocks = JSON.parse(content);
+        return extractTextFromBlocks(blocks);
+      } catch {
+        // Fallback: strip HTML tags (legacy HTML-in-blocks content)
+        return content.replace(/<[^>]+>/g, "").trim();
+      }
+    }
+
+    if (format === "html") {
+      // HTML format: content is JSON { html, css, js } — extract and strip html
+      try {
+        const parsed = JSON.parse(content);
+        if (parsed.html) return parsed.html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+      } catch {}
       return content.replace(/<[^>]+>/g, "").trim();
     }
+
     return content;
   }
 

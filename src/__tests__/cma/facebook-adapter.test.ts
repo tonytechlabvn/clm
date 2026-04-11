@@ -158,10 +158,58 @@ describe("FacebookAdapter", () => {
       expect(result).not.toContain("<");
     });
 
-    it("strips HTML tags for blocks format", () => {
+    it("strips HTML tags for blocks format (legacy HTML-in-blocks)", () => {
       const html = "<p>Content</p>";
       const result = adapter.prepareContent(html, "blocks");
       expect(result).toContain("Content");
+      expect(result).not.toContain("<");
+    });
+
+    it("extracts plain text from BlockNote JSON for blocks format", () => {
+      const blocksJson = JSON.stringify([
+        {
+          id: "abc",
+          type: "paragraph",
+          content: [{ type: "text", text: "Khóa học AI" }],
+          children: [],
+        },
+        {
+          id: "def",
+          type: "paragraph",
+          content: [{ type: "text", text: "Dòng hai" }],
+          children: [],
+        },
+      ]);
+      const result = adapter.prepareContent(blocksJson, "blocks");
+      expect(result).toBe("Khóa học AI\n\nDòng hai");
+      expect(result).not.toContain("{");
+      expect(result).not.toContain("type");
+    });
+
+    it("handles nested children in BlockNote JSON", () => {
+      const blocksJson = JSON.stringify([
+        {
+          type: "bulletListItem",
+          content: [{ type: "text", text: "Parent" }],
+          children: [
+            {
+              type: "bulletListItem",
+              content: [{ type: "text", text: "Nested" }],
+              children: [],
+            },
+          ],
+        },
+      ]);
+      const result = adapter.prepareContent(blocksJson, "blocks");
+      expect(result).toContain("Parent");
+      expect(result).toContain("Nested");
+    });
+
+    it("extracts html field from JSON for html format", () => {
+      const htmlJson = JSON.stringify({ html: "<h1>Title</h1><p>Body text</p>", css: "" });
+      const result = adapter.prepareContent(htmlJson, "html");
+      expect(result).toContain("Title");
+      expect(result).toContain("Body text");
       expect(result).not.toContain("<");
     });
 
