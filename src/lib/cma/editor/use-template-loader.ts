@@ -26,6 +26,7 @@ interface ApiTemplateRow {
   width: number;
   height: number;
   isSystem: boolean;
+  authCode: string;
   layerData: {
     version?: number;
     backgroundColor?: string;
@@ -101,6 +102,10 @@ export function useTemplateLoader({
           width: data.width,
           height: data.height,
           backgroundColor,
+          // Forked drafts have no public URL yet — server mints a new authCode
+          // on first save. Non-forked edits keep the original so the existing
+          // Direct URL stays valid.
+          authCode: isFork ? null : data.authCode,
           layers,
           variables,
         });

@@ -4,17 +4,19 @@
 // Variables stays a stub until phase-11.
 
 import { useState } from "react";
-import { Layers, SlidersHorizontal, Braces } from "lucide-react";
+import { Layers, SlidersHorizontal, Braces, Link2 } from "lucide-react";
 import { LayerTree } from "./panels/layer-tree";
 import { PropertiesInspector } from "./panels/properties-inspector";
 import { VariablesPanel } from "./panels/variables-panel";
+import { DirectUrlPanel } from "./panels/direct-url-panel";
 
-type Tab = "layers" | "properties" | "variables";
+type Tab = "layers" | "properties" | "variables" | "direct-url";
 
 const TABS: Array<{ key: Tab; label: string; Icon: typeof Layers }> = [
   { key: "layers", label: "Layers", Icon: Layers },
   { key: "properties", label: "Properties", Icon: SlidersHorizontal },
   { key: "variables", label: "Variables", Icon: Braces },
+  { key: "direct-url", label: "Direct URL", Icon: Link2 },
 ];
 
 export function EditorRightPanel() {
@@ -49,6 +51,7 @@ export function EditorRightPanel() {
         {tab === "layers" && <LayerTree />}
         {tab === "properties" && <PropertiesInspector />}
         {tab === "variables" && <VariablesPanel />}
+        {tab === "direct-url" && <DirectUrlPanel />}
       </div>
     </aside>
   );

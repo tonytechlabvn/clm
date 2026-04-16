@@ -15,6 +15,7 @@ import type { VariableDefinition } from "@/lib/cma/types/image-template-types";
 import {
   extractUsedVariableNames,
   diffDeclaredVsUsed,
+  mergeDynamicFieldsIntoVariables,
 } from "./extract-layer-variables";
 
 export interface SaveInputMeta {
@@ -45,6 +46,12 @@ interface SaveOptions {
 
 // Build the exact JSON body the POST/PUT handlers expect. Separated so the
 // smoke test can assert on the shape without making a real network call.
+//
+// Dynamic-field layers contribute one `variableSchema` entry each, keyed by
+// `${fieldName}.${property}`. That flat naming keeps the stored schema
+// compatible with the existing `variableSchemaValidator` (just an array of
+// `{name,type,...}`) — we don't need a nested-object variant. User-declared
+// free-form variables still merge in alongside.
 export function buildSavePayload(input: SaveInput, orgId: string) {
   const layerData: TemplateLayerData = {
     version: 1,
@@ -55,6 +62,10 @@ export function buildSavePayload(input: SaveInput, orgId: string) {
   };
 
   const htmlContent = compileLayersToHtml(layerData);
+  const variableSchema = mergeDynamicFieldsIntoVariables(
+    input.variables,
+    input.layers
+  );
 
   return {
     orgId,
@@ -64,7 +75,7 @@ export function buildSavePayload(input: SaveInput, orgId: string) {
     height: input.meta.height,
     htmlContent,
     layerData,
-    variableSchema: input.variables,
+    variableSchema,
   };
 }
 

@@ -14,13 +14,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma-client";
 import { renderTemplate } from "@/lib/cma/services/image-template-renderer-service";
 import { variableSchemaValidator } from "@/lib/cma/types/image-template-types";
+import {
+  buildRenderContext,
+  type QueryParamLike,
+} from "@/lib/cma/services/direct-url-query-parser";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
-
-// Reserved query params that aren't template variables
-const RESERVED_PARAMS = new Set(["auth", "_cb"]);
 
 export async function GET(request: Request, { params }: RouteParams) {
   try {
@@ -49,20 +50,15 @@ export async function GET(request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Invalid template schema" }, { status: 500 });
     }
 
-    // Parse query params → variables (skip reserved params)
-    const variables: Record<string, string> = {};
-    for (const v of schemaResult.data) {
-      const val = url.searchParams.get(v.name);
-      variables[v.name] = val ?? v.defaultValue ?? "";
-    }
-
-    // Check required variables
-    const missing = schemaResult.data
-      .filter((v) => v.required && !variables[v.name])
-      .map((v) => v.name);
-    if (missing.length > 0) {
+    // Parse flat + dotted query keys into a (possibly nested) Handlebars context.
+    // `date.text=...` becomes `ctx.date.text`; `title=...` stays flat.
+    const { context, missingRequired } = buildRenderContext(
+      schemaResult.data,
+      url.searchParams satisfies QueryParamLike
+    );
+    if (missingRequired.length > 0) {
       return NextResponse.json(
-        { error: "Missing required variables", details: missing },
+        { error: "Missing required variables", details: missingRequired },
         { status: 400 }
       );
     }
@@ -70,7 +66,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Render PNG via Puppeteer
     const result = await renderTemplate({
       htmlContent: template.htmlContent,
-      variables,
+      variables: context,
       width: template.width,
       height: template.height,
     });

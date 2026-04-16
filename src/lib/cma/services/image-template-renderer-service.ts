@@ -109,9 +109,17 @@ function releasePage(): void {
 
 // ── Types ──
 
+// Variables map passed to Handlebars. Values can be:
+//   - string: flat legacy variable (e.g. `title` → `{{title}}`)
+//   - Record<string,string>: nested dynamic-field context (e.g. `date: { text }`
+//     → `{{date.text}}`). Enables APITemplate.io-style dotted query keys.
+// Nested objects are exactly one level deep; see direct-url-query-parser.ts
+// for the flattening rules used by validation.
+export type RenderVariables = Record<string, string | Record<string, string>>;
+
 export interface RenderOptions {
   htmlContent: string;
-  variables: Record<string, string>;
+  variables: RenderVariables;
   width: number;
   height: number;
 }
@@ -124,19 +132,30 @@ export interface RenderResult {
 
 // ── Variable validation ──
 
-function validateVariables(variables: Record<string, string>): void {
-  for (const [key, value] of Object.entries(variables)) {
-    if (!value) continue;
-    // URL/image fields: SSRF check
-    if (key.toLowerCase().includes("url") || key.toLowerCase().includes("image")) {
-      if (!validateImageUrl(value)) {
-        throw new Error(`Invalid URL for "${key}": private/internal URLs blocked`);
-      }
+// Walk flat + nested values. Key used for substring heuristics is the full
+// dotted path (`background.url`, `date.text`) so SSRF/hex-color checks keep
+// firing correctly when dynamic fields are used.
+function checkValue(key: string, value: string): void {
+  if (!value) return;
+  if (key.toLowerCase().includes("url") || key.toLowerCase().includes("image")) {
+    if (!validateImageUrl(value)) {
+      throw new Error(`Invalid URL for "${key}": private/internal URLs blocked`);
     }
-    // Color fields: hex format check
-    if (key.toLowerCase().includes("color")) {
-      if (!/^#[0-9a-fA-F]{3,8}$/.test(value)) {
-        throw new Error(`Invalid color for "${key}": must be hex (e.g. #ff6600)`);
+  }
+  if (key.toLowerCase().includes("color")) {
+    if (!/^#[0-9a-fA-F]{3,8}$/.test(value)) {
+      throw new Error(`Invalid color for "${key}": must be hex (e.g. #ff6600)`);
+    }
+  }
+}
+
+function validateVariables(variables: RenderVariables): void {
+  for (const [key, value] of Object.entries(variables)) {
+    if (typeof value === "string") {
+      checkValue(key, value);
+    } else if (value && typeof value === "object") {
+      for (const [k2, v2] of Object.entries(value)) {
+        checkValue(`${key}.${k2}`, v2);
       }
     }
   }

@@ -49,6 +49,7 @@ export const useEditorStore = create<EditorState>()(
             width: p.width,
             height: p.height,
             backgroundColor: p.backgroundColor,
+            authCode: p.authCode ?? null,
           },
           layers: p.layers,
           variables: p.variables,

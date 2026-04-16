@@ -8,6 +8,7 @@ import { TransformSection } from "./transform-section";
 import { TextPropertiesSection } from "./text-properties-section";
 import { ImagePropertiesSection } from "./image-properties-section";
 import { RectPropertiesSection } from "./rect-properties-section";
+import { DynamicFieldSection } from "./dynamic-field-section";
 
 export function PropertiesInspector() {
   const selectedLayerId = useEditorStore((s) => s.selectedLayerId);
@@ -30,6 +31,7 @@ export function PropertiesInspector() {
       {layerType === "text" && <TextPropertiesSection layerId={selectedLayerId} />}
       {layerType === "image" && <ImagePropertiesSection layerId={selectedLayerId} />}
       {layerType === "rect" && <RectPropertiesSection layerId={selectedLayerId} />}
+      <DynamicFieldSection layerId={selectedLayerId} />
     </div>
   );
 }

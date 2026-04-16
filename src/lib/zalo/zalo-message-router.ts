@@ -280,9 +280,19 @@ export async function routeMessage(
       return;
     }
 
-    // Build the Direct URL with the caller's text as the {{title}} variable.
+    // Build the Direct URL with the caller's text as the dynamic title field.
+    // APITemplate.io-style dotted key (`title.text`) is preferred — the Direct
+    // URL route matches it against any text-layer that declared fieldName=title
+    // and dynamic=true. We also pass the legacy flat key (`title`) so older
+    // MAF-DAILY templates that still use `{{title}}` keep working without
+    // re-editing. The route ignores keys the schema doesn't declare, so
+    // sending both is safe and costs nothing.
     // URLSearchParams handles non-ASCII encoding for Vietnamese characters.
-    const params = new URLSearchParams({ auth: template.authCode, title: message });
+    const params = new URLSearchParams({
+      auth: template.authCode,
+      "title.text": message,
+      title: message,
+    });
     const base = process.env.NEXTAUTH_URL?.replace(/\/$/, "") ?? "https://clm.tonytechlab.com";
     const directUrl = `${base}/api/cma/image-templates/${template.id}/image?${params.toString()}`;
 

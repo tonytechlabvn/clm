@@ -9,6 +9,7 @@ import type {
   ImageLayer,
   RectLayer,
 } from "../types/image-template-layer-types";
+import { DYNAMIC_FIELD_PROPERTY } from "../types/image-template-layer-types";
 import { escapeHtml, textToHtml, escapeKeepTokens } from "./template-layer-compiler-escape";
 
 // CSS fragment every layer shares — position, size, rotation, opacity, z-index.
@@ -65,7 +66,14 @@ export function renderText(l: TextLayer): string {
     "word-break:break-word",
     "overflow:hidden",
   ].join(";") + shadowCss(l.textShadow, "text-shadow");
-  return `<div style="${style}"><span style="width:100%">${textToHtml(l.text)}</span></div>`;
+  // Dynamic layers emit `{{fieldName.text}}` verbatim so Handlebars substitutes
+  // the URL-provided value. textToHtml() is skipped for the dynamic branch
+  // because the token itself must not be HTML-escaped; the substituted value
+  // IS escaped by Handlebars' default (triple-stash would be needed to bypass).
+  const inner = l.dynamic && l.fieldName
+    ? `{{${l.fieldName}.${DYNAMIC_FIELD_PROPERTY.text}}}`
+    : textToHtml(l.text);
+  return `<div style="${style}"><span style="width:100%">${inner}</span></div>`;
 }
 
 // ── Image layer ──────────────────────────────────────────────────────
@@ -89,6 +97,18 @@ export function renderImage(l: ImageLayer): string {
     `object-fit:${objectFit}`,
     "display:block",
   ].join(";");
+
+  // Dynamic image layers resolve their src from the URL via
+  // `{{fieldName.url}}`. We wrap the <img> in `{{#if fieldName.url}}` so a
+  // missing value renders an empty div instead of a broken-image icon.
+  if (l.dynamic && l.fieldName) {
+    const path = `${l.fieldName}.${DYNAMIC_FIELD_PROPERTY.image}`;
+    return (
+      `<div style="${style}">{{#if ${path}}}` +
+      `<img src="{{${path}}}" style="${imgStyle}" alt="">` +
+      `{{/if}}</div>`
+    );
+  }
 
   // src may contain {{token}} — keep it untouched, Handlebars substitutes later.
   // Non-token chars are still escaped via escapeKeepTokens to block attribute breakout.
@@ -115,9 +135,14 @@ export function renderImage(l: ImageLayer): string {
 
 export function renderRect(l: RectLayer): string {
   const radiusCss = l.borderRadius ? `;border-radius:${l.borderRadius}px` : "";
+  // Dynamic rect layers resolve `background-color` from `{{fieldName.color}}`.
+  // escapeKeepTokens stays for the static branch to block attribute breakout.
+  const fill = l.dynamic && l.fieldName
+    ? `{{${l.fieldName}.${DYNAMIC_FIELD_PROPERTY.rect}}}`
+    : escapeKeepTokens(l.fillColor);
   const style =
     baseStyle(l) +
-    `;background-color:${escapeKeepTokens(l.fillColor)}` +
+    `;background-color:${fill}` +
     radiusCss +
     borderCss(l.border) +
     shadowCss(l.shadow, "box-shadow");

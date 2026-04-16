@@ -14,6 +14,7 @@ export const DEFAULT_META: EditorMeta = {
   width: 1200,
   height: 630,
   backgroundColor: "#ffffff",
+  authCode: null,
 };
 
 export const DEFAULT_LAYERS: Layer[] = [];
@@ -33,6 +34,7 @@ export function createBlankTemplatePayload(
     width: overrides.width ?? DEFAULT_META.width,
     height: overrides.height ?? DEFAULT_META.height,
     backgroundColor: overrides.backgroundColor ?? DEFAULT_META.backgroundColor,
+    authCode: overrides.authCode ?? null,
     layers: [],
     variables: [],
   };

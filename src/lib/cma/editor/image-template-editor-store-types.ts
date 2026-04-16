@@ -13,11 +13,18 @@ export interface EditorMeta {
   width: number;
   height: number;
   backgroundColor: string;
+  // APITemplate.io-style Direct URL auth token. Null for unsaved drafts — the
+  // server assigns one on first save. The editor reads this to preview the
+  // public Direct URL in the Direct URL panel.
+  authCode: string | null;
 }
 
 // Shape accepted by store.loadTemplate() — decoupled from API response type so
 // the store doesn't depend on Prisma's generated types.
-export interface LoadPayload extends EditorMeta {
+// `authCode` is optional here (the store reducer normalizes missing → null)
+// so older test fixtures and the blank-template factory stay backward-compatible.
+export interface LoadPayload extends Omit<EditorMeta, "authCode"> {
+  authCode?: string | null;
   layers: Layer[];
   variables: VariableDefinition[];
 }
