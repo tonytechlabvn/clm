@@ -1,0 +1,51 @@
+# Auto-deploy to tonytechlab production server on push to main.
+#
+# Triggers only when app sources change — doc-only edits skip the build.
+# The workflow SSHs to the server and runs the shared /opt/tonytechlab/deploy.sh
+# script which handles git pull, rebuild, and post-deploy health check.
+#
+# Secrets required on this repo:
+#   DEPLOY_HOST      server IP/hostname
+#   DEPLOY_USER      SSH user (root)
+#   DEPLOY_SSH_KEY   ed25519 private key authorized on the server
+
+name: Deploy to production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "prisma/**"
+      - "public/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "next.config.mjs"
+      - "tailwind.config.ts"
+      - "docker-compose.yml"
+      - "Dockerfile"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Run deploy script
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+              "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+              "/opt/tonytechlab/deploy.sh clm clm"
