@@ -40,12 +40,19 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          # StrictHostKeyChecking=accept-new trusts on first connect and pins
+          # after — handles the case where ssh-keyscan is flaky from runners.
+          cat > ~/.ssh/config <<EOF
+          Host deploy-target
+            HostName ${{ secrets.DEPLOY_HOST }}
+            User ${{ secrets.DEPLOY_USER }}
+            IdentityFile ~/.ssh/id_ed25519
+            StrictHostKeyChecking accept-new
+            UserKnownHostsFile ~/.ssh/known_hosts
+          EOF
+          chmod 600 ~/.ssh/config
 
       - name: Run deploy script
-        run: |
-          ssh -i ~/.ssh/id_ed25519 \
-              "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
-              "/opt/tonytechlab/deploy.sh clm clm"
+        run: ssh deploy-target "/opt/tonytechlab/deploy.sh clm clm"
